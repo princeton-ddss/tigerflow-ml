@@ -1,6 +1,6 @@
 # tigerflow-ml
 
-ML tasks for TigerFlow (translation, OCR).
+ML tasks for [TigerFlow](https://github.com/princeton-ddss/tigerflow) — private cloud ML APIs on HPC infrastructure.
 
 ## Installation
 
@@ -10,8 +10,12 @@ pip install tigerflow-ml
 
 ## Tasks
 
-- **translate**: Translate text documents using Hugging Face text-to-text models
-- **ocr**: Extract text from images using Hugging Face image-to-text models
+| Task        | Description                       | Entry Point                     |
+|-------------|-----------------------------------|---------------------------------|
+| OCR         | Extract text from images and PDFs | `ocr` / `ocr-local`             |
+| Translation | Translate text documents          | `translate` / `translate-local` |
+
+Each task provides both a Slurm variant (for HPC) and a Local variant (for development).
 
 ## Usage
 
@@ -24,6 +28,14 @@ tigerflow tasks list
 Run a task directly:
 
 ```bash
-python -m tigerflow_ml.translate --help
-python -m tigerflow_ml.ocr --help
+python -m tigerflow_ml.text.ocr.slurm --help
+python -m tigerflow_ml.text.translate.slurm --help
+```
+
+## Development
+
+```bash
+uv sync --group dev
+uv run pre-commit run --all-files
+uv run pytest tests
 ```
