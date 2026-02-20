@@ -1,0 +1,10 @@
+tasks:
+  - name: transcribe
+    kind: local
+    module: ./transcribe.py
+    input_ext: .mp3
+    output_ext: .json
+    params:
+      model: openai/whisper-tiny
+      output_format: json
+      return_timestamps: true

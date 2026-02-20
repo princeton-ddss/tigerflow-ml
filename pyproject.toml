@@ -5,7 +5,7 @@ description = "ML tasks for TigerFlow"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
-    "tigerflow",
+    "tigerflow @ git+https://github.com/princeton-ddss/tigerflow.git@main",
     "transformers",
     "torch",
     "Pillow",
@@ -35,10 +35,15 @@ translate = "tigerflow_ml.text.translate.slurm:Translate"
 translate-local = "tigerflow_ml.text.translate.local:Translate"
 ocr = "tigerflow_ml.text.ocr.slurm:OCR"
 ocr-local = "tigerflow_ml.text.ocr.local:OCR"
+transcribe = "tigerflow_ml.audio.transcribe.slurm:Transcribe"
+transcribe-local = "tigerflow_ml.audio.transcribe.local:Transcribe"
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[tool.hatch.metadata]
+allow-direct-references = true
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/tigerflow_ml"]

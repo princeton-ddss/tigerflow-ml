@@ -31,3 +31,8 @@ Thumbs.db
 
 # mkdocs
 site/
+
+# Examples (generated test data)
+examples/*/.cache/
+examples/*/input/
+examples/*/output/
