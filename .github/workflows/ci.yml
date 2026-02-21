@@ -119,3 +119,4 @@ jobs:
         run: |
           cd docs
           uv run mike deploy --push next
+          uv run mike set-default --push next
