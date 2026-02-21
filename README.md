@@ -1,5 +1,9 @@
 # tigerflow-ml
 
+[![CI](https://github.com/princeton-ddss/tigerflow-ml/actions/workflows/ci.yml/badge.svg)](https://github.com/princeton-ddss/tigerflow-ml/actions/workflows/ci.yml)
+[![PyPI](https://img.shields.io/pypi/v/tigerflow-ml)](https://pypi.org/project/tigerflow-ml/)
+[![Docs](https://img.shields.io/badge/docs-latest-blue)](https://princeton-ddss.github.io/tigerflow-ml/)
+
 ML tasks for [TigerFlow](https://github.com/princeton-ddss/tigerflow) — private cloud ML APIs on HPC infrastructure.
 
 ## Installation

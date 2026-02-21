@@ -23,6 +23,12 @@ hide:
     <a href="https://opensource.org/licenses/MIT">
       <img alt="mit-license" src="https://img.shields.io/badge/License-MIT-yellow.svg"/>
     </a>
+    <a href="https://github.com/princeton-ddss/tigerflow-ml/actions/workflows/ci.yml">
+      <img alt="ci" src="https://github.com/princeton-ddss/tigerflow-ml/actions/workflows/ci.yml/badge.svg"/>
+    </a>
+    <a href="https://pypi.org/project/tigerflow-ml/">
+      <img alt="pypi" src="https://img.shields.io/pypi/v/tigerflow-ml"/>
+    </a>
 </p>
 
 **TigerFlow ML** is a [TigerFlow](https://github.com/princeton-ddss/tigerflow) task library extension that makes large-scale machine learning inference a breeze. Think of it as your replacement for expensive, opaque private cloud services. TigerFlow supports *batch inference* by running tasks on your organization's existing HPC resources using TigerFlow orchestration to optimize throughput and take advantage of unused compute cycles. Task logic is completely transparent and open source and relies on open-weight models available from the Hugging Face model hub (or bring your own). Tasks can be used on their own or incorporated into larger workflows using TigerFlow's pipeline construction.
