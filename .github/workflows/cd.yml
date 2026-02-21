@@ -1,0 +1,77 @@
+name: CD
+
+on:
+  release:
+    types: [published]
+
+env:
+  UV_VERSION: "0.7.15"
+
+permissions:
+  contents: write
+
+jobs:
+  ci:
+    uses: ./.github/workflows/ci.yml
+
+  publish:
+    needs: ci
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure Git credentials
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+
+      - name: Install uv and set up Python
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: ${{ env.UV_VERSION }}
+          enable-cache: true
+          python-version-file: ".python-version"
+
+      - name: Sync version with tag name
+        run: |
+          uv version ${{ github.event.release.tag_name }}
+          git add .
+          git commit -m "Update package version" || echo "Package version up to date"
+          git push origin HEAD:main
+
+      - name: Build and publish the package
+        run: |
+          uv build
+          uv publish --token ${{ secrets.PYPI_API_TOKEN }}
+
+  docs:
+    needs: publish
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure Git credentials
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+
+      - name: Checkout merge branch
+        run: |
+          git fetch origin
+          git checkout ${{ github.ref_name }}
+
+      - name: Install uv and set up Python
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: ${{ env.UV_VERSION }}
+          enable-cache: true
+          python-version-file: ".python-version"
+
+      - name: Install dependencies
+        run: uv sync --locked --group docs
+
+      - name: Publish docs to gh-pages
+        run: |
+          cd docs
+          MINOR_VERSION=$(echo "${{ github.event.release.tag_name }}" | sed 's/^v\?\([0-9]*\.[0-9]*\).*/\1/')
+          uv run mike deploy --push --update-aliases $MINOR_VERSION latest

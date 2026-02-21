@@ -1,0 +1,66 @@
+"""Unit tests for pure helper functions (no model downloads needed)."""
+
+from tigerflow_ml.audio.transcribe._base import _format_timestamp, _format_as_srt
+from tigerflow_ml.text.translate._base import _split_sentences
+
+
+class TestFormatTimestamp:
+    def test_zero(self):
+        assert _format_timestamp(0.0) == "00:00:00,000"
+
+    def test_fractional_seconds(self):
+        assert _format_timestamp(1.5) == "00:00:01,500"
+
+    def test_minutes(self):
+        assert _format_timestamp(65.25) == "00:01:05,250"
+
+    def test_hours(self):
+        assert _format_timestamp(3661.0) == "01:01:01,000"
+
+
+class TestFormatAsSrt:
+    def test_empty_chunks(self):
+        result = {"text": "Hello world", "chunks": []}
+        assert _format_as_srt(result) == "Hello world"
+
+    def test_single_chunk(self):
+        result = {
+            "text": "Hello",
+            "chunks": [{"text": "Hello", "timestamp": (0.0, 1.5)}],
+        }
+        srt = _format_as_srt(result)
+        assert "1\n" in srt
+        assert "00:00:00,000 --> 00:00:01,500" in srt
+        assert "Hello" in srt
+
+    def test_multiple_chunks(self):
+        result = {
+            "text": "Hello world",
+            "chunks": [
+                {"text": "Hello", "timestamp": (0.0, 1.0)},
+                {"text": "world", "timestamp": (1.0, 2.0)},
+            ],
+        }
+        srt = _format_as_srt(result)
+        lines = srt.strip().split("\n")
+        # Two subtitle blocks separated by blank line
+        assert "1" in lines
+        assert "2" in lines
+
+
+class TestSplitSentences:
+    def test_simple(self):
+        result = _split_sentences("Hello. World!")
+        assert result == ["Hello.", "World!"]
+
+    def test_single_sentence(self):
+        result = _split_sentences("Hello world")
+        assert result == ["Hello world"]
+
+    def test_question_marks(self):
+        result = _split_sentences("Who? What? Where?")
+        assert result == ["Who?", "What?", "Where?"]
+
+    def test_empty(self):
+        result = _split_sentences("")
+        assert result == []
