@@ -62,3 +62,5 @@ nav:
   - Tasks:
       - OCR: tasks/ocr.md
       - Translation: tasks/translate.md
+      - Transcription: tasks/transcribe.md
+      - Object Detection: tasks/detect.md

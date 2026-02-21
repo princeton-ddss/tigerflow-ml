@@ -11,6 +11,7 @@ dependencies = [
     "Pillow",
     "pymupdf>=1.27.1",
     "sentencepiece",
+    "opencv-python-headless",
 ]
 
 [dependency-groups]
@@ -38,6 +39,8 @@ ocr = "tigerflow_ml.text.ocr.slurm:OCR"
 ocr-local = "tigerflow_ml.text.ocr.local:OCR"
 transcribe = "tigerflow_ml.audio.transcribe.slurm:Transcribe"
 transcribe-local = "tigerflow_ml.audio.transcribe.local:Transcribe"
+detect = "tigerflow_ml.image.detect.slurm:Detect"
+detect-local = "tigerflow_ml.image.detect.local:Detect"
 
 [build-system]
 requires = ["hatchling"]

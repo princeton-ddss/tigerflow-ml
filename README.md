@@ -10,10 +10,12 @@ pip install tigerflow-ml
 
 ## Tasks
 
-| Task        | Description                       | Entry Point                     |
-|-------------|-----------------------------------|---------------------------------|
-| OCR         | Extract text from images and PDFs | `ocr` / `ocr-local`             |
-| Translation | Translate text documents          | `translate` / `translate-local` |
+| Task             | Description                         | Entry Point                       |
+|------------------|-------------------------------------|-----------------------------------|
+| OCR              | Extract text from images and PDFs   | `ocr` / `ocr-local`               |
+| Translation      | Translate text documents            | `translate` / `translate-local`   |
+| Transcription    | Transcribe audio to text            | `transcribe` / `transcribe-local` |
+| Object Detection | Detect objects in images and videos | `detect` / `detect-local`         |
 
 Each task provides both a Slurm variant (for HPC) and a Local variant (for development).
 
@@ -30,6 +32,8 @@ Run a task directly:
 ```bash
 python -m tigerflow_ml.text.ocr.slurm --help
 python -m tigerflow_ml.text.translate.slurm --help
+python -m tigerflow_ml.audio.transcribe.slurm --help
+python -m tigerflow_ml.image.detect.slurm --help
 ```
 
 ## Development

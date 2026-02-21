@@ -8,6 +8,8 @@ ML tasks for [TigerFlow](https://github.com/princeton-ddss/tigerflow) — privat
 |------|-------------|
 | [OCR](tasks/ocr.md) | Extract text from images and PDFs |
 | [Translation](tasks/translate.md) | Translate text documents |
+| [Transcription](tasks/transcribe.md) | Transcribe audio to text |
+| [Object Detection](tasks/detect.md) | Detect objects in images and videos |
 
 ## Installation
 

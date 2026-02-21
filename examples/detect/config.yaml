@@ -1,0 +1,8 @@
+tasks:
+  - name: detect
+    kind: local
+    module: ./detect.py
+    input_ext: .jpg
+    output_ext: .json
+    params:
+      model: PekingU/rtdetr_r50vd

@@ -1,0 +1,9 @@
+tasks:
+  - name: detect
+    kind: local
+    module: ./detect.py
+    input_ext: .mp4
+    output_ext: .json
+    params:
+      model: PekingU/rtdetr_r50vd
+      sample_fps: 1.0
