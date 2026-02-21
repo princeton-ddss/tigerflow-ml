@@ -4,7 +4,7 @@ from tigerflow.tasks import LocalTask, SlurmTask
 
 
 def test_top_level_imports():
-    from tigerflow_ml import Detect, OCR, Transcribe, Translate
+    from tigerflow_ml import OCR, Detect, Transcribe, Translate
 
     assert OCR is not None
     assert Translate is not None
@@ -33,7 +33,7 @@ def test_slurm_variants_importable():
 
 
 def test_each_task_has_params():
-    from tigerflow_ml import Detect, OCR, Transcribe, Translate
+    from tigerflow_ml import OCR, Detect, Transcribe, Translate
 
     for cls in (OCR, Translate, Transcribe, Detect):
         assert hasattr(cls, "Params")

@@ -25,13 +25,17 @@ CONFIG = EXAMPLE_DIR / "config.yaml"
 TEXT_FILE = "sample_english.txt"
 
 # Sample English text for translation
-SAMPLE_TEXT = """\
-The quick brown fox jumps over the lazy dog. This sentence contains every letter of the alphabet.
-
-Machine translation has improved dramatically in recent years. Neural networks can now translate text with remarkable accuracy, capturing nuances that were previously impossible for computers to understand.
-
-Today we will test the translation pipeline with this sample text. The output should be readable German text that preserves the meaning of the original English.
-"""
+SAMPLE_TEXT = (
+    "The quick brown fox jumps over the lazy dog. "
+    "This sentence contains every letter of the alphabet.\n\n"
+    "Machine translation has improved dramatically in recent years. "
+    "Neural networks can now translate text with remarkable accuracy, "
+    "capturing nuances that were previously impossible for computers "
+    "to understand.\n\n"
+    "Today we will test the translation pipeline with this sample text. "
+    "The output should be readable German text that preserves the meaning "
+    "of the original English.\n"
+)
 
 
 def setup():

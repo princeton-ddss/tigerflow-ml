@@ -1,6 +1,6 @@
 """Unit tests for pure helper functions (no model downloads needed)."""
 
-from tigerflow_ml.audio.transcribe._base import _format_timestamp, _format_as_srt
+from tigerflow_ml.audio.transcribe._base import _format_as_srt, _format_timestamp
 from tigerflow_ml.text.translate._base import _split_sentences
 
 

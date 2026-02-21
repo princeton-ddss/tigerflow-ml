@@ -10,7 +10,10 @@ For video input, frames are sampled at a configurable rate and processed in batc
 
 import json
 from pathlib import Path
-from typing import Annotated
+from typing import TYPE_CHECKING, Annotated
+
+if TYPE_CHECKING:
+    from PIL import Image as PILImage
 
 import typer
 from tigerflow.logconfig import logger
@@ -99,7 +102,7 @@ class _DetectBase:
         )
         context.is_zero_shot = is_zero_shot
         context.labels_list = (
-            [l.strip() for l in context.labels.split(",") if l.strip()]
+            [s.strip() for s in context.labels.split(",") if s.strip()]
             if context.labels
             else []
         )
@@ -191,7 +194,7 @@ def _run_video(context: SetupContext, input_file: Path) -> list[dict]:
 
 def _extract_frames(
     video_path: Path, sample_fps: float
-) -> list[tuple[int, float, "Image"]]:
+) -> list[tuple[int, float, "PILImage.Image"]]:
     """Extract frames from a video file at the given sample rate.
 
     Returns a list of (frame_number, timestamp_seconds, PIL.Image) tuples.

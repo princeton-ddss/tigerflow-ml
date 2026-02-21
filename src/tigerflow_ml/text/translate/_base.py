@@ -56,8 +56,7 @@ class _TranslateBase:
         encoding: Annotated[
             str,
             typer.Option(
-                help="Input file encoding (non-UTF-8 may cause "
-                "lossy tokenization)"
+                help="Input file encoding (non-UTF-8 may cause lossy tokenization)"
             ),
         ] = "utf-8-sig"
 
@@ -127,16 +126,20 @@ class _TranslateBase:
                 target_lang=context.target_lang,
             )
             prompt_overhead = len(
-                context.tokenizer.encode(template_without_text, add_special_tokens=False)
+                context.tokenizer.encode(  # type: ignore[union-attr]
+                    template_without_text, add_special_tokens=False
+                )
             )
-            context.max_input_tokens = context.tokenizer.model_max_length - prompt_overhead
+            context.max_input_tokens = (
+                context.tokenizer.model_max_length - prompt_overhead  # type: ignore[union-attr]
+            )
             context.translation_device = device
             logger.info("Translation model ready on device: {}", device)
             return
 
         context.translation_device = device
         context.uses_lang_prefix = "madlad" in context.model.lower()
-        context.max_input_tokens = context.tokenizer.model_max_length
+        context.max_input_tokens = context.tokenizer.model_max_length  # type: ignore[union-attr]
 
         logger.info("Translation model ready on device: {}", device)
 
