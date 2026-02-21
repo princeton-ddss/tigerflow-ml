@@ -10,6 +10,7 @@ dependencies = [
     "torch",
     "Pillow",
     "pymupdf>=1.27.1",
+    "sentencepiece",
 ]
 
 [dependency-groups]

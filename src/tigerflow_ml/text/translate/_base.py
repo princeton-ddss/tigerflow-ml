@@ -1,24 +1,23 @@
 """
-Translate text documents using Hugging Face translation models.
+Translate text documents using Hugging Face models.
 
-Supports any Hugging Face model compatible with the translation pipeline.
+Supports both Seq2Seq translation models (Helsinki-NLP/opus-mt-*) and
+chat/causal LMs with a translation prompt.
 """
 
-import logging
 import re
 from pathlib import Path
 from typing import Annotated
 
 import typer
+from tigerflow.logconfig import logger
 from tigerflow.utils import SetupContext
 
 from tigerflow_ml.params import HFParams
 
-logger = logging.getLogger(__name__)
-
 
 class _TranslateBase:
-    """Translate documents using Hugging Face translation models."""
+    """Translate documents using Hugging Face models."""
 
     class Params(HFParams):
         model: Annotated[
@@ -26,15 +25,20 @@ class _TranslateBase:
             typer.Option(help="HuggingFace model repo ID"),
         ] = "Helsinki-NLP/opus-mt-en-de"
 
+        src_lang: Annotated[
+            str,
+            typer.Option(help="Source language name (for chat models)"),
+        ] = "English"
+
+        tgt_lang: Annotated[
+            str,
+            typer.Option(help="Target language name (for chat models)"),
+        ] = "German"
+
         max_length: Annotated[
             int,
             typer.Option(help="Maximum length of generated translation"),
         ] = 512
-
-        batch_size: Annotated[
-            int,
-            typer.Option(help="Number of chunks to translate in parallel on GPU"),
-        ] = 4
 
         encoding: Annotated[
             str,
@@ -46,56 +50,118 @@ class _TranslateBase:
 
     @staticmethod
     def setup(context: SetupContext):
-        from transformers import pipeline
+        import torch
+        from transformers import AutoConfig
 
-        device_map = context.device
-        if device_map == "auto":
-            import torch
+        logger.info("Setting up translation model...")
+        logger.info("Model: {}", context.model)
 
-            device_map = 0 if torch.cuda.is_available() else -1
+        device = context.device
+        if device == "auto":
+            device = "cuda" if torch.cuda.is_available() else "cpu"
 
-        context.pipeline = pipeline(  # type: ignore
-            "translation",
-            model=context.model,
-            revision=context.revision,
-            cache_dir=context.cache_dir or None,
-            device=device_map,
-            local_files_only=bool(context.cache_dir),
-        )
-        context.tokenizer = context.pipeline.tokenizer
+        # Detect model type
+        config = AutoConfig.from_pretrained(context.model)
+        is_seq2seq = config.is_encoder_decoder
+
+        if is_seq2seq:
+            from transformers import AutoModelForSeq2SeqLM
+
+            logger.info("Using Seq2Seq translation model")
+
+            # Use model-specific tokenizer for Marian models
+            if config.model_type == "marian":
+                from transformers import MarianTokenizer
+                context.tokenizer = MarianTokenizer.from_pretrained(
+                    context.model,
+                    revision=context.revision,
+                    cache_dir=context.cache_dir or None,
+                )
+            else:
+                from transformers import AutoTokenizer
+                context.tokenizer = AutoTokenizer.from_pretrained(
+                    context.model,
+                    revision=context.revision,
+                    cache_dir=context.cache_dir or None,
+                )
+
+            context.translation_model = AutoModelForSeq2SeqLM.from_pretrained(
+                context.model,
+                revision=context.revision,
+                cache_dir=context.cache_dir or None,
+            )
+            context.translation_model.to(device)
+            context.is_seq2seq = True
+        else:
+            from transformers import pipeline
+
+            logger.info("Using text-generation pipeline for translation")
+            context.pipeline = pipeline(
+                "text-generation",
+                model=context.model,
+                revision=context.revision,
+                cache_dir=context.cache_dir or None,
+                device=device,
+            )
+            context.tokenizer = context.pipeline.tokenizer
+            context.is_seq2seq = False
+
+        context.translation_device = device
         context.max_input_tokens = context.tokenizer.model_max_length
+
+        logger.info("Translation model ready on device: {}", device)
 
     @staticmethod
     def run(context: SetupContext, input_file: Path, output_file: Path):
+        import torch
+
+        logger.info("Translating: {}", input_file)
+
         with open(input_file, encoding=context.encoding) as f:
             text = f.read()
 
         chunks = _chunk_text(text, context.tokenizer, context.max_input_tokens)
-        results = context.pipeline(
-            chunks,
-            max_length=context.max_length,
-            batch_size=context.batch_size,
-        )
+        logger.info("Split into {} chunk(s)", len(chunks))
 
         translated_parts = []
-        for chunk, result in zip(chunks, results):
-            output = result["translation_text"]
-            n_tokens = len(
-                context.tokenizer.encode(output, add_special_tokens=False)
-            )
-            if n_tokens >= context.max_length:
-                logger.warning(
-                    "Translation may be truncated "
-                    "(hit max_length=%d) for chunk: %.50s...",
-                    context.max_length,
-                    chunk,
+        for i, chunk in enumerate(chunks):
+            if context.is_seq2seq:
+                inputs = context.tokenizer(
+                    chunk, return_tensors="pt", truncation=True, max_length=context.max_input_tokens
                 )
+                inputs = {k: v.to(context.translation_device) for k, v in inputs.items()}
+
+                with torch.no_grad():
+                    output_ids = context.translation_model.generate(
+                        **inputs,
+                        max_length=context.max_length,
+                    )
+
+                output = context.tokenizer.decode(output_ids[0], skip_special_tokens=True)
+            else:
+                prompt = (
+                    f"Translate the following text from {context.src_lang} to {context.tgt_lang}. "
+                    f"Output only the translation, nothing else.\n\n{chunk}"
+                )
+                result = context.pipeline(
+                    prompt,
+                    max_new_tokens=context.max_length,
+                    do_sample=False,
+                )
+                output = result[0]["generated_text"]
+                # Remove the prompt from the output
+                if output.startswith(prompt):
+                    output = output[len(prompt):].strip()
+
             translated_parts.append(output)
+            logger.info("Chunk {}: {} chars -> {} chars", i + 1, len(chunk), len(output))
 
         translated = " ".join(translated_parts)
 
         with open(output_file, "w", encoding="utf-8") as f:
             f.write(translated)
+
+        logger.info("Done")
 
 
 def _split_sentences(text: str) -> list[str]:

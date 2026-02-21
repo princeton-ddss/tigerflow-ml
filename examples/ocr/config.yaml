@@ -1,0 +1,8 @@
+tasks:
+  - name: ocr
+    kind: local
+    module: ./ocr.py
+    input_ext: .png
+    output_ext: .txt
+    params:
+      model: microsoft/trocr-base-printed

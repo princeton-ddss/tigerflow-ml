@@ -1,0 +1,8 @@
+tasks:
+  - name: translate
+    kind: local
+    module: ./translate.py
+    input_ext: .txt
+    output_ext: .txt
+    params:
+      model: Helsinki-NLP/opus-mt-en-de
