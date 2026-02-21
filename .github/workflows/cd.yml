@@ -17,6 +17,10 @@ jobs:
   publish:
     needs: ci
     runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      contents: write
+      id-token: write
     steps:
       - uses: actions/checkout@v4
 
@@ -39,10 +43,11 @@ jobs:
           git commit -m "Update package version" || echo "Package version up to date"
           git push origin HEAD:main
 
-      - name: Build and publish the package
-        run: |
-          uv build
-          uv publish --token ${{ secrets.PYPI_API_TOKEN }}
+      - name: Build the package
+        run: uv build
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
 
   docs:
     needs: publish
