@@ -59,7 +59,7 @@ plugins:
 
 nav:
   - Home: index.md
-  - Tasks:
+  - Task Guide:
       - OCR: tasks/ocr.md
       - Translation: tasks/translate.md
       - Transcription: tasks/transcribe.md
