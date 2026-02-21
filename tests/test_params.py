@@ -7,18 +7,26 @@ from tigerflow_ml.text.translate._base import _TranslateBase
 
 
 def test_ocr_defaults():
+    from tigerflow_ml.text.ocr._base import OutputFormat
+
     p = _OCRBase.Params()
-    assert p.model == "microsoft/trocr-base-printed"
-    assert p.max_length == 512
+    assert p.model == "stepfun-ai/GOT-OCR-2.0-hf"
+    assert p.max_length == 4096
     assert p.batch_size == 4
+    assert p.output_format == OutputFormat.TEXT
     assert p.device == "auto"
 
 
 def test_translate_defaults():
     p = _TranslateBase.Params()
-    assert p.model == "Helsinki-NLP/opus-mt-en-de"
+    assert p.model == "google/madlad400-3b-mt"
+    assert p.source_lang == "en"
+    assert p.target_lang == "de"
     assert p.max_length == 512
     assert p.encoding == "utf-8-sig"
+    assert "{text}" in p.prompt
+    assert "{source_lang}" in p.prompt
+    assert "{target_lang}" in p.prompt
 
 
 def test_transcribe_defaults():

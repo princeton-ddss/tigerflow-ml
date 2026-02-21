@@ -1,17 +1,19 @@
 # OCR
 
-Extract text from images and PDFs using HuggingFace image-to-text models.
+Extract text from images and PDFs using HuggingFace image-text-to-text models.
 
 ## Parameters
 
-| Parameter      | Default                        | Description                                    |
-|----------------|--------------------------------|------------------------------------------------|
-| `--model`      | `microsoft/trocr-base-printed` | HuggingFace model repo ID                      |
-| `--revision`   | `main`                         | Model revision (branch, tag, or commit hash)   |
-| `--cache-dir`  |                                | HuggingFace cache directory for model files    |
-| `--device`     | `auto`                         | Device to use (`cuda`, `cpu`, or `auto`)       |
-| `--max-length` | `512`                          | Maximum number of tokens to generate per image |
-| `--batch-size` | `4`                            | Number of images to process in parallel on GPU |
+| Parameter         | Default                       | Description                                    |
+|-------------------|-------------------------------|------------------------------------------------|
+| `--model`         | `stepfun-ai/GOT-OCR-2.0-hf`  | HuggingFace model repo ID                      |
+| `--revision`      | `main`                        | Model revision (branch, tag, or commit hash)   |
+| `--cache-dir`     |                               | HuggingFace cache directory for model files    |
+| `--device`        | `auto`                        | Device to use (`cuda`, `cpu`, or `auto`)       |
+| `--output-format` | `text`                        | Output format: `text`, `markdown`, or `json`   |
+| `--max-length`    | `4096`                        | Maximum number of tokens to generate per image |
+| `--batch-size`    | `4`                           | Number of images to process in parallel on GPU |
+| `--prompt`        | `Extract all text from this image.` | Prompt for image-text-to-text models     |
 
 ## Supported Input Formats
 
@@ -20,29 +22,91 @@ Extract text from images and PDFs using HuggingFace image-to-text models.
 
 ## Output Format
 
-Plain text. For multi-page inputs (PDFs), pages are separated by form-feed characters (`\f`).
+Depends on `--output-format`:
+
+- **`text`** (default) — Plain text. For multi-page inputs, pages are separated by form-feed characters (`\f`).
+- **`markdown`** — Formatted output preserving tables, equations, and document structure as markdown/LaTeX.
+- **`json`** — Structured JSON with per-page text: `{"pages": [{"page": 1, "text": "..."}, ...]}`.
 
 ## Models
 
-Any HuggingFace [`image-to-text`](https://huggingface.co/models?pipeline_tag=image-to-text) model is supported.
-
-### Printed text
+Any HuggingFace [`image-text-to-text`](https://huggingface.co/models?pipeline_tag=image-text-to-text) model is supported. The [GOT-OCR](https://huggingface.co/stepfun-ai/GOT-OCR-2.0-hf) model is recommended for general-purpose document OCR.
 
 | Model | Params | Description | License |
 |-------|--------|-------------|---------|
-| [`microsoft/trocr-base-printed`](https://huggingface.co/microsoft/trocr-base-printed) (default) | 334M | General-purpose printed text recognition | MIT |
-| [`microsoft/trocr-large-printed`](https://huggingface.co/microsoft/trocr-large-printed) | 558M | Higher accuracy for printed text | MIT |
+| [`stepfun-ai/GOT-OCR-2.0-hf`](https://huggingface.co/stepfun-ai/GOT-OCR-2.0-hf) (default) | 600M | Full-page OCR with format preservation | Apache 2.0 |
 
-### Handwritten text
+!!! tip
 
-| Model | Params | Description | License |
-|-------|--------|-------------|---------|
-| [`microsoft/trocr-base-handwritten`](https://huggingface.co/microsoft/trocr-base-handwritten) | 334M | General-purpose handwriting recognition | MIT |
-| [`microsoft/trocr-large-handwritten`](https://huggingface.co/microsoft/trocr-large-handwritten) | 558M | Higher accuracy for handwritten text | MIT |
+    GOT-OCR supports plain text and formatted (markdown/LaTeX) output. Use
+    `--output-format markdown` to preserve tables, equations, and document structure.
 
 ## Examples
 
-### Extract text from scanned images
+### Extract text from a handwritten document
+
+=== "Config"
+
+    ```yaml title="config.yaml"
+    tasks:
+      - name: ocr
+        kind: local
+        module: tigerflow_ml.text.ocr.local
+        input_ext: .jpg
+        output_ext: .txt  # or .md, .json
+        params:
+          # output_format: text       # (default) plain text
+          # output_format: markdown   # formatted markdown/LaTeX
+          # output_format: json       # structured JSON with pages
+    ```
+
+=== "Input"
+
+    ![1820 handwritten census form](../assets/img/1820-handwritten-census-form-geauga-oh.jpg)
+
+=== "Output (.txt)"
+
+    ```text title="census-form.txt"
+    The number of Persons within the Division taken by Charles C. Paine
+    consisting of part of Geauga County, Ohio, and also the number of
+    persons within the Division Allotted to Eleazer Paine consisting of
+    the residue of said County, appears in a schedule here unto annexed,
+    and by us subscribed this 3rd day of December in the year one
+    thousand eight hundred & twenty.
+        Charles C. Paine    Assistants to the
+        Eleazer Paine       Marshall of Ohio
+
+    Schedule of the whole number of Persons in the County of Geauga
+    ...
+    ```
+
+=== "Output (.md)"
+
+    ```markdown title="census-form.md"
+    The number of Persons within the Division taken by **Charles C. Paine**
+    consisting of part of **Geauga County, Ohio**, and also the number of
+    persons within the Division Allotted to **Eleazer Paine** consisting of
+    the residue of said County...
+
+    *Schedule of the whole number of Persons in the County of Geauga*
+
+    ...
+    ```
+
+=== "Output (.json)"
+
+    ```json title="census-form.json"
+    {
+      "pages": [
+        {
+          "page": 1,
+          "text": "The number of Persons within the Division taken by Charles C. Paine consisting of part of Geauga County, Ohio..."
+        }
+      ]
+    }
+    ```
+
+### Extract text from a document with tables
 
 === "Config"
 
@@ -52,24 +116,70 @@ Any HuggingFace [`image-to-text`](https://huggingface.co/models?pipeline_tag=ima
         kind: local
         module: tigerflow_ml.text.ocr.local
         input_ext: .png
-        output_ext: .txt
+        output_ext: .md
+        params:
+          output_format: markdown
     ```
 
 === "Input"
 
-    A scanned image of a printed document, e.g. `invoice.png`.
+    ![Statistical Abstract of the United States](../assets/img/statistical-abstract-of-the-united-states.png)
 
-=== "Output"
+=== "Output (.txt)"
 
-    ```text title="invoice.txt"
-    INVOICE
-    Date: 2025-01-15
-    Invoice Number: INV-2025-0042
+    ```text title="abstract.txt"
+    STATISTICAL ABSTRACT OF THE UNITED STATES
 
-    Bill To:
-    Jane Doe
-    123 Main Street
-    Princeton, NJ 08544
+    1. AREA AND POPULATION
+
+    No. 1.—TERRITORIAL EXPANSION OF CONTINENTAL UNITED STATES AND
+    ACQUISITIONS OF OUTLYING TERRITORIES AND POSSESSIONS
+
+    ACCESSION    Date    Gross area, square miles
+    Aggregate (1930)    3,738,395
+    Continental United States    3,026,789
+    Territory in 1790    892,135
+    Louisiana Purchase    1803    827,987
+    Florida    1819    58,666
+    ...
+    ```
+
+=== "Output (.md)"
+
+    ```markdown title="abstract.md"
+    # STATISTICAL ABSTRACT OF THE UNITED STATES
+
+    ## 1. AREA AND POPULATION
+
+    **No. 1.—Territorial Expansion of Continental United States and
+    Acquisitions of Outlying Territories and Possessions**
+
+    | ACCESSION | Date | Gross area, square miles |
+    |---|---|---|
+    | Aggregate (1930) | | 3,738,395 |
+    | Continental United States | | 3,026,789 |
+    | Territory in 1790 | | 892,135 |
+    | Louisiana Purchase | 1803 | 827,987 |
+    | Florida | 1819 | 58,666 |
+    | By treaty with Spain | 1819 | 13,435 |
+    | Texas | 1845 | 393,196 |
+    | Oregon | 1846 | 286,541 |
+    | Mexican Cession | 1848 | 529,189 |
+    | Gadsden Purchase | 1853 | 29,670 |
+    ...
+    ```
+
+=== "Output (.json)"
+
+    ```json title="abstract.json"
+    {
+      "pages": [
+        {
+          "page": 1,
+          "text": "STATISTICAL ABSTRACT OF THE UNITED STATES\n\n1. AREA AND POPULATION\n\nNo. 1.—TERRITORIAL EXPANSION OF CONTINENTAL UNITED STATES..."
+        }
+      ]
+    }
     ```
 
 ### Extract text from a multi-page PDF
@@ -83,27 +193,67 @@ Any HuggingFace [`image-to-text`](https://huggingface.co/models?pipeline_tag=ima
         module: tigerflow_ml.text.ocr.local
         input_ext: .pdf
         output_ext: .txt
-        params:
-          batch_size: 8
     ```
 
 === "Input"
 
-    A scanned PDF document, e.g. `report.pdf` with 3 pages.
+    A multi-page PDF document, e.g. [`2602.15607v1.pdf`](../assets/img/2602.15607v1.pdf).
 
-=== "Output"
+=== "Output (.txt)"
 
-    ```text title="report.txt"
-    Page one text content here...
+    ```text title="2602.15607v1.txt"
+    [Page 1 text...]
     ␌
-    Page two text content here...
+    [Page 2 text...]
     ␌
-    Page three text content here...
+    ...
     ```
 
     Each page is separated by a form-feed character (`\f`, shown as `␌`).
 
-!!! tip
+=== "Output (.md)"
 
-    For large PDFs with many pages, increase `--batch-size` to process more pages
-    in parallel on the GPU.
+    ```markdown title="2602.15607v1.md"
+    [Page 1 formatted text...]
+    ␌
+    [Page 2 formatted text...]
+    ␌
+    ...
+    ```
+
+=== "Output (.json)"
+
+    ```json title="2602.15607v1.json"
+    {
+      "pages": [
+        {
+          "page": 1,
+          "text": "..."
+        },
+        {
+          "page": 2,
+          "text": "..."
+        }
+      ]
+    }
+    ```
+
+### Run on HPC with Slurm
+
+For bulk OCR across large document collections, use the Slurm variant to distribute
+work across compute nodes:
+
+```yaml title="config.yaml"
+tasks:
+  - name: ocr
+    kind: slurm
+    module: tigerflow_ml.text.ocr.slurm
+    input_ext: .pdf
+    output_ext: .txt
+    max_workers: 4
+    worker_resources:
+      cpus: 2
+      gpus: 1
+      memory: 16G
+      time: 04:00:00
+```

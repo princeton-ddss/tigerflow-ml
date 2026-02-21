@@ -1,8 +1,8 @@
 """
 Translate text documents using Hugging Face models.
 
-Supports both Seq2Seq translation models (Helsinki-NLP/opus-mt-*) and
-chat/causal LMs with a translation prompt.
+Supports Seq2Seq translation models (MADLAD-400, Helsinki-NLP/opus-mt-*, NLLB)
+and chat/causal LMs with a translation prompt.
 """
 
 import re
@@ -15,6 +15,11 @@ from tigerflow.utils import SetupContext
 
 from tigerflow_ml.params import HFParams
 
+_DEFAULT_PROMPT = (
+    "Translate the following text from {source_lang} to {target_lang}. "
+    "Output only the translation, nothing else.\n\n{text}"
+)
+
 
 class _TranslateBase:
     """Translate documents using Hugging Face models."""
@@ -23,22 +28,30 @@ class _TranslateBase:
         model: Annotated[
             str,
             typer.Option(help="HuggingFace model repo ID"),
-        ] = "Helsinki-NLP/opus-mt-en-de"
+        ] = "google/madlad400-3b-mt"
 
-        src_lang: Annotated[
+        source_lang: Annotated[
             str,
-            typer.Option(help="Source language name (for chat models)"),
-        ] = "English"
+            typer.Option(help="Source language code (e.g. 'en', 'de', 'zh')"),
+        ] = "en"
 
-        tgt_lang: Annotated[
+        target_lang: Annotated[
             str,
-            typer.Option(help="Target language name (for chat models)"),
-        ] = "German"
+            typer.Option(help="Target language code (e.g. 'de', 'en', 'fr')"),
+        ] = "de"
 
         max_length: Annotated[
             int,
-            typer.Option(help="Maximum length of generated translation"),
+            typer.Option(help="Maximum number of tokens to generate per chunk"),
         ] = 512
+
+        prompt: Annotated[
+            str,
+            typer.Option(
+                help="Prompt template for text-generation models. "
+                "Use {source_lang}, {target_lang}, and {text} as placeholders."
+            ),
+        ] = _DEFAULT_PROMPT
 
         encoding: Annotated[
             str,
@@ -72,6 +85,7 @@ class _TranslateBase:
             # Use model-specific tokenizer for Marian models
             if config.model_type == "marian":
                 from transformers import MarianTokenizer
+
                 context.tokenizer = MarianTokenizer.from_pretrained(
                     context.model,
                     revision=context.revision,
@@ -79,6 +93,7 @@ class _TranslateBase:
                 )
             else:
                 from transformers import AutoTokenizer
+
                 context.tokenizer = AutoTokenizer.from_pretrained(
                     context.model,
                     revision=context.revision,
@@ -106,7 +121,21 @@ class _TranslateBase:
             context.tokenizer = context.pipeline.tokenizer
             context.is_seq2seq = False
 
+            # Account for prompt overhead when chunking
+            template_without_text = context.prompt.replace("{text}", "").format(
+                source_lang=context.source_lang,
+                target_lang=context.target_lang,
+            )
+            prompt_overhead = len(
+                context.tokenizer.encode(template_without_text, add_special_tokens=False)
+            )
+            context.max_input_tokens = context.tokenizer.model_max_length - prompt_overhead
+            context.translation_device = device
+            logger.info("Translation model ready on device: {}", device)
+            return
+
         context.translation_device = device
+        context.uses_lang_prefix = "madlad" in context.model.lower()
         context.max_input_tokens = context.tokenizer.model_max_length
 
         logger.info("Translation model ready on device: {}", device)
@@ -120,16 +149,34 @@ class _TranslateBase:
         with open(input_file, encoding=context.encoding) as f:
             text = f.read()
 
-        chunks = _chunk_text(text, context.tokenizer, context.max_input_tokens)
+        # Account for language prefix tokens in chunk budget
+        max_tokens = context.max_input_tokens
+        if context.is_seq2seq and getattr(context, "uses_lang_prefix", False):
+            prefix = f"<2{context.target_lang}> "
+            prefix_tokens = len(
+                context.tokenizer.encode(prefix, add_special_tokens=False)
+            )
+            max_tokens -= prefix_tokens
+
+        chunks = _chunk_text(text, context.tokenizer, max_tokens)
         logger.info("Split into {} chunk(s)", len(chunks))
 
         translated_parts = []
         for i, chunk in enumerate(chunks):
             if context.is_seq2seq:
+                input_text = chunk
+                if getattr(context, "uses_lang_prefix", False):
+                    input_text = f"<2{context.target_lang}> {chunk}"
+
                 inputs = context.tokenizer(
-                    chunk, return_tensors="pt", truncation=True, max_length=context.max_input_tokens
+                    input_text,
+                    return_tensors="pt",
+                    truncation=True,
+                    max_length=context.max_input_tokens,
                 )
-                inputs = {k: v.to(context.translation_device) for k, v in inputs.items()}
+                inputs = {
+                    k: v.to(context.translation_device) for k, v in inputs.items()
+                }
 
                 with torch.no_grad():
                     output_ids = context.translation_model.generate(
@@ -137,11 +184,14 @@ class _TranslateBase:
                         max_length=context.max_length,
                     )
 
-                output = context.tokenizer.decode(output_ids[0], skip_special_tokens=True)
+                output = context.tokenizer.decode(
+                    output_ids[0], skip_special_tokens=True
+                )
             else:
-                prompt = (
-                    f"Translate the following text from {context.src_lang} to {context.tgt_lang}. "
-                    f"Output only the translation, nothing else.\n\n{chunk}"
+                prompt = context.prompt.format(
+                    source_lang=context.source_lang,
+                    target_lang=context.target_lang,
+                    text=chunk,
                 )
                 result = context.pipeline(
                     prompt,
@@ -151,10 +201,12 @@ class _TranslateBase:
                 output = result[0]["generated_text"]
                 # Remove the prompt from the output
                 if output.startswith(prompt):
-                    output = output[len(prompt):].strip()
+                    output = output[len(prompt) :].strip()
 
             translated_parts.append(output)
-            logger.info("Chunk {}: {} chars -> {} chars", i + 1, len(chunk), len(output))
+            logger.info(
+                "Chunk {}: {} chars -> {} chars", i + 1, len(chunk), len(output)
+            )
 
         translated = " ".join(translated_parts)
 
