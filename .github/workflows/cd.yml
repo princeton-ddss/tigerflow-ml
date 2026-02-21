@@ -38,7 +38,8 @@ jobs:
 
       - name: Sync version with tag name
         run: |
-          uv version ${{ github.event.release.tag_name }}
+          VERSION=$(echo "${{ github.event.release.tag_name }}" | sed 's/^v//')
+          uv version $VERSION
           git add .
           git commit -m "Update package version" || echo "Package version up to date"
           git push origin HEAD:main
