@@ -97,8 +97,8 @@ class _DetectBase:
             pipeline_type,
             model=context.model,
             revision=context.revision,
-            cache_dir=context.cache_dir or None,
             device=device,
+            model_kwargs={"cache_dir": context.cache_dir or None},
         )
         context.is_zero_shot = is_zero_shot
         context.labels_list = (

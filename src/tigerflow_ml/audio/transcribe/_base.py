@@ -78,7 +78,7 @@ class _TranscribeBase:
     @staticmethod
     def setup(context: SetupContext):
         import torch
-        from transformers import pipeline
+        from transformers import AutoFeatureExtractor, pipeline
 
         logger.info("Setting up transcription pipeline...")
         logger.info("Model: {}", context.model)
@@ -90,13 +90,22 @@ class _TranscribeBase:
         torch_dtype = torch.float16 if torch.cuda.is_available() else torch.float32
         logger.info("Device: {}, dtype: {}", device_map, torch_dtype)
 
+        cache_dir = context.cache_dir or None
+
+        feature_extractor = AutoFeatureExtractor.from_pretrained(
+            context.model,
+            revision=context.revision,
+            cache_dir=cache_dir,
+        )
+
         context.pipeline = pipeline(
             "automatic-speech-recognition",
             model=context.model,
             revision=context.revision,
-            cache_dir=context.cache_dir or None,
             device=device_map,
             torch_dtype=torch_dtype,
+            model_kwargs={"cache_dir": cache_dir},
+            feature_extractor=feature_extractor,
         )
         logger.info("Pipeline ready")
 

@@ -114,8 +114,8 @@ class _TranslateBase:
                 "text-generation",
                 model=context.model,
                 revision=context.revision,
-                cache_dir=context.cache_dir or None,
                 device=device,
+                model_kwargs={"cache_dir": context.cache_dir or None},
             )
             context.tokenizer = context.pipeline.tokenizer
             context.is_seq2seq = False
