@@ -71,8 +71,8 @@ class _OCRBase:
             "image-text-to-text",
             model=context.model,
             revision=context.revision,
-            cache_dir=context.cache_dir or None,
             device=device,
+            model_kwargs={"cache_dir": context.cache_dir or None},
         )
         logger.info("OCR ready on device: {}", device)
 
