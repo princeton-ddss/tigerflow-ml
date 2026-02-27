@@ -93,14 +93,13 @@ class _OCRBase:
                 {
                     "role": "user",
                     "content": [
-                        {"type": "image"},
+                        {"type": "image", "image": image},
                         {"type": "text", "text": prompt},
                     ],
                 }
             ]
             result = context.pipeline(
                 text=messages,
-                images=[image],
                 max_new_tokens=context.max_length,
             )
             text = result[0]["generated_text"][-1]["content"]
