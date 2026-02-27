@@ -89,12 +89,21 @@ class _OCRBase:
 
         pages = []
         for i, image in enumerate(images):
+            messages = [
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "image"},
+                        {"type": "text", "text": prompt},
+                    ],
+                }
+            ]
             result = context.pipeline(
-                image,
-                prompt=prompt,
+                text=messages,
+                images=[image],
                 max_new_tokens=context.max_length,
             )
-            text = result[0].get("generated_text", "")
+            text = result[0]["generated_text"][-1]["content"]
             pages.append(text)
             logger.info("Page {}: {} chars", i + 1, len(text))
 
