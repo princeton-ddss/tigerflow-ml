@@ -73,7 +73,11 @@ class _TranslateBase:
             device = "cuda" if torch.cuda.is_available() else "cpu"
 
         # Detect model type
-        config = AutoConfig.from_pretrained(context.model)
+        config = AutoConfig.from_pretrained(
+            context.model,
+            revision=context.revision,
+            cache_dir=context.cache_dir or None,
+        )
         is_seq2seq = config.is_encoder_decoder
 
         if is_seq2seq:
