@@ -188,7 +188,7 @@ class _TranslateBase:
                 with torch.no_grad():
                     output_ids = context.translation_model.generate(
                         **inputs,
-                        max_length=context.max_length,
+                        max_new_tokens=context.max_length,
                     )
 
                 output = context.tokenizer.decode(
