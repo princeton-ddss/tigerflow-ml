@@ -34,6 +34,9 @@ jobs:
         with:
           version: ${{ env.UV_VERSION }}
           enable-cache: true
+          cache-dependency-glob: |
+            uv.lock
+            pyproject.toml
           python-version-file: ".python-version"
 
       - name: Sync version with tag name
@@ -71,6 +74,9 @@ jobs:
         with:
           version: ${{ env.UV_VERSION }}
           enable-cache: true
+          cache-dependency-glob: |
+            uv.lock
+            pyproject.toml
           python-version-file: ".python-version"
 
       - name: Install dependencies

@@ -4,9 +4,17 @@ on:
   push:
     branches:
       - main
+    paths-ignore:
+      - "docs/**"
+      - "*.md"
+      - LICENSE
   pull_request:
     branches:
       - main
+    paths-ignore:
+      - "docs/**"
+      - "*.md"
+      - LICENSE
   workflow_call:
 
 concurrency:
@@ -41,6 +49,7 @@ jobs:
   test:
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         python-version:
           - "3.10"
@@ -67,7 +76,7 @@ jobs:
         run: uv run pytest tests
 
   build:
-    needs: test
+    needs: [lint, test]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -85,8 +94,14 @@ jobs:
       - name: Build the package
         run: uv build
 
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
   docs:
-    needs: test
+    needs: [lint, test]
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
     permissions:
