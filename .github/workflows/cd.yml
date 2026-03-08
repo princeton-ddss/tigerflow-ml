@@ -34,15 +34,24 @@ jobs:
         with:
           version: ${{ env.UV_VERSION }}
           enable-cache: true
+          cache-dependency-glob: |
+            uv.lock
+            pyproject.toml
           python-version-file: ".python-version"
 
-      - name: Sync version with tag name
+      - name: Sync version with tag
         run: |
-          VERSION=$(echo "${{ github.event.release.tag_name }}" | sed 's/^v//')
-          uv version $VERSION
-          git add .
-          git commit -m "Update package version" || echo "Package version up to date"
-          git push origin HEAD:main
+          TAG_VERSION=$(echo "${{ github.event.release.tag_name }}" | sed 's/^v//')
+          PKG_VERSION=$(uv version)
+          if [ "$TAG_VERSION" != "$PKG_VERSION" ]; then
+            echo "::warning::Syncing version: pyproject.toml has '$PKG_VERSION', updating to '$TAG_VERSION' from tag"
+            uv version $TAG_VERSION
+            git add pyproject.toml
+            git commit -m "Bump version to $TAG_VERSION"
+            git push origin HEAD:main
+            git tag -f ${{ github.event.release.tag_name }}
+            git push origin ${{ github.event.release.tag_name }} --force
+          fi
 
       - name: Build the package
         run: uv build
@@ -71,6 +80,9 @@ jobs:
         with:
           version: ${{ env.UV_VERSION }}
           enable-cache: true
+          cache-dependency-glob: |
+            uv.lock
+            pyproject.toml
           python-version-file: ".python-version"
 
       - name: Install dependencies
