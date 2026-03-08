@@ -25,6 +25,20 @@ env:
   UV_VERSION: "0.7.15"
 
 jobs:
+  lock:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv and set up Python
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: ${{ env.UV_VERSION }}
+          python-version-file: ".python-version"
+
+      - name: Check lockfile is up to date
+        run: uv lock --check
+
   lint:
     runs-on: ubuntu-latest
     steps:
