@@ -19,15 +19,9 @@ jobs:
     runs-on: ubuntu-latest
     environment: pypi
     permissions:
-      contents: write
       id-token: write
     steps:
       - uses: actions/checkout@v4
-
-      - name: Configure Git credentials
-        run: |
-          git config user.name github-actions[bot]
-          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
 
       - name: Install uv and set up Python
         uses: astral-sh/setup-uv@v5
@@ -39,13 +33,14 @@ jobs:
             pyproject.toml
           python-version-file: ".python-version"
 
-      - name: Sync version with tag name
+      - name: Verify version matches tag
         run: |
-          VERSION=$(echo "${{ github.event.release.tag_name }}" | sed 's/^v//')
-          uv version $VERSION
-          git add .
-          git commit -m "Update package version" || echo "Package version up to date"
-          git push origin HEAD:main
+          TAG_VERSION=$(echo "${{ github.event.release.tag_name }}" | sed 's/^v//')
+          PKG_VERSION=$(uv version)
+          if [ "$TAG_VERSION" != "$PKG_VERSION" ]; then
+            echo "::error::Version mismatch: git tag is '$TAG_VERSION' but pyproject.toml has '$PKG_VERSION'"
+            exit 1
+          fi
 
       - name: Build the package
         run: uv build
