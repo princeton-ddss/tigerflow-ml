@@ -9,24 +9,15 @@ import re
 from pathlib import Path
 from typing import Annotated
 from collections.abc import Callable
-
-
 from transformers import PreTrainedTokenizerBase, AutoTokenizer
-
 import typer
 from tigerflow.logconfig import logger
 from tigerflow.utils import SetupContext
-
 from tigerflow_ml.params import HFParams
-
 from .chunking import MAX_CHUNK_TOKENS, chunk_text_by_tokens, count_tokens
 from .translator import HuggingFaceTranslator
 from .utils import SkippedFileError, TranslationError, read_file_with_fallback
 from .detection import LANGUAGES, detect_language, get_language_name
-
-# from __future__ import annotations
-# import traceback
-
 
 _DEFAULT_PROMPT = (
     "Translate the following text from {source_lang} to {target_lang}. "
@@ -99,16 +90,11 @@ class _TranslateBase:
         
     @staticmethod
     def run(context: SetupContext, input_file: Path, output_file: Path):
-   
         try:
-            #translate input_file and write to output_file
             _translate_file(context.translator, input_file, output_file, context.source_lang, context.target_lang, logger.info)
         except SkippedFileError as e:
             logger.warning(f"  Skipping: {e}")
-        except TranslationError as e:
-            logger.error(f"  Error: {e}")
-        except Exception as e:
-            logger.error(f"  Error during translation: {e}")
+            return
 
         logger.info("Translation complete!")
 
@@ -166,7 +152,7 @@ def _translate_file(
     source_lang: str | None = None,
     target_lang: str = "en",
     on_progress: Callable[..., None] = print,
-) -> None:
+) -> str:
     """
     Translate a single file.
 
