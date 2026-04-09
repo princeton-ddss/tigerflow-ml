@@ -38,9 +38,13 @@ def _import_task(module_path: str):
     classes = [
         v
         for v in vars(module).values()
-        if isinstance(v, type) and issubclass(v, (LocalTask, SlurmTask)) and v not in (LocalTask, SlurmTask)
+        if isinstance(v, type)
+        and issubclass(v, (LocalTask, SlurmTask))
+        and v not in (LocalTask, SlurmTask)
     ]
-    assert len(classes) == 1, f"Expected 1 task class in {module_path}, found {len(classes)}"
+    assert len(classes) == 1, (
+        f"Expected 1 task class in {module_path}, found {len(classes)}"
+    )
     return classes[0]
 
 

@@ -3,6 +3,7 @@
 import json
 
 import pytest
+
 from tigerflow_ml.audio.transcribe._base import OutputFormat, _TranscribeBase
 
 _context = None
@@ -20,14 +21,18 @@ def test_setup(make_context):
 @pytest.mark.dependency()
 def test_setup_json_format(make_context):
     global _json_context
-    _json_context = make_context(_TranscribeBase.Params, "transcribe", output_format=OutputFormat.JSON)
+    _json_context = make_context(
+        _TranscribeBase.Params, "transcribe", output_format=OutputFormat.JSON
+    )
     _TranscribeBase.setup(_json_context)
 
 
 @pytest.mark.dependency()
 def test_setup_srt_format(make_context):
     global _srt_context
-    _srt_context = make_context(_TranscribeBase.Params, "transcribe", output_format=OutputFormat.SRT)
+    _srt_context = make_context(
+        _TranscribeBase.Params, "transcribe", output_format=OutputFormat.SRT
+    )
     _TranscribeBase.setup(_srt_context)
 
 

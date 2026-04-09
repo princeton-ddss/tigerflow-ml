@@ -3,6 +3,7 @@
 import json
 
 import pytest
+
 from tigerflow_ml.text.ocr._base import OutputFormat, _OCRBase
 
 _context = None
@@ -19,7 +20,9 @@ def test_setup(make_context):
 @pytest.mark.dependency()
 def test_setup_json_format(make_context):
     global _json_context
-    _json_context = make_context(_OCRBase.Params, "ocr", output_format=OutputFormat.JSON)
+    _json_context = make_context(
+        _OCRBase.Params, "ocr", output_format=OutputFormat.JSON
+    )
     _OCRBase.setup(_json_context)
 
 

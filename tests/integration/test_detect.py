@@ -3,6 +3,7 @@
 import json
 
 import pytest
+
 from tigerflow_ml.image.detect._base import _DetectBase
 
 _context = None

@@ -1,6 +1,7 @@
 """Integration tests for Translate task."""
 
 import pytest
+
 from tigerflow_ml.text.translate._base import _TranslateBase
 
 _context = None
