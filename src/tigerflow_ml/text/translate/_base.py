@@ -122,6 +122,9 @@ class _TranslateBase:
                 model_kwargs={"cache_dir": context.cache_dir or None},
             )
             context.tokenizer = context.pipeline.tokenizer
+            if context.tokenizer is None:
+                msg = f"Model {context.model!r} does not have a tokenizer"
+                raise ValueError(msg)
             context.is_seq2seq = False
 
             # Account for prompt overhead when chunking
@@ -130,12 +133,12 @@ class _TranslateBase:
                 target_lang=context.target_lang,
             )
             prompt_overhead = len(
-                context.tokenizer.encode(  # type: ignore[union-attr]
+                context.tokenizer.encode(
                     template_without_text, add_special_tokens=False
                 )
             )
             context.max_input_tokens = (
-                context.tokenizer.model_max_length - prompt_overhead  # type: ignore[union-attr]
+                context.tokenizer.model_max_length - prompt_overhead
             )
             context.translation_device = device
             logger.info("Translation model ready on device: {}", device)
@@ -143,7 +146,10 @@ class _TranslateBase:
 
         context.translation_device = device
         context.uses_lang_prefix = "madlad" in context.model.lower()
-        context.max_input_tokens = context.tokenizer.model_max_length  # type: ignore[union-attr]
+        if context.tokenizer is None:
+            msg = f"Model {context.model!r} does not have a tokenizer"
+            raise ValueError(msg)
+        context.max_input_tokens = context.tokenizer.model_max_length
 
         logger.info("Translation model ready on device: {}", device)
 
