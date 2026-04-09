@@ -36,3 +36,4 @@ site/
 examples/*/.cache/
 examples/*/input/
 examples/*/output/
+*.pyc
