@@ -32,6 +32,7 @@ dependencies = [
     "sentencepiece",
     "opencv-python-headless",
     "timm",
+    "langdetect>=1.0.9",
 ]
 
 [project.urls]
