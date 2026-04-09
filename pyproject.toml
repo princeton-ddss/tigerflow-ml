@@ -54,6 +54,7 @@ docs = [
 ]
 test = [
     "pytest>=9.0.2",
+    "pytest-dependency>=0.6",
 ]
 
 [project.entry-points."tigerflow.tasks"]
@@ -85,3 +86,7 @@ include = ["src"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+markers = [
+    "integration: run on HPC cluster with real models and test data",
+]
+addopts = "-m 'not integration'"
