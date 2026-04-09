@@ -1,13 +1,32 @@
 """Fixtures for integration tests.
 
-Requires TIGERFLOW_ML_TEST_DIR environment variable pointing to a directory with:
+Running
+-------
+Integration tests are gated by the TIGERFLOW_ML_TEST_DIR environment variable.
+Without it, they are skipped automatically. To run them::
+
+    TIGERFLOW_ML_TEST_DIR=/path/to/test/data uv run pytest tests
+
+Test data directory
+-------------------
+TIGERFLOW_ML_TEST_DIR should point to a directory with sample files for each task::
 
     $TIGERFLOW_ML_TEST_DIR/
     ├── config.json    # optional, overrides default_config.json
-    ├── ocr/           # sample files directly in task dirs
-    ├── translate/
-    ├── transcribe/
-    └── detect/
+    ├── ocr/           # e.g. sample.pdf, sample.png
+    ├── translate/     # e.g. sample.txt
+    ├── transcribe/    # e.g. sample.wav
+    └── detect/        # e.g. sample.jpg
+
+Configuration
+-------------
+Default model and device settings are in ``default_config.json``. To override
+per-machine, place a ``config.json`` in the test data directory. Keys are merged
+recursively, so you only need to specify what differs.
+
+Models should be downloaded or cached before running. On HPC, set ``cache_dir``
+in your config or export ``HF_HOME`` / ``HUGGINGFACE_HUB_CACHE`` to point at a
+shared or scratch location.
 """
 
 import json
