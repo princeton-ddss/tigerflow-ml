@@ -64,17 +64,20 @@ class HuggingFaceTranslator:
 
         if not torch.cuda.is_available():
             return 1
-        free_bytes, _ = torch.cuda.mem_get_info()
-        cfg = self.pipe.model.config
-        if hasattr(cfg, "text_config"):
-            cfg = cfg.text_config
-        n_layers = cfg.num_hidden_layers
-        n_kv_heads = getattr(cfg, "num_key_value_heads", cfg.num_attention_heads)
-        head_dim = getattr(cfg, "head_dim", cfg.hidden_size // cfg.num_attention_heads)
-        # KV cache per sequence: 2 (K+V) * layers * kv_heads * head_dim * tokens * 2 bytes (bfloat16)
-        # 1.5x overhead for activations and intermediate buffers
-        per_seq_bytes = int(2 * n_layers * n_kv_heads * head_dim * self.max_chunk_tokens * 2 * 1.5)
-        return max(1, min(int(free_bytes // per_seq_bytes), 256))
+        try:
+            free_bytes, _ = torch.cuda.mem_get_info()
+            cfg = self.pipe.model.config
+            if hasattr(cfg, "text_config"):
+                cfg = cfg.text_config
+            n_layers = cfg.num_hidden_layers
+            n_kv_heads = getattr(cfg, "num_key_value_heads", cfg.num_attention_heads)
+            head_dim = getattr(cfg, "head_dim", cfg.hidden_size // cfg.num_attention_heads)
+            # KV cache per sequence: 2 (K+V) * layers * kv_heads * head_dim * tokens * 2 bytes (bfloat16)
+            # 1.5x overhead for activations and intermediate buffers
+            per_seq_bytes = int(2 * n_layers * n_kv_heads * head_dim * self.max_chunk_tokens * 2 * 1.5)
+            return max(1, min(int(free_bytes // per_seq_bytes), 256))
+        except:
+            return 1
 
     def _build_messages(self, text: str, source_lang: str, target_lang: str) -> list[dict[str, object]]:
         """Build the message payload for a single chunk."""
