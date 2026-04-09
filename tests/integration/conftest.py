@@ -132,10 +132,12 @@ def make_context(config):
         params = params_cls()
         ctx = SetupContext()
 
-        # Apply param defaults
-        for key, value in vars(params).items():
-            if not key.startswith("_"):
-                setattr(ctx, key, value)
+        # Apply param defaults (class-level annotations, not in __dict__).
+        # Walk MRO to pick up inherited fields from HFParams.
+        for cls in params_cls.__mro__:
+            for key in getattr(cls, "__annotations__", {}):
+                if not hasattr(ctx, key):
+                    setattr(ctx, key, getattr(params, key))
 
         # Apply global config
         if config.get("cache_dir"):
