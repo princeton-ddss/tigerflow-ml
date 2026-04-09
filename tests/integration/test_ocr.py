@@ -29,7 +29,7 @@ def test_setup_json_format(make_context):
 @pytest.mark.dependency(depends=["test_setup"])
 def test_run(ocr_dir, get_input_files, make_output_path):
     for input_file in get_input_files(ocr_dir):
-        output_file = make_output_path(ocr_dir, input_file, ".txt")
+        output_file = make_output_path(input_file, ".txt")
         _OCRBase.run(_context, input_file, output_file)
 
         assert output_file.exists(), f"No output for {input_file.name}"
@@ -40,7 +40,7 @@ def test_run(ocr_dir, get_input_files, make_output_path):
 @pytest.mark.dependency(depends=["test_setup_json_format"])
 def test_run_json_format(ocr_dir, get_input_files, make_output_path):
     for input_file in get_input_files(ocr_dir):
-        output_file = make_output_path(ocr_dir, input_file, ".json")
+        output_file = make_output_path(input_file, ".json")
         _OCRBase.run(_json_context, input_file, output_file)
 
         data = json.loads(output_file.read_text(encoding="utf-8"))

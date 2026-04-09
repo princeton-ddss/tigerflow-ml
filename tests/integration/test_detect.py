@@ -19,7 +19,7 @@ def test_setup(make_context):
 @pytest.mark.dependency(depends=["test_setup"])
 def test_run(detect_dir, get_input_files, make_output_path):
     for input_file in get_input_files(detect_dir):
-        output_file = make_output_path(detect_dir, input_file, ".json")
+        output_file = make_output_path(input_file, ".json")
         _DetectBase.run(_context, input_file, output_file)
 
         assert output_file.exists(), f"No output for {input_file.name}"

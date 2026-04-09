@@ -39,7 +39,7 @@ def test_setup_srt_format(make_context):
 @pytest.mark.dependency(depends=["test_setup"])
 def test_run(transcribe_dir, get_input_files, make_output_path):
     for input_file in get_input_files(transcribe_dir):
-        output_file = make_output_path(transcribe_dir, input_file, ".txt")
+        output_file = make_output_path(input_file, ".txt")
         _TranscribeBase.run(_context, input_file, output_file)
 
         assert output_file.exists(), f"No output for {input_file.name}"
@@ -50,7 +50,7 @@ def test_run(transcribe_dir, get_input_files, make_output_path):
 @pytest.mark.dependency(depends=["test_setup_json_format"])
 def test_run_json_format(transcribe_dir, get_input_files, make_output_path):
     for input_file in get_input_files(transcribe_dir):
-        output_file = make_output_path(transcribe_dir, input_file, ".json")
+        output_file = make_output_path(input_file, ".json")
         _TranscribeBase.run(_json_context, input_file, output_file)
 
         data = json.loads(output_file.read_text(encoding="utf-8"))
@@ -62,7 +62,7 @@ def test_run_json_format(transcribe_dir, get_input_files, make_output_path):
 @pytest.mark.dependency(depends=["test_setup_srt_format"])
 def test_run_srt_format(transcribe_dir, get_input_files, make_output_path):
     for input_file in get_input_files(transcribe_dir):
-        output_file = make_output_path(transcribe_dir, input_file, ".srt")
+        output_file = make_output_path(input_file, ".srt")
         _TranscribeBase.run(_srt_context, input_file, output_file)
 
         text = output_file.read_text(encoding="utf-8")

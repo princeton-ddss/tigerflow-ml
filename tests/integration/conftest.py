@@ -4,26 +4,18 @@ Requires TIGERFLOW_ML_TEST_DIR environment variable pointing to a directory with
 
     $TIGERFLOW_ML_TEST_DIR/
     ├── config.json    # optional, overrides default_config.json
-    ├── ocr/
-    │   ├── input/
-    │   └── output/
+    ├── ocr/           # sample files directly in task dirs
     ├── translate/
-    │   ├── input/
-    │   └── output/
     ├── transcribe/
-    │   ├── input/
-    │   └── output/
     └── detect/
-        ├── input/
-        └── output/
 """
 
 import json
 import os
+import tempfile
 from pathlib import Path
 
 import pytest
-from tigerflow.utils import SetupContext
 
 _TEST_DIR_VAR = "TIGERFLOW_ML_TEST_DIR"
 _DEFAULT_CONFIG = Path(__file__).parent / "default_config.json"
@@ -50,14 +42,6 @@ def _deep_merge(base: dict, overrides: dict) -> None:
             _deep_merge(base[key], value)
         else:
             base[key] = value
-
-
-def pytest_collection_modifyitems(items):
-    """Automatically mark tests in this directory as integration."""
-    integration_dir = Path(__file__).parent
-    for item in items:
-        if integration_dir in item.path.parents:
-            item.add_marker(pytest.mark.integration)
 
 
 @pytest.fixture(scope="session")
@@ -100,26 +84,33 @@ def detect_dir(test_dir):
 
 @pytest.fixture(scope="session")
 def get_input_files():
-    """Factory to return all files in a task's input/ directory."""
+    """Factory to return all files in a task directory."""
 
     def _get(task_dir: Path) -> list[Path]:
-        input_dir = task_dir / "input"
-        assert input_dir.is_dir(), f"Missing input directory: {input_dir}"
-        files = sorted(f for f in input_dir.iterdir() if f.is_file())
-        assert files, f"No input files found in {input_dir}"
+        assert task_dir.is_dir(), f"Missing task directory: {task_dir}"
+        files = sorted(f for f in task_dir.iterdir() if f.is_file())
+        assert files, f"No input files found in {task_dir}"
         return files
 
     return _get
 
 
 @pytest.fixture(scope="session")
-def make_output_path():
-    """Factory to build an output path, ensuring the output directory exists."""
+def output_dir():
+    """Temporary directory for test outputs, cleaned up after the session."""
+    with tempfile.TemporaryDirectory(prefix="tigerflow_ml_test_") as tmpdir:
+        yield Path(tmpdir)
 
-    def _make(task_dir: Path, input_file: Path, ext: str) -> Path:
-        output_dir = task_dir / "output"
-        output_dir.mkdir(exist_ok=True)
-        return output_dir / (input_file.stem + ext)
+
+@pytest.fixture(scope="session")
+def make_output_path(output_dir):
+    """Factory to build an output path in the tmp directory."""
+
+    def _make(input_file: Path, ext: str, prefix: str = "") -> Path:
+        name = (
+            f"{prefix}_{input_file.stem}{ext}" if prefix else f"{input_file.stem}{ext}"
+        )
+        return output_dir / name
 
     return _make
 
@@ -129,6 +120,8 @@ def make_context(config):
     """Factory for creating a SetupContext with task params and config applied."""
 
     def _make(params_cls, task_name: str, **overrides):
+        from tigerflow.utils import SetupContext
+
         params = params_cls()
         ctx = SetupContext()
 

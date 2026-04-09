@@ -86,7 +86,3 @@ include = ["src"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-markers = [
-    "integration: run on HPC cluster with real models and test data",
-]
-addopts = "-m 'not integration'"

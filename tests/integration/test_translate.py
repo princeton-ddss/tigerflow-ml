@@ -17,7 +17,7 @@ def test_setup(make_context):
 @pytest.mark.dependency(depends=["test_setup"])
 def test_run(translate_dir, get_input_files, make_output_path):
     for input_file in get_input_files(translate_dir):
-        output_file = make_output_path(translate_dir, input_file, ".txt")
+        output_file = make_output_path(input_file, ".txt")
         _TranslateBase.run(_context, input_file, output_file)
 
         assert output_file.exists(), f"No output for {input_file.name}"

@@ -1,5 +1,5 @@
 {
-  "cache_dir": "",
+  "cache_dir": null,
   "tasks": {
     "ocr": {
       "model": "stepfun-ai/GOT-OCR-2.0-hf",
