@@ -24,7 +24,7 @@ classifiers = [
 ]
 requires-python = ">=3.10,<3.14"
 dependencies = [
-    "tigerflow>=0.1.0a1",
+    "tigerflow>=0.3.0",
     "transformers>=4.45",
     "torch>=2.0",
     "Pillow",
