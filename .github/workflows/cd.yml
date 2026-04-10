@@ -94,5 +94,5 @@ jobs:
         run: |
           cd docs
           MINOR_VERSION=$(echo "${{ github.event.release.tag_name }}" | sed 's/^v\?\([0-9]*\.[0-9]*\).*/\1/')
-          uv run mike deploy --push --update-aliases $MINOR_VERSION latest
+          uv run mike deploy --push --update-aliases --title="$MINOR_VERSION (latest)" $MINOR_VERSION latest
           uv run mike set-default --push latest
