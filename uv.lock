@@ -1732,7 +1732,7 @@ wheels = [
 
 [[package]]
 name = "tigerflow"
-version = "0.1.0a3"
+version = "0.3.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiofiles" },
@@ -1745,9 +1745,9 @@ dependencies = [
     { name = "pyyaml" },
     { name = "typer" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/b2/b0/d1a557b4e89b8930e8039b58a0892ad4693bb7e696bca16b6b062cf7c0fe/tigerflow-0.1.0a3.tar.gz", hash = "sha256:78b7f27df0602dfb36960c34af3f38ce9e33d7c0c7cc91a2a96ea23c69da3342", size = 7070340, upload-time = "2026-02-04T03:55:08.735Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/86/29/7ead0ad9dfbd7fc8c6bcdc89979c08872ff531ce9ea7895c2fb66906db71/tigerflow-0.3.0.tar.gz", hash = "sha256:c0b3512d03dcc20449f9b8909c7c167c7416496a2786b8080fa08355ff064878", size = 7111149, upload-time = "2026-04-09T01:32:44.712Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/1f/06/2f0f6e52b5c0ea699b45313ec7c16c67f221bd669dce7cb87598ed5f2b3a/tigerflow-0.1.0a3-py3-none-any.whl", hash = "sha256:71a1a37a554bf0071f489d3a886fac903ba4ec3937e5108fa550ef645620820f", size = 25249, upload-time = "2026-02-04T03:55:06.578Z" },
+    { url = "https://files.pythonhosted.org/packages/75/9e/053937311e58c0a854c3295a7462a991762f0494fc237d68b317b8a50211/tigerflow-0.3.0-py3-none-any.whl", hash = "sha256:4ab228a33822d83b2b92fc2ae49a87eac49718c61edb94372413d24339e8eb19", size = 40970, upload-time = "2026-04-09T01:32:43.524Z" },
 ]
 
 [[package]]
@@ -1793,7 +1793,7 @@ requires-dist = [
     { name = "pillow" },
     { name = "pymupdf", specifier = ">=1.27.1" },
     { name = "sentencepiece" },
-    { name = "tigerflow", specifier = ">=0.1.0a1" },
+    { name = "tigerflow", specifier = ">=0.3.0" },
     { name = "timm" },
     { name = "torch", specifier = ">=2.0" },
     { name = "transformers", specifier = ">=4.45" },
