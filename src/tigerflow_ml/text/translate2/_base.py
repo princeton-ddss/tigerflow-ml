@@ -104,11 +104,11 @@ def _get_tokenizer(model_name: str, fetch: bool) -> PreTrainedTokenizerBase:
         return _load_tokenizer(model_name)
     except OSError:
         if not fetch:
-            print(f"Error: Tokenizer for '{model_name}' not found in cache.")
-            print("  Run with --fetch to download, or manually with:")
-            print(f"    hf download {model_name} --include 'tokenizer*'")
+            logger.error(f"Error: Tokenizer for '{model_name}' not found in cache.")
+            logger.error("  Run with --fetch to download, or manually with:")
+            logger.error(f"    hf download {model_name} --include 'tokenizer*'")
             raise typer.Exit(1)
-        print("Downloading tokenizer from HuggingFace Hub...")
+        logger.info("Downloading tokenizer from HuggingFace Hub...")
         _download_tokenizer(model_name)
         return _load_tokenizer(model_name)
 
@@ -242,7 +242,7 @@ def _translate_text(
         )
 
     chunks = chunk_text_by_tokens(text, tokenizer, max_tokens=max_tokens)
-    print(f"    Document is long - splitting into {len(chunks)} chunks...")
+    logger.info(f"    Document is long - splitting into {len(chunks)} chunks...")
 
     return "\n\n".join(translator.translate_batch(chunks, source_lang, target_lang))
 
@@ -275,7 +275,7 @@ def _translate_chunk_with_retry(
         half = max(int(input_tokens * 0.6), 1)
 
         prefix = f"Chunk {chunk_num}/{total_chunks}: " if chunk_num else ""
-        print(
+        logger.info(
             f"      {prefix}Output truncated, splitting ({input_tokens} tokens) "
             f"and retrying (attempt {retry_depth + 1}/{max_retries})..."
         )
@@ -283,7 +283,7 @@ def _translate_chunk_with_retry(
         sub_chunks = chunk_text_by_tokens(text, tokenizer, max_tokens=half)
         parts = []
         for j, sub in enumerate(sub_chunks, 1):
-            print(f"      Sub-chunk {j}/{len(sub_chunks)} ({count_tokens(sub, tokenizer)} tokens)...")
+            logger.info(f"      Sub-chunk {j}/{len(sub_chunks)} ({count_tokens(sub, tokenizer)} tokens)...")
             result = _translate_chunk_with_retry(
                 sub,
                 translator,
