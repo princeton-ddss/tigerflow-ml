@@ -876,7 +876,7 @@
 <li><strong><code>json</code></strong> — Structured JSON with per-page text: <code>{"pages": [{"page": 1, "text": "..."}, ...]}</code>.</li>
 </ul>
 <h2 id="models">Models<a class="headerlink" href="#models" title="Permanent link">&para;</a></h2>
-<p>Any HuggingFace <a href="https://huggingface.co/models?pipeline_tag=image-text-to-text"><code>image-text-to-text</code></a> model is supported. The <a href="https://huggingface.co/stepfun-ai/GOT-OCR-2.0-hf">GOT-OCR</a> model is recommended for general-purpose document OCR.</p>
+<p>Any HuggingFace <a href="https://huggingface.co/models?pipeline_tag=image-text-to-text"><code>image-text-to-text</code></a> model is supported. The <a href="https://huggingface.co/stepfun-ai/GOT-OCR-2.0-hf">GOT-OCR</a> model is recommended for general-purpose English document OCR. For multilingual documents, see the alternatives below.</p>
 <table>
 <thead>
 <tr>
@@ -891,6 +891,24 @@
 <td><a href="https://huggingface.co/stepfun-ai/GOT-OCR-2.0-hf"><code>stepfun-ai/GOT-OCR-2.0-hf</code></a> (default)</td>
 <td>600M</td>
 <td>Full-page OCR with format preservation</td>
+<td>Apache 2.0</td>
+</tr>
+<tr>
+<td><a href="https://huggingface.co/rednote-hilab/dots.ocr"><code>rednote-hilab/dots.ocr</code></a></td>
+<td>3B</td>
+<td>Multilingual document parsing (100+ languages) with layout detection</td>
+<td>MIT</td>
+</tr>
+<tr>
+<td><a href="https://huggingface.co/zai-org/GLM-4.1V-9B-Thinking"><code>zai-org/GLM-4.1V-9B-Thinking</code></a></td>
+<td>10B</td>
+<td>Bilingual (English/Chinese) VLM with reasoning, up to 4K image resolution</td>
+<td>MIT</td>
+</tr>
+<tr>
+<td><a href="https://huggingface.co/Qwen/Qwen2.5-VL-7B-Instruct"><code>Qwen/Qwen2.5-VL-7B-Instruct</code></a></td>
+<td>7B</td>
+<td>General-purpose VLM with strong OCR and multilingual support</td>
 <td>Apache 2.0</td>
 </tr>
 </tbody>
