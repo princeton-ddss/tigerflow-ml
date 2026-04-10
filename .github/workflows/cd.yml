@@ -42,15 +42,17 @@ jobs:
       - name: Sync version with tag
         run: |
           TAG_VERSION=$(echo "${{ github.event.release.tag_name }}" | sed 's/^v//')
-          PKG_VERSION=$(uv version)
+          PKG_VERSION=$(uv version --short)
           if [ "$TAG_VERSION" != "$PKG_VERSION" ]; then
             echo "::warning::Syncing version: pyproject.toml has '$PKG_VERSION', updating to '$TAG_VERSION' from tag"
-            uv version $TAG_VERSION
-            git add pyproject.toml
-            git commit -m "Bump version to $TAG_VERSION"
-            git push origin HEAD:main
-            git tag -f ${{ github.event.release.tag_name }}
-            git push origin ${{ github.event.release.tag_name }} --force
+            uv version "$TAG_VERSION"
+            if ! git diff --quiet pyproject.toml; then
+              git add pyproject.toml
+              git commit -m "Bump version to $TAG_VERSION"
+              git push origin HEAD:main
+              git tag -f "${{ github.event.release.tag_name }}"
+              git push origin "${{ github.event.release.tag_name }}" --force
+            fi
           fi
 
       - name: Build the package
