@@ -1,6 +1,6 @@
 [project]
 name = "tigerflow-ml"
-version = "0.1.0a0"
+version = "0.1.0a1"
 description = "ML task library for TigerFlow"
 readme = "README.md"
 authors = [
