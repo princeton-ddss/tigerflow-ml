@@ -3,7 +3,7 @@ Utility functions for file I/O and encoding detection.
 """
 
 from pathlib import Path
-
+from tigerflow.logconfig import logger
 
 class TranslationError(Exception):
     """Raised when translation fails."""
@@ -46,7 +46,7 @@ def read_file_with_fallback(path: Path) -> str:
                 content = f.read()
             # Warn if we fell back to latin-1 (might be decoding garbage)
             if encoding == "latin-1" and i > 0:
-                print(
+                logger.warning(
                     "  Warning: Fell back to latin-1 encoding - content may be incorrect "
                     "if file uses a non-Western encoding (e.g., Shift-JIS, GB2312)"
                 )

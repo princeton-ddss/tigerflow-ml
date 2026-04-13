@@ -8,6 +8,8 @@ and orchestration are handled by the orchestration module.
 from typing import Protocol
 
 from transformers import PreTrainedTokenizerBase
+from tigerflow.logconfig import logger
+
 
 from .chunking import MAX_CHUNK_TOKENS, chunk_text_by_tokens, count_tokens
 from .utils import TranslationError
@@ -42,8 +44,8 @@ class HuggingFaceTranslator:
         import torch
         from transformers import pipeline
 
-        print(f"Loading model: {model_name}...")
-        print("(This may take a few minutes on first run as the model downloads)")
+        logger.info(f"Loading model: {model_name}...")
+        logger.info("(This may take a few minutes on first run as the model downloads)")
 
         self.pipe = pipeline(
             "image-text-to-text",
@@ -52,11 +54,11 @@ class HuggingFaceTranslator:
             torch_dtype=torch.bfloat16,
             local_files_only=not fetch,
         )
-        print("Model loaded!")
+        logger.info("Model loaded!")
 
         if batch_size is None:
             self.batch_size = self._auto_batch_size()
-            print(f"Auto batch size: {self.batch_size}")
+            logger.info(f"Auto batch size: {self.batch_size}")
         else:
             self.batch_size = batch_size
 
@@ -139,7 +141,7 @@ class HuggingFaceTranslator:
 
             if len(texts) > 1:
                 batch_end = batch_start + len(batch)
-                print(f"    Translating chunks {batch_start + 1}-{batch_end}/{len(texts)}...")
+                logger.info(f"    Translating chunks {batch_start + 1}-{batch_end}/{len(texts)}...")
 
             batch_messages = [self._build_messages(c, source_lang, target_lang) for c in batch]
             outputs = self.pipe(
@@ -171,12 +173,12 @@ class HuggingFaceTranslator:
 
         input_tokens = count_tokens(text, self.tokenizer)
         half = max(int(input_tokens * 0.6), 1)
-        print(f"      Output truncated ({input_tokens} tokens), retrying (attempt {depth + 1}/{_MAX_DEPTH})...")
+        logger.info(f"      Output truncated ({input_tokens} tokens), retrying (attempt {depth + 1}/{_MAX_DEPTH})...")
 
         sub_chunks = chunk_text_by_tokens(text, self.tokenizer, max_tokens=half)
         parts = []
         for j, sub in enumerate(sub_chunks, 1):
-            print(f"      Sub-chunk {j}/{len(sub_chunks)} ({count_tokens(sub, self.tokenizer)} tokens)...")
+            logger.info(f"      Sub-chunk {j}/{len(sub_chunks)} ({count_tokens(sub, self.tokenizer)} tokens)...")
             messages = self._build_messages(sub, source_lang, target_lang)
             output = self.pipe(
                 text=messages,
