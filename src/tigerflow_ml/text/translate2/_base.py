@@ -48,13 +48,13 @@ class _TranslateBase:
             typer.Option(help="Maximum tokens per chunk"),
         ] = MAX_CHUNK_TOKENS
 
-        prompt: Annotated[
-            str,
-            typer.Option(
-                help="Prompt template for text-generation models. "
-                "Use {source_lang}, {target_lang}, and {text} as placeholders."
-            ),
-        ] = _DEFAULT_PROMPT
+        # prompt: Annotated[
+        #     str,
+        #     typer.Option(
+        #         help="Prompt template for text-generation models. "
+        #         "Use {source_lang}, {target_lang}, and {text} as placeholders."
+        #     ),
+        # ] = _DEFAULT_PROMPT
 
         batch_size: Annotated[
             int | None, 
@@ -86,6 +86,7 @@ class _TranslateBase:
             tokenizer=tokenizer,
             max_chunk_tokens=chunk_size,
             batch_size=context.batch_size,
+            fetch=context.fetch,
         )
         
     @staticmethod

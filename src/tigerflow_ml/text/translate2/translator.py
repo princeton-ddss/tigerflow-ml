@@ -34,6 +34,7 @@ class HuggingFaceTranslator:
         tokenizer: PreTrainedTokenizerBase | None = None,
         max_chunk_tokens: int = MAX_CHUNK_TOKENS,
         batch_size: int | None = None,
+        fetch: bool = False,
     ):
         self.tokenizer = tokenizer
         self.max_chunk_tokens = max_chunk_tokens
@@ -49,6 +50,7 @@ class HuggingFaceTranslator:
             model=model_name,
             device_map="auto",
             torch_dtype=torch.bfloat16,
+            local_files_only=not fetch,
         )
         print("Model loaded!")
 
