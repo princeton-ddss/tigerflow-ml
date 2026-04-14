@@ -11,12 +11,12 @@ import re
 from pathlib import Path
 from typing import Annotated
 from collections.abc import Callable
-from transformers import PreTrainedTokenizerBase, AutoTokenizer
+from transformers import PreTrainedTokenizerBase, AutoTokenizer, AutoConfig
 import typer
 from tigerflow.logconfig import logger
 from tigerflow.utils import SetupContext
 from tigerflow_ml.params import HFParams
-from .chunking import MAX_CHUNK_TOKENS, chunk_text_by_tokens, count_tokens
+from .chunking import MAX_CHUNK_TOKENS, chunk_text_by_tokens, count_tokens, get_context_window, compute_chunk_size
 from .translator import HuggingFaceTranslator
 from .utils import SkippedFileError, TranslationError, read_file_with_fallback
 from .detection import LANGUAGES, detect_language, get_language_name
@@ -48,7 +48,7 @@ class _TranslateBase:
         chunk_size: Annotated[
             int,
             typer.Option(help="Maximum tokens per chunk"),
-        ] = MAX_CHUNK_TOKENS
+        ] = None
 
         # prompt: Annotated[
         #     str,
@@ -71,14 +71,38 @@ class _TranslateBase:
     @staticmethod
     def setup(context: SetupContext):
         chunk_size = context.chunk_size
-        if chunk_size > MAX_CHUNK_TOKENS:
-            logger.warning(
-                f"Warning: --chunk-size {chunk_size} exceeds maximum of"
-                f" {MAX_CHUNK_TOKENS}, clamping"
-            )
-            chunk_size = MAX_CHUNK_TOKENS
 
-        logger.info(f"Chunk size: {chunk_size} tokens")
+        try: 
+            config = AutoConfig.from_pretrained(context.model, local_files_only=not context.fetch)
+            context_window = get_context_window(config)
+            computed_chunk_size = compute_chunk_size(context_window)
+            logger.info(f"Identified a context window of {context_window} tokens; calculated max chunk size is {computed_chunk_size} tokens")
+            # if user did not provide a chunk size, use calculated
+            if chunk_size is None:
+                chunk_size = compute_chunk_size
+            # if user provided a chunk size that is too large
+            else:
+                if chunk_size > computed_chunk_size:
+                    logger.warning(
+                        f"Warning: --chunk-size {chunk_size} exceeds maximum of"
+                        f" {compute_chunk_size}, clamping"
+                    )
+                    chunk_size = compute_chunk_size
+        except Exception as err:
+            logger.info(f"FOR DEVELOPMENT: WHEN TRYING TO CALCULATE CHUNK SIZE/SLIDING WINDOW: {err}")
+            #if user did not provide a chunk size, use MAX_CHUNK_TOKENS
+            if chunk_size is None:
+                chunk_size = MAX_CHUNK_TOKENS
+                logger.info(f"Chunk size: {chunk_size} tokens")
+
+            # if user provided a chunk size that is too large
+            else:
+                if chunk_size > MAX_CHUNK_TOKENS:
+                    logger.warning(
+                        f"Warning: --chunk-size {chunk_size} exceeds maximum of"
+                        f" {MAX_CHUNK_TOKENS}, clamping"
+                    )
+                    chunk_size = MAX_CHUNK_TOKENS
 
         tokenizer = _get_tokenizer(context.model, context.fetch)
         logger.info(f"Model: {context.model}")

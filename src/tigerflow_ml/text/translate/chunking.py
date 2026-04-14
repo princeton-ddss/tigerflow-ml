@@ -9,11 +9,35 @@ import re
 from typing import Callable
 
 from transformers import PreTrainedTokenizerBase
+from transformers import PretrainedConfig
+
+
 
 # TranslateGemma context window is 2048 tokens (input + output).
 # Reserve ~248 tokens for the prompt template and split the rest
 # evenly between the input chunk and the generated translation.
 MAX_CHUNK_TOKENS = 900
+
+def get_context_window(config: PretrainedConfig) -> int | None:
+
+    # Different model families use different names for the same field
+    typical_fields = ["max_position_embeddings", "n_positions", "max_sequence_length", "seq_len", "seq_length", "n_ctx", "sliding_window"]  
+
+    # Check which attribute a given model object has
+    context_windows = [getattr(config.config, field) for field in typical_fields if field in dir(config.config)]
+
+    # Grab the last one in the list; usually there's only 1 anyway
+    while len(context_windows):
+        context_window = context_windows.pop()
+        if context_window > 0:
+            return context_window
+    return None
+
+def compute_chunk_size(context_window: int, prompt_overhead: int = 200) -> int:
+    """Derive max input chunk tokens from the model's context window."""
+    usable = max(context_window - prompt_overhead)
+    chunk_size = usable // 2
+    return chunk_size
 
 
 def count_tokens(text: str, tokenizer: PreTrainedTokenizerBase) -> int:
