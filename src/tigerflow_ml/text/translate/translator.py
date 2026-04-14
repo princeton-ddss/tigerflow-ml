@@ -11,7 +11,7 @@ from transformers import PreTrainedTokenizerBase
 from tigerflow.logconfig import logger
 
 
-from .chunking import MAX_CHUNK_TOKENS, chunk_text_by_tokens, count_tokens
+from .chunking import FALLBACK_MAX_CHUNK_TOKENS, chunk_text_by_tokens, count_tokens
 from .utils import TranslationError
 
 
@@ -34,7 +34,7 @@ class HuggingFaceTranslator:
         self,
         model_name: str = "google/translategemma-12b-it",
         tokenizer: PreTrainedTokenizerBase | None = None,
-        max_chunk_tokens: int = MAX_CHUNK_TOKENS,
+        max_chunk_tokens: int = FALLBACK_MAX_CHUNK_TOKENS,
         batch_size: int | None = None,
         fetch: bool = False,
     ):

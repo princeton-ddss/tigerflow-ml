@@ -16,7 +16,7 @@ import typer
 from tigerflow.logconfig import logger
 from tigerflow.utils import SetupContext
 from tigerflow_ml.params import HFParams
-from .chunking import MAX_CHUNK_TOKENS, chunk_text_by_tokens, count_tokens, get_context_window, compute_chunk_size
+from .chunking import FALLBACK_MAX_CHUNK_TOKENS, MAX_CHUNK_TOKENS, chunk_text_by_tokens, count_tokens, get_context_window, compute_chunk_size
 from .translator import HuggingFaceTranslator
 from .utils import SkippedFileError, TranslationError, read_file_with_fallback
 from .detection import LANGUAGES, detect_language, get_language_name
@@ -79,20 +79,20 @@ class _TranslateBase:
             logger.info(f"Identified a context window of {context_window} tokens; calculated max chunk size is {computed_chunk_size} tokens")
             # if user did not provide a chunk size, use calculated
             if chunk_size is None:
-                chunk_size = compute_chunk_size
+                chunk_size = computed_chunk_size
             # if user provided a chunk size that is too large
             else:
                 if chunk_size > computed_chunk_size:
                     logger.warning(
                         f"Warning: --chunk-size {chunk_size} exceeds maximum of"
-                        f" {compute_chunk_size}, clamping"
+                        f" {computed_chunk_size}, clamping"
                     )
-                    chunk_size = compute_chunk_size
+                    chunk_size = computed_chunk_size
         except Exception as err:
             logger.info(f"FOR DEVELOPMENT: WHEN TRYING TO CALCULATE CHUNK SIZE/SLIDING WINDOW: {err}")
-            #if user did not provide a chunk size, use MAX_CHUNK_TOKENS
+            #if user did not provide a chunk size, use FALLBACK_MAX_CHUNK_TOKENS
             if chunk_size is None:
-                chunk_size = MAX_CHUNK_TOKENS
+                chunk_size = FALLBACK_MAX_CHUNK_TOKENS
                 logger.info(f"Chunk size: {chunk_size} tokens")
 
             # if user provided a chunk size that is too large
