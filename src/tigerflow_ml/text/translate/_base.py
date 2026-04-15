@@ -16,7 +16,7 @@ import typer
 from tigerflow.logconfig import logger
 from tigerflow.utils import SetupContext
 from tigerflow_ml.params import HFParams
-from .chunking import FALLBACK_MAX_CHUNK_TOKENS, MAX_CHUNK_TOKENS, chunk_text_by_tokens, count_tokens, get_context_window, compute_chunk_size
+from .chunking import FALLBACK_MAX_CHUNK_TOKENS, MAX_CHUNK_TOKENS, chunk_text_by_tokens, count_tokens, compute_chunk_size
 from .translator import HuggingFaceTranslator
 from .utils import SkippedFileError, TranslationError, read_file_with_fallback
 from .detection import LANGUAGES, detect_language, get_language_name
@@ -74,9 +74,8 @@ class _TranslateBase:
 
         try: 
             config = AutoConfig.from_pretrained(context.model, local_files_only=not context.fetch)
-            context_window = get_context_window(config)
-            computed_chunk_size = compute_chunk_size(context_window)
-            logger.info(f"Identified a context window of {context_window} tokens; calculated max chunk size is {computed_chunk_size} tokens")
+            computed_chunk_size = compute_chunk_size(config)
+            logger.info(f"Calculated max chunk size: {computed_chunk_size} tokens")
             # if user did not provide a chunk size, use calculated
             if chunk_size is None:
                 chunk_size = computed_chunk_size

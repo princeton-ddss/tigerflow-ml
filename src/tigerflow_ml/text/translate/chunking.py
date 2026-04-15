@@ -23,31 +23,41 @@ FALLBACK_MAX_CHUNK_TOKENS = 900
 MAX_CHUNK_TOKENS = 63500
 
 
-def get_context_window(config: PretrainedConfig) -> int | None:
+def compute_chunk_size(config: PretrainedConfig, prompt_overhead: int = 248) -> int | None:
+    """
+    Derive max input chunk tokens from a model config.
 
-    # Different model families use different names for the same field
-    typical_fields = ["max_position_embeddings", "n_positions", "max_sequence_length", "seq_len", "seq_length", "n_ctx", "sliding_window"]
+    Uses the first matching context-window field found, checking the top-level
+    config and then text_config (for multimodal models like Gemma3).
 
-    # For multimodal models (e.g. Gemma3), the relevant fields are nested under text_config
+    For full context-window fields the chunk is half the usable window, since
+    the other half is reserved for the generated translation.  For
+    sliding_window the local window is already small enough to use directly.
+    """
+    # Fields that represent the model's full context window
+    full_context_fields = ["n_ctx","seq_length","seq_len","max_sequence_length", "n_positions", "max_position_embeddings"]
+    # Fields that represent a local attention window — already small, so don't halve
+    sliding_fields = ["sliding_window"]
+
+    # For multimodal models (e.g. Gemma3) the relevant fields live in text_config
     configs_to_check = [config]
     if hasattr(config, "text_config") and config.text_config is not None:
         configs_to_check.append(config.text_config)
 
+    def _first_positive(cfg, fields):
+        for field in fields:
+            value = getattr(cfg, field, None)
+            if value is not None and value > 0:
+                return value
+        return None
+
     for cfg in configs_to_check:
-        context_windows = [getattr(cfg, field) for field in typical_fields if hasattr(cfg, field)]
-
-        # Grab the last one in the list; usually there's only 1 anyway
-        while len(context_windows):
-            context_window = context_windows.pop()
-            if context_window is not None and context_window > 0:
-                return context_window
+        if (value := _first_positive(cfg, sliding_fields)) is not None:
+            return max(value - prompt_overhead, 1)
+        if (value := _first_positive(cfg, full_context_fields)) is not None:
+            return max((value - prompt_overhead) // 2, 1)
+        
     return None
-
-def compute_chunk_size(context_window: int, prompt_overhead: int = 200) -> int:
-    """Derive max input chunk tokens from the model's context window."""
-    usable = max(context_window - prompt_overhead, 1)
-    chunk_size = usable // 2
-    return chunk_size
 
 
 def count_tokens(text: str, tokenizer: PreTrainedTokenizerBase) -> int:
