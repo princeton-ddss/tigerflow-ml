@@ -31,7 +31,7 @@ from .chunking import (
     count_tokens,
 )
 from .detection import LANGUAGES, detect_language, get_language_name
-from .translator import HuggingFaceTranslator
+from .translator import GemmaTranslator, HuggingFaceTranslator
 from .utils import SkippedFileError, TranslationError, read_file_with_fallback
 
 _DEFAULT_PROMPT = (
@@ -122,7 +122,7 @@ class _TranslateBase:
         tokenizer = _get_tokenizer(context.model, context.fetch)
         logger.info(f"Model: {context.model}")
         logger.info("\nInitializing HuggingFace backend...")
-        context.translator = HuggingFaceTranslator(
+        context.translator = GemmaTranslator(
             context.model,
             tokenizer=tokenizer,
             max_chunk_tokens=chunk_size,

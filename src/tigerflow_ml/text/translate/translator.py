@@ -24,16 +24,16 @@ class Translator(Protocol):
     def translate_batch(
         self, texts: list[str], source_lang: str, target_lang: str
     ) -> list[str]:
-        """Translate multiple chunks. Default loops over translate()."""
+        """Translate multiple chunks."""
         ...
 
 
 class HuggingFaceTranslator:
-    """TranslateGemma using Hugging Face Transformers backend."""
+    """Shared base class for all HuggingFace translation backends."""
 
     def __init__(
         self,
-        model_name: str = "google/translategemma-12b-it",
+        model_name: str,
         tokenizer: PreTrainedTokenizerBase | None = None,
         max_chunk_tokens: int = FALLBACK_MAX_CHUNK_TOKENS,
         batch_size: int | None = None,
@@ -41,20 +41,7 @@ class HuggingFaceTranslator:
     ):
         self.tokenizer = tokenizer
         self.max_chunk_tokens = max_chunk_tokens
-
-        import torch
-        from transformers import pipeline
-
-        logger.info(f"Loading model: {model_name}...")
-        logger.info("(This may take a few minutes on first run as the model downloads)")
-
-        self.pipe: Any = pipeline(
-            "image-text-to-text",
-            model=model_name,
-            device_map="auto",
-            torch_dtype=torch.bfloat16,
-            local_files_only=not fetch,
-        )
+        self.pipe: Any = self._load_pipeline(model_name, fetch)
         logger.info("Model loaded!")
 
         if batch_size is None:
@@ -62,6 +49,12 @@ class HuggingFaceTranslator:
             logger.info(f"Auto batch size: {self.batch_size}")
         else:
             self.batch_size = batch_size
+
+    def _load_pipeline(self, model_name: str, fetch: bool) -> Any:
+        raise NotImplementedError
+
+    def translate(self, text: str, source_lang: str, target_lang: str) -> str:
+        raise NotImplementedError
 
     def _auto_batch_size(self) -> int:
         """Estimate batch size from free VRAM and model KV-cache footprint."""
@@ -89,64 +82,23 @@ class HuggingFaceTranslator:
         except Exception:
             return 1
 
-    def _build_messages(
-        self, text: str, source_lang: str, target_lang: str
-    ) -> list[dict[str, object]]:
-        """Build the message payload for a single chunk."""
-        return [
-            {
-                "role": "user",
-                "content": [
-                    {
-                        "type": "text",
-                        "source_lang_code": source_lang,
-                        "target_lang_code": target_lang,
-                        "text": text,
-                    }
-                ],
-            }
-        ]
-
     def is_truncated(self, text: str) -> bool:
         """Check if output was likely truncated by hitting max_new_tokens."""
         if self.tokenizer is None:
             return False
         return count_tokens(text, self.tokenizer) >= self.max_chunk_tokens
 
-    def translate(self, text: str, source_lang: str, target_lang: str) -> str:
-        """
-        Translate a single chunk of text.
-
-        Raises:
-            TranslationError: If translation returns empty or truncated output.
-        """
-        messages = self._build_messages(text, source_lang, target_lang)
-        output = self.pipe(  # type: ignore[no-matching-overload]
-            text=messages,
-            do_sample=False,
-            pad_token_id=1,
-            max_new_tokens=self.max_chunk_tokens,
-        )
-        result: str = output[0]["generated_text"][-1]["content"]
-
-        if not result or not result.strip():
-            raise TranslationError("Translation returned empty result")
-
-        if self.is_truncated(result):
-            raise TranslationError(
-                f"Output truncated (hit {self.max_chunk_tokens} token limit)"
-            )
-
-        return result
-
     def translate_batch(
         self, texts: list[str], source_lang: str, target_lang: str
     ) -> list[str]:
         """
-        Translate multiple chunks using batched inference.
+        Translate multiple chunks by calling translate() for each.
 
         Raises:
-            TranslationError: If any translation returns empty or truncated output.
+            TranslationError: If any translation returns an empty result.
+
+        Note: Subclasses may override this to use true pipeline batching for
+        better GPU throughput.
         """
         results = []
 
@@ -160,28 +112,13 @@ class HuggingFaceTranslator:
                     f"{batch_start + 1}-{batch_end}/{len(texts)}..."
                 )
 
-            batch_messages = [
-                self._build_messages(c, source_lang, target_lang) for c in batch
-            ]
-            outputs = self.pipe(  # type: ignore[no-matching-overload]
-                text=batch_messages,
-                do_sample=False,
-                batch_size=len(batch),
-                pad_token_id=1,
-                max_new_tokens=self.max_chunk_tokens,
-            )
-
-            for i, output in enumerate(outputs):
-                result = output[0]["generated_text"][-1]["content"]
-                if not result or not result.strip():
-                    raise TranslationError(
-                        "Translation returned empty result for chunk "
-                        f"{batch_start + i + 1}"
-                    )
-                if self.is_truncated(result):
-                    result = self._retry_truncated(
-                        texts[batch_start + i], source_lang, target_lang
-                    )
+            for chunk in batch:
+                try:
+                    result = self.translate(chunk, source_lang, target_lang)
+                except TranslationError as e:
+                    if "truncated" not in str(e).lower():
+                        raise
+                    result = self._retry_truncated(chunk, source_lang, target_lang)
                 results.append(result)
 
         return results
@@ -189,7 +126,7 @@ class HuggingFaceTranslator:
     def _retry_truncated(
         self, text: str, source_lang: str, target_lang: str, depth: int = 0
     ) -> str:
-        """Recursively retry a truncated chunk by splitting it"""
+        """Recursively retry a truncated chunk by splitting it."""
         _MAX_DEPTH = 3
         if depth >= _MAX_DEPTH:
             raise TranslationError(
@@ -212,18 +149,122 @@ class HuggingFaceTranslator:
                 f"      Sub-chunk {j}/{len(sub_chunks)} "
                 f"({count_tokens(sub, self.tokenizer)} tokens)..."
             )
-            messages = self._build_messages(sub, source_lang, target_lang)
-            output = self.pipe(  # type: ignore[no-matching-overload]
-                text=messages,
-                do_sample=False,
-                pad_token_id=1,
-                max_new_tokens=self.max_chunk_tokens,
-            )
-            result: str = output[0]["generated_text"][-1]["content"]
-            if not result or not result.strip():
-                raise TranslationError("Translation returned empty result in retry")
-            if self.is_truncated(result):
+            try:
+                result = self.translate(sub, source_lang, target_lang)
+            except TranslationError as e:
+                if "truncated" not in str(e).lower():
+                    raise
                 result = self._retry_truncated(sub, source_lang, target_lang, depth + 1)
             parts.append(result)
 
         return "\n\n".join(parts)
+
+
+class GemmaTranslator(HuggingFaceTranslator):
+    """Translation backend for TranslateGemma image-text-to-text models."""
+
+    def _load_pipeline(self, model_name: str, fetch: bool) -> Any:
+        import torch
+        from transformers import pipeline
+
+        logger.info(f"Loading model: {model_name}...")
+        logger.info("(This may take a few minutes on first run as the model downloads)")
+        pipe = pipeline(
+            "image-text-to-text",
+            model=model_name,
+            device_map="auto",
+            torch_dtype=torch.bfloat16,
+            local_files_only=not fetch,
+        )
+        return pipe
+
+    def _build_messages(
+        self, text: str, source_lang: str, target_lang: str
+    ) -> list[dict[str, object]]:
+        """Build the message payload using TranslateGemma's content format."""
+        return [
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "text",
+                        "source_lang_code": source_lang,
+                        "target_lang_code": target_lang,
+                        "text": text,
+                    }
+                ],
+            }
+        ]
+
+    def translate(self, text: str, source_lang: str, target_lang: str) -> str:
+        """
+        Translate a single chunk of text.
+
+        Raises:
+            TranslationError: If translation returns empty or truncated output.
+        """
+        messages = self._build_messages(text, source_lang, target_lang)
+        output = self.pipe(
+            text=messages,
+            do_sample=False,
+            pad_token_id=1,
+            max_new_tokens=self.max_chunk_tokens,
+        )
+        result: str = output[0]["generated_text"][-1]["content"]
+
+        if not result or not result.strip():
+            raise TranslationError("Translation returned empty result")
+
+        if self.is_truncated(result):
+            raise TranslationError(
+                f"Output truncated (hit {self.max_chunk_tokens} token limit)"
+            )
+
+        return result
+
+    def translate_batch(
+        self, texts: list[str], source_lang: str, target_lang: str
+    ) -> list[str]:
+        """
+        Translate multiple chunks using batched pipeline inference.
+
+        Raises:
+            TranslationError: If any translation returns an empty result.
+        """
+        results = []
+
+        for batch_start in range(0, len(texts), self.batch_size):
+            batch = texts[batch_start : batch_start + self.batch_size]
+
+            if len(texts) > 1:
+                batch_end = batch_start + len(batch)
+                logger.info(
+                    "    Translating chunks "
+                    f"{batch_start + 1}-{batch_end}/{len(texts)}..."
+                )
+
+            batch_messages = [
+                self._build_messages(c, source_lang, target_lang) for c in batch
+            ]
+            outputs = self.pipe(
+                text=batch_messages,
+                do_sample=False,
+                batch_size=len(batch),
+                pad_token_id=1,
+                max_new_tokens=self.max_chunk_tokens,
+            )
+
+            for i, output in enumerate(outputs):
+                result = output[0]["generated_text"][-1]["content"]
+                if not result or not result.strip():
+                    raise TranslationError(
+                        "Translation returned empty result for chunk "
+                        f"{batch_start + i + 1}"
+                    )
+                if self.is_truncated(result):
+                    result = self._retry_truncated(
+                        texts[batch_start + i], source_lang, target_lang
+                    )
+                results.append(result)
+
+        return results
