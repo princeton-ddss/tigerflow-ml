@@ -19,15 +19,12 @@ def test_ocr_defaults():
 
 def test_translate_defaults():
     p = _TranslateBase.Params()
-    assert p.model == "google/madlad400-3b-mt"
-    assert p.source_lang == "en"
-    assert p.target_lang == "de"
-    assert p.max_length == 512
-    assert p.encoding == "utf-8-sig"
-    assert "{text}" in p.prompt
-    assert "{source_lang}" in p.prompt
-    assert "{target_lang}" in p.prompt
-
+    assert p.model == "google/translategemma-12b-it"
+    assert p.source_lang is None
+    assert p.chunk_size is None
+    assert p.target_lang == "en"
+    assert p.batch_size is None
+    assert p.fetch is False
 
 def test_transcribe_defaults():
     p = _TranscribeBase.Params()

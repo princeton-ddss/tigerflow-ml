@@ -1,8 +1,6 @@
 """Unit tests for pure helper functions (no model downloads needed)."""
 
 from tigerflow_ml.audio.transcribe._base import _format_as_srt, _format_timestamp
-from tigerflow_ml.text.translate._base import _split_sentences
-
 
 class TestFormatTimestamp:
     def test_zero(self):
@@ -48,19 +46,3 @@ class TestFormatAsSrt:
         assert "2" in lines
 
 
-class TestSplitSentences:
-    def test_simple(self):
-        result = _split_sentences("Hello. World!")
-        assert result == ["Hello.", "World!"]
-
-    def test_single_sentence(self):
-        result = _split_sentences("Hello world")
-        assert result == ["Hello world"]
-
-    def test_question_marks(self):
-        result = _split_sentences("Who? What? Where?")
-        assert result == ["Who?", "What?", "Where?"]
-
-    def test_empty(self):
-        result = _split_sentences("")
-        assert result == []
