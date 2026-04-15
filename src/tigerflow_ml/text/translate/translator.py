@@ -8,10 +8,18 @@ and orchestration are handled by the orchestration module.
 from typing import Any, Protocol
 
 from tigerflow.logconfig import logger
-from transformers import PreTrainedTokenizerBase
+from transformers import PretrainedConfig, PreTrainedTokenizerBase
 
 from .chunking import FALLBACK_MAX_CHUNK_TOKENS, chunk_text_by_tokens, count_tokens
 from .utils import TranslationError
+
+SEQ2SEQ_TYPES = {"marian", "m2m_100", "mbart", "nllb", "t5", "mt5", "madlad"}
+GEMMA_TYPES = {"gemma", "gemma2", "gemma3"}
+
+
+def _is_image_text_model(config: PretrainedConfig) -> bool:
+    """Return True if the config describes a multimodal (vision+language) model."""
+    return hasattr(config, "vision_config") or hasattr(config, "image_token_id")
 
 
 class Translator(Protocol):
@@ -268,3 +276,66 @@ class GemmaTranslator(HuggingFaceTranslator):
                 results.append(result)
 
         return results
+
+
+def build_translator(
+    model_name: str,
+    *,
+    tokenizer: PreTrainedTokenizerBase,
+    max_chunk_tokens: int,
+    batch_size: int | None,
+    fetch: bool,
+    config: PretrainedConfig,
+    backend: str = "auto",
+    prompt_template: str | None = None,
+) -> HuggingFaceTranslator:
+    """
+    Instantiate the appropriate translation backend.
+
+    Args:
+        model_name: HuggingFace model repo ID.
+        tokenizer: Pre-loaded tokenizer for the model.
+        max_chunk_tokens: Maximum input tokens per chunk.
+        batch_size: Pipeline batch size (None = auto).
+        fetch: Allow downloading from HuggingFace Hub.
+        config: Pre-loaded model config, used for auto-detection.
+        backend: One of "auto", "gemma", "seq2seq", or "chat".
+        prompt_template: Prompt template for chat backends.
+
+    Returns:
+        A concrete HuggingFaceTranslator subclass.
+    """
+    kwargs: dict[str, Any] = dict(
+        model_name=model_name,
+        tokenizer=tokenizer,
+        max_chunk_tokens=max_chunk_tokens,
+        batch_size=batch_size,
+        fetch=fetch,
+    )
+
+    if backend == "gemma":
+        logger.info("building a gemma translator")
+        return GemmaTranslator(**kwargs)
+    elif backend == "seq2seq":
+        pass  # TODO: return Seq2SeqTranslator(**kwargs)
+    elif backend == "chat":
+        pass  # TODO: return ChatTranslator(**kwargs, prompt_template=prompt_template)
+
+    # Auto-detect from config.json
+    arch = (config.architectures or [""])[0]
+    model_type = getattr(config, "model_type", "")
+
+    if model_type in GEMMA_TYPES and _is_image_text_model(config):
+        logger.info("building a gemma translator")
+        return GemmaTranslator(**kwargs)
+    elif model_type in SEQ2SEQ_TYPES or any(
+        a in arch for a in ["Marian", "M2M100", "MBart"]
+    ):
+        pass  # TODO: return Seq2SeqTranslator(**kwargs)
+    # else: ChatTranslator is the default for any CausalLM
+    #     TODO: return ChatTranslator(**kwargs, prompt_template=prompt_template)
+
+    raise NotImplementedError(
+        f"Auto-detected backend for model_type='{model_type}' is not yet implemented. "
+        "Use --backend gemma to force the GemmaTranslator."
+    )

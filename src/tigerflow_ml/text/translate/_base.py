@@ -31,7 +31,7 @@ from .chunking import (
     count_tokens,
 )
 from .detection import LANGUAGES, detect_language, get_language_name
-from .translator import GemmaTranslator, HuggingFaceTranslator
+from .translator import HuggingFaceTranslator, build_translator
 from .utils import SkippedFileError, TranslationError, read_file_with_fallback
 
 _DEFAULT_PROMPT = (
@@ -90,6 +90,10 @@ class _TranslateBase:
             config = AutoConfig.from_pretrained(
                 context.model, local_files_only=not context.fetch
             )
+        except Exception as e:
+            logger.error(f"Failed to parse model config file: {e}")
+
+        try:
             computed_chunk_size = compute_chunk_size(config)
             logger.info(f"Calculated max chunk size: {computed_chunk_size} tokens")
             # if user did not provide a chunk size, use calculated
@@ -122,10 +126,11 @@ class _TranslateBase:
         tokenizer = _get_tokenizer(context.model, context.fetch)
         logger.info(f"Model: {context.model}")
         logger.info("\nInitializing HuggingFace backend...")
-        context.translator = GemmaTranslator(
+        context.translator = build_translator(
             context.model,
             tokenizer=tokenizer,
             max_chunk_tokens=chunk_size,
+            config=config,
             batch_size=context.batch_size,
             fetch=context.fetch,
         )
