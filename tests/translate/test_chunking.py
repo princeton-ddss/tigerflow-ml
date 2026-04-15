@@ -2,8 +2,16 @@
 
 from types import SimpleNamespace
 from unittest.mock import MagicMock
+
 import pytest
-from tigerflow_ml.text.translate.chunking import compute_chunk_size, _chunk_by_raw_tokens, _chunk_by_sentences, chunk_text_by_tokens, count_tokens
+
+from tigerflow_ml.text.translate.chunking import (
+    _chunk_by_raw_tokens,
+    _chunk_by_sentences,
+    chunk_text_by_tokens,
+    compute_chunk_size,
+    count_tokens,
+)
 
 OVERHEAD = 248  # default prompt_overhead
 
@@ -116,7 +124,9 @@ class TestChunkBySentences:
         def token_count(t):
             return count_tokens(t, mock_tokenizer)
 
-        result = _chunk_by_sentences("One. Two. Three.", token_count, 10, mock_tokenizer)
+        result = _chunk_by_sentences(
+            "One. Two. Three.", token_count, 10, mock_tokenizer
+        )
         assert len(result) == 1
         assert result[0] == "One. Two. Three."
 
@@ -125,21 +135,27 @@ class TestChunkBySentences:
             return count_tokens(t, mock_tokenizer)
 
         # Each sentence is 2 tokens, limit is 3
-        result = _chunk_by_sentences("Word one. Word two. Word three.", token_count, 3, mock_tokenizer)
+        result = _chunk_by_sentences(
+            "Word one. Word two. Word three.", token_count, 3, mock_tokenizer
+        )
         assert len(result) == 3
 
     def test_handles_exclamation_and_question_marks(self, mock_tokenizer):
         def token_count(t):
             return count_tokens(t, mock_tokenizer)
 
-        result = _chunk_by_sentences("Hello! How are you? Fine.", token_count, 10, mock_tokenizer)
+        result = _chunk_by_sentences(
+            "Hello! How are you? Fine.", token_count, 10, mock_tokenizer
+        )
         assert len(result) == 1
 
     def test_handles_exclamation_and_question_marks_exceed_limit(self, mock_tokenizer):
         def token_count(t):
             return count_tokens(t, mock_tokenizer)
 
-        result = _chunk_by_sentences("Hello! How are you? Fine.", token_count, 3, mock_tokenizer)
+        result = _chunk_by_sentences(
+            "Hello! How are you? Fine.", token_count, 3, mock_tokenizer
+        )
         assert len(result) == 3
 
 
@@ -169,7 +185,10 @@ class TestChunkEdgeCases:
         assert len(chunks) == 4
 
     def test_mixed_paragraph_lengths(self, mock_tokenizer):
-        text = "Short.\n\nThis is a much longer paragraph with many words in it.\n\nAnother short."
+        text = (
+            "Short.\n\nThis is a much longer paragraph with many words in it."
+            "\n\nAnother short."
+        )
         chunks = chunk_text_by_tokens(text, mock_tokenizer, max_tokens=5)
         # First paragraph fits alone, second needs splitting, third fits alone
         assert len(chunks) > 3
@@ -189,6 +208,7 @@ class TestChunkEdgeCases:
         assert not chunks[0].startswith(" ")
         assert not chunks[0].endswith(" ")
 
+
 def cfg(**kwargs):
     """Build a minimal fake config with only the given attributes."""
     return SimpleNamespace(**kwargs)
@@ -200,7 +220,6 @@ def multimodal_cfg(text_kwargs, **top_kwargs):
 
 
 class TestComputeChunkSize:
-
     def test_max_position_embeddings(self):
         result = compute_chunk_size(cfg(max_position_embeddings=8192))
         assert result == (8192 - OVERHEAD) // 2
@@ -225,17 +244,19 @@ class TestComputeChunkSize:
         result = compute_chunk_size(cfg(max_sequence_length=4096))
         assert result == (4096 - OVERHEAD) // 2
 
-    #sliding_window uses the direct formula (no halving)
+    # sliding_window uses the direct formula (no halving)
 
     def test_sliding_window(self):
         result = compute_chunk_size(cfg(sliding_window=1024))
         assert result == 1024 - OVERHEAD
 
     def test_sliding_window_takes_priority_over_full_context(self):
-        result = compute_chunk_size(cfg(sliding_window=1024, max_position_embeddings=131072))
+        result = compute_chunk_size(
+            cfg(sliding_window=1024, max_position_embeddings=131072)
+        )
         assert result == 1024 - OVERHEAD
 
-    #Multimodal models (Gemma3, etc.) nest text fields under text_config
+    # Multimodal models (Gemma3, etc.) nest text fields under text_config
     # Top-level config has no context fields; text_config does
 
     def test_multimodal_config_max_position_embeddings(self):
@@ -247,7 +268,9 @@ class TestComputeChunkSize:
         assert result == 1024 - OVERHEAD
 
     def test_multimodal_config_sliding_window_priority(self):
-        result = compute_chunk_size(multimodal_cfg({"sliding_window": 1024, "max_position_embeddings": 131072}))
+        result = compute_chunk_size(
+            multimodal_cfg({"sliding_window": 1024, "max_position_embeddings": 131072})
+        )
         assert result == 1024 - OVERHEAD
 
     def test_multimodal_config_none_does_not_crash(self):
@@ -261,7 +284,9 @@ class TestComputeChunkSize:
 
     def test_none_field_value_is_skipped(self):
         # sliding_window present but None — should fall through to full context field
-        result = compute_chunk_size(cfg(sliding_window=None, max_position_embeddings=8192))
+        result = compute_chunk_size(
+            cfg(sliding_window=None, max_position_embeddings=8192)
+        )
         assert result == (8192 - OVERHEAD) // 2
 
     def test_zero_field_value_is_skipped(self):
@@ -269,7 +294,9 @@ class TestComputeChunkSize:
         assert result == (8192 - OVERHEAD) // 2
 
     def test_custom_prompt_overhead(self):
-        result = compute_chunk_size(cfg(max_position_embeddings=4096), prompt_overhead=500)
+        result = compute_chunk_size(
+            cfg(max_position_embeddings=4096), prompt_overhead=500
+        )
         assert result == (4096 - 500) // 2
 
     def test_chunk_size_minimum_is_one(self):

@@ -5,11 +5,10 @@ Translators handle single-chunk translation only. Chunking, retry logic,
 and orchestration are handled by the orchestration module.
 """
 
-from typing import Protocol
+from typing import Any, Protocol
 
-from transformers import PreTrainedTokenizerBase
 from tigerflow.logconfig import logger
-
+from transformers import PreTrainedTokenizerBase
 
 from .chunking import FALLBACK_MAX_CHUNK_TOKENS, chunk_text_by_tokens, count_tokens
 from .utils import TranslationError
@@ -22,7 +21,9 @@ class Translator(Protocol):
         """Translate a single chunk of text."""
         ...
 
-    def translate_batch(self, texts: list[str], source_lang: str, target_lang: str) -> list[str]:
+    def translate_batch(
+        self, texts: list[str], source_lang: str, target_lang: str
+    ) -> list[str]:
         """Translate multiple chunks. Default loops over translate()."""
         ...
 
@@ -47,7 +48,7 @@ class HuggingFaceTranslator:
         logger.info(f"Loading model: {model_name}...")
         logger.info("(This may take a few minutes on first run as the model downloads)")
 
-        self.pipe = pipeline(
+        self.pipe: Any = pipeline(
             "image-text-to-text",
             model=model_name,
             device_map="auto",
@@ -75,15 +76,22 @@ class HuggingFaceTranslator:
                 cfg = cfg.text_config
             n_layers = cfg.num_hidden_layers
             n_kv_heads = getattr(cfg, "num_key_value_heads", cfg.num_attention_heads)
-            head_dim = getattr(cfg, "head_dim", cfg.hidden_size // cfg.num_attention_heads)
-            # KV cache per sequence: 2 (K+V) * layers * kv_heads * head_dim * tokens * 2 bytes (bfloat16)
+            head_dim = getattr(
+                cfg, "head_dim", cfg.hidden_size // cfg.num_attention_heads
+            )
+            # KV cache per sequence:
+            # 2(K+V) * layers * kv_heads * head_dim * tokens * 2 bytes (bfloat16)
             # 1.5x overhead for activations and intermediate buffers
-            per_seq_bytes = int(2 * n_layers * n_kv_heads * head_dim * self.max_chunk_tokens * 2 * 1.5)
+            per_seq_bytes = int(
+                2 * n_layers * n_kv_heads * head_dim * self.max_chunk_tokens * 2 * 1.5
+            )
             return max(1, min(int(free_bytes // per_seq_bytes), 256))
-        except:
+        except Exception:
             return 1
 
-    def _build_messages(self, text: str, source_lang: str, target_lang: str) -> list[dict[str, object]]:
+    def _build_messages(
+        self, text: str, source_lang: str, target_lang: str
+    ) -> list[dict[str, object]]:
         """Build the message payload for a single chunk."""
         return [
             {
@@ -101,6 +109,8 @@ class HuggingFaceTranslator:
 
     def is_truncated(self, text: str) -> bool:
         """Check if output was likely truncated by hitting max_new_tokens."""
+        if self.tokenizer is None:
+            return False
         return count_tokens(text, self.tokenizer) >= self.max_chunk_tokens
 
     def translate(self, text: str, source_lang: str, target_lang: str) -> str:
@@ -111,7 +121,7 @@ class HuggingFaceTranslator:
             TranslationError: If translation returns empty or truncated output.
         """
         messages = self._build_messages(text, source_lang, target_lang)
-        output = self.pipe(
+        output = self.pipe(  # type: ignore[no-matching-overload]
             text=messages,
             do_sample=False,
             pad_token_id=1,
@@ -123,11 +133,15 @@ class HuggingFaceTranslator:
             raise TranslationError("Translation returned empty result")
 
         if self.is_truncated(result):
-            raise TranslationError(f"Output truncated (hit {self.max_chunk_tokens} token limit)")
+            raise TranslationError(
+                f"Output truncated (hit {self.max_chunk_tokens} token limit)"
+            )
 
         return result
 
-    def translate_batch(self, texts: list[str], source_lang: str, target_lang: str) -> list[str]:
+    def translate_batch(
+        self, texts: list[str], source_lang: str, target_lang: str
+    ) -> list[str]:
         """
         Translate multiple chunks using batched inference.
 
@@ -141,10 +155,15 @@ class HuggingFaceTranslator:
 
             if len(texts) > 1:
                 batch_end = batch_start + len(batch)
-                logger.info(f"    Translating chunks {batch_start + 1}-{batch_end}/{len(texts)}...")
+                logger.info(
+                    "    Translating chunks "
+                    f"{batch_start + 1}-{batch_end}/{len(texts)}..."
+                )
 
-            batch_messages = [self._build_messages(c, source_lang, target_lang) for c in batch]
-            outputs = self.pipe(
+            batch_messages = [
+                self._build_messages(c, source_lang, target_lang) for c in batch
+            ]
+            outputs = self.pipe(  # type: ignore[no-matching-overload]
                 text=batch_messages,
                 do_sample=False,
                 batch_size=len(batch),
@@ -155,15 +174,22 @@ class HuggingFaceTranslator:
             for i, output in enumerate(outputs):
                 result = output[0]["generated_text"][-1]["content"]
                 if not result or not result.strip():
-                    raise TranslationError(f"Translation returned empty result for chunk {batch_start + i + 1}")
+                    raise TranslationError(
+                        "Translation returned empty result for chunk "
+                        f"{batch_start + i + 1}"
+                    )
                 if self.is_truncated(result):
-                    result = self._retry_truncated(texts[batch_start + i], source_lang, target_lang)
+                    result = self._retry_truncated(
+                        texts[batch_start + i], source_lang, target_lang
+                    )
                 results.append(result)
 
         return results
 
-    def _retry_truncated(self, text: str, source_lang: str, target_lang: str, depth: int = 0) -> str:
-        """Recursively retry a truncated chunk by splitting it into smaller sub-chunks."""
+    def _retry_truncated(
+        self, text: str, source_lang: str, target_lang: str, depth: int = 0
+    ) -> str:
+        """Recursively retry a truncated chunk by splitting it"""
         _MAX_DEPTH = 3
         if depth >= _MAX_DEPTH:
             raise TranslationError(
@@ -171,16 +197,23 @@ class HuggingFaceTranslator:
                 "Input may be too complex to translate within token limits."
             )
 
+        assert self.tokenizer is not None
         input_tokens = count_tokens(text, self.tokenizer)
         half = max(int(input_tokens * 0.6), 1)
-        logger.info(f"      Output truncated ({input_tokens} tokens), retrying (attempt {depth + 1}/{_MAX_DEPTH})...")
+        logger.info(
+            f"      Output truncated ({input_tokens} tokens), retrying "
+            f"(attempt {depth + 1}/{_MAX_DEPTH})..."
+        )
 
         sub_chunks = chunk_text_by_tokens(text, self.tokenizer, max_tokens=half)
         parts = []
         for j, sub in enumerate(sub_chunks, 1):
-            logger.info(f"      Sub-chunk {j}/{len(sub_chunks)} ({count_tokens(sub, self.tokenizer)} tokens)...")
+            logger.info(
+                f"      Sub-chunk {j}/{len(sub_chunks)} "
+                f"({count_tokens(sub, self.tokenizer)} tokens)..."
+            )
             messages = self._build_messages(sub, source_lang, target_lang)
-            output = self.pipe(
+            output = self.pipe(  # type: ignore[no-matching-overload]
                 text=messages,
                 do_sample=False,
                 pad_token_id=1,

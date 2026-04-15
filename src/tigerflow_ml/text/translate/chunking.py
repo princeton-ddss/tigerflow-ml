@@ -6,24 +6,24 @@ document structure (paragraphs, sentences) as much as possible.
 """
 
 import re
-from typing import Callable
+from collections.abc import Callable
+from typing import cast
 
-from transformers import PreTrainedTokenizerBase
-from transformers import PretrainedConfig
-
-
+from transformers import PretrainedConfig, PreTrainedTokenizerBase
 
 # TranslateGemma context window is 2048 tokens (input + output).
 # Reserve ~248 tokens for the prompt template and split the rest
 # evenly between the input chunk and the generated translation.
 FALLBACK_MAX_CHUNK_TOKENS = 900
 
-# context windows range in sizes, assuming a 128K token context 
-# window on the larger end to be the cap. 
+# context windows range in sizes, assuming a 128K token context
+# window on the larger end to be the cap.
 MAX_CHUNK_TOKENS = 63500
 
 
-def compute_chunk_size(config: PretrainedConfig, prompt_overhead: int = 248) -> int | None:
+def compute_chunk_size(
+    config: PretrainedConfig, prompt_overhead: int = 248
+) -> int | None:
     """
     Derive max input chunk tokens from a model config.
 
@@ -35,7 +35,14 @@ def compute_chunk_size(config: PretrainedConfig, prompt_overhead: int = 248) -> 
     sliding_window the local window is already small enough to use directly.
     """
     # Fields that represent the model's full context window
-    full_context_fields = ["n_ctx","seq_length","seq_len","max_sequence_length", "n_positions", "max_position_embeddings"]
+    full_context_fields = [
+        "n_ctx",
+        "seq_length",
+        "seq_len",
+        "max_sequence_length",
+        "n_positions",
+        "max_position_embeddings",
+    ]
     # Fields that represent a local attention window — already small, so don't halve
     sliding_fields = ["sliding_window"]
 
@@ -56,7 +63,7 @@ def compute_chunk_size(config: PretrainedConfig, prompt_overhead: int = 248) -> 
             return max(value - prompt_overhead, 1)
         if (value := _first_positive(cfg, full_context_fields)) is not None:
             return max((value - prompt_overhead) // 2, 1)
-        
+
     return None
 
 
@@ -114,7 +121,9 @@ def chunk_text_by_tokens(
                 current_tokens = 0
 
             # Split paragraph into sentences
-            sentence_chunks = _chunk_by_sentences(para, token_count, max_tokens, tokenizer)
+            sentence_chunks = _chunk_by_sentences(
+                para, token_count, max_tokens, tokenizer
+            )
             chunks.extend(sentence_chunks)
 
         elif current_tokens + para_tokens > max_tokens:
@@ -189,6 +198,6 @@ def _chunk_by_raw_tokens(
 
     for i in range(0, len(tokens), max_tokens):
         chunk_tokens = tokens[i : i + max_tokens]
-        chunks.append(tokenizer.decode(chunk_tokens))
+        chunks.append(cast(str, tokenizer.decode(chunk_tokens)))
 
     return chunks

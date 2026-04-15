@@ -2,6 +2,7 @@
 
 from tigerflow_ml.audio.transcribe._base import _format_as_srt, _format_timestamp
 
+
 class TestFormatTimestamp:
     def test_zero(self):
         assert _format_timestamp(0.0) == "00:00:00,000"
@@ -44,5 +45,3 @@ class TestFormatAsSrt:
         # Two subtitle blocks separated by blank line
         assert "1" in lines
         assert "2" in lines
-
-

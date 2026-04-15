@@ -3,7 +3,9 @@ Utility functions for file I/O and encoding detection.
 """
 
 from pathlib import Path
+
 from tigerflow.logconfig import logger
+
 
 class TranslationError(Exception):
     """Raised when translation fails."""
@@ -12,7 +14,8 @@ class TranslationError(Exception):
 
 
 class SkippedFileError(Exception):
-    """Raised when a file should be skipped (e.g., empty, already in target language)."""
+    """Raised when a file should be skipped
+    (e.g., empty, already in target language)."""
 
     pass
 
@@ -21,7 +24,7 @@ class SkippedFileError(Exception):
 # Note: utf-8-sig handles both BOM and non-BOM UTF-8 files (strips BOM if present).
 # latin-1 always succeeds (maps all 256 byte values), so it must be last.
 # Files encoded in non-Western encodings (Shift-JIS, GB2312, etc.) will decode
-# as garbage rather than failing - consider using charset-normalizer for better detection.
+# as garbage rather than failing-consider using charset-normalizer for better detection.
 ENCODING_FALLBACK_CHAIN = ["utf-8-sig", "cp1252", "iso-8859-15", "latin-1"]
 
 
@@ -42,13 +45,13 @@ def read_file_with_fallback(path: Path) -> str:
     last_error = None
     for i, encoding in enumerate(ENCODING_FALLBACK_CHAIN):
         try:
-            with open(path, "r", encoding=encoding) as f:
+            with open(path, encoding=encoding) as f:
                 content = f.read()
             # Warn if we fell back to latin-1 (might be decoding garbage)
             if encoding == "latin-1" and i > 0:
                 logger.warning(
-                    "  Warning: Fell back to latin-1 encoding - content may be incorrect "
-                    "if file uses a non-Western encoding (e.g., Shift-JIS, GB2312)"
+                    " Warning: Fell back to latin-1 encoding - content may be incorrect"
+                    " if file uses a non-Western encoding (e.g., Shift-JIS, GB2312)"
                 )
             return content
         except UnicodeDecodeError as e:

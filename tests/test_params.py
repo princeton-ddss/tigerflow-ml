@@ -26,6 +26,7 @@ def test_translate_defaults():
     assert p.batch_size is None
     assert p.fetch is False
 
+
 def test_transcribe_defaults():
     p = _TranscribeBase.Params()
     assert p.model == "openai/whisper-large-v3"
