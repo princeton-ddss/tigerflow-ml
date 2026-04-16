@@ -119,6 +119,7 @@ FLORES_CODES: dict[str, str] = {
     "zh": "zho_Hans",
 }
 
+
 def to_flores(code: str) -> str:
     """Convert an ISO 639-1 code to its FLORES-200 equivalent.
 

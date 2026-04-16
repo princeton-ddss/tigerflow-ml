@@ -25,7 +25,7 @@ hf auth login
 HF_HOME=./.hf hf download google/translategemma-27b-it
 ```
 
-Setting `HF_HOME=./.hf` defines the directory where the model's files will be downloaded. Using `./.hf` means the files will be downloaded to the current working directory (`./`) and will be in a new direcotry named `.hf`.
+Setting `HF_HOME=./.hf` defines the directory where the model's files will be downloaded. Using `./.hf` means the files will be downloaded to the current working directory (`./`) and will be in a new directory named `.hf`.
 
 ### Running the task
 
@@ -47,21 +47,21 @@ Here's a breakdown of what each of these arguments does:
 - `--input-ext` : Specifies the file format of the input data -- this needs to be `.txt`.
 - `--output-dir` : Specifies the path where the translated output files will be saved.
 - `--output-ext .txt` : Specifies the file format of the output data -- this needs to be `.txt`.
-- `--max-workers` : The maximum number of workers for autoscaling. 
+- `--max-workers` : The maximum number of workers for autoscaling.
 - `--cpus` : The number of CPUs allocated per worker.
 - `--memory` : The memory allocated per worker
-- `--gpus` : The number of GPUs allocated per worker. 
-- `--sbatch-option` : Additional Slurm options for workers -- when using large models, setting `--constraint=gpu80` ensures the GPUs will have sufficient memory. 
+- `--gpus` : The number of GPUs allocated per worker.
+- `--sbatch-option` : Additional Slurm options for workers -- when using large models, setting `--constraint=gpu80` ensures the GPUs will have sufficient memory.
 - `--setup-command` : Shell command to run before the task starts -- this is where you would activate your virtual environment and make sure `HF_HOME` is pointing to the directory where the model is saved.
 - `--model` : The HuggingFace model repo ID for your translation model.
 
 Some other arguments you can use are:
 
-- `--source-lang` : Source language code (e.g. 'en', 'de', 'zh'). If this is not specified, the input files' langage is detected via `langdetect`
-- `--target-lang` : Target language code (e.g. 'de', 'en', 'fr'). Ths defaults to english (en).
-- `--chunk-size` : The maximum tokens per chunk. The documents are translated one chunk at a time, so if your model cannot handle large inputs, this should be small. If no value is provided, the context window of the model will be determined using the downloaded `config.json` and an appropriate chunk size will be computed. If this process fails, it will fall back to a chunk size of `900`, which is optimized for the `translategemma` models. 
-- `--batch-size` : The number of chunks to translate in parallel. If not specified, there will be an attempt to identify an optimal number based on resources available and model size. If this process fails, a batch size of `1` will be used. 
-- `--fetch` : If included, allows downloading from the HuggingFace Hub. Only include `--fetch` if your hardware will have internet access. 
+- `--source-lang` : Source language code (e.g. 'en', 'de', 'zh'). If this is not specified, the input files' language is detected via `langdetect`
+- `--target-lang` : Target language code (e.g. 'de', 'en', 'fr'). This defaults to english (en).
+- `--chunk-size` : The maximum tokens per chunk. The documents are translated one chunk at a time, so if your model cannot handle large inputs, this should be small. If no value is provided, the context window of the model will be determined using the downloaded `config.json` and an appropriate chunk size will be computed. If this process fails, it will fall back to a chunk size of `900`, which is optimized for the `translategemma` models.
+- `--batch-size` : The number of chunks to translate in parallel. If not specified, there will be an attempt to identify an optimal number based on resources available and model size. If this process fails, a batch size of `1` will be used.
+- `--fetch` : If included, allows downloading from the HuggingFace Hub. Only include `--fetch` if your hardware will have internet access.
 - `--task-name` : The task name, which defaults to "Translate"
 - `--revision` : The model revision
 - `--cache-dir` : The HuggingFace cache directory for model files. This would be an alternative for specifying the path using `HF_HOME` in a `setup-command`

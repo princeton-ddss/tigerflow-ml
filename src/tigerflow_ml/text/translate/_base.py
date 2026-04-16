@@ -73,10 +73,9 @@ class _TranslateBase:
         ] = _DEFAULT_PROMPT
 
         # backend: Annotated[
-        #     Literal["auto", "seq2seq", "chat", "gemma"],
-        #     typer.Option(help="Translation backend. 'auto' detects from model config."),
+        #   Literal["auto", "seq2seq", "chat", "gemma"],
+        #   typer.Option(help="Translation backend. 'auto' detects from model config."),
         # ] = "auto"
-
 
         batch_size: Annotated[
             int | None,
@@ -139,7 +138,7 @@ class _TranslateBase:
             config=config,
             batch_size=context.batch_size,
             fetch=context.fetch,
-            prompt_template=context.prompt
+            prompt_template=context.prompt,
         )
 
     @staticmethod
