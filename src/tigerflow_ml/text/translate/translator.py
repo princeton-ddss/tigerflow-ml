@@ -9,6 +9,8 @@ from typing import Any, Protocol
 
 from tigerflow.logconfig import logger
 from transformers import PretrainedConfig, PreTrainedTokenizerBase
+import torch
+from transformers import pipeline
 
 from .chunking import FALLBACK_MAX_CHUNK_TOKENS, chunk_text_by_tokens, count_tokens
 from .utils import TranslationError
@@ -172,8 +174,7 @@ class GemmaTranslator(HuggingFaceTranslator):
     """Translation backend for TranslateGemma image-text-to-text models."""
 
     def _load_pipeline(self, model_name: str, fetch: bool) -> Any:
-        import torch
-        from transformers import pipeline
+    
 
         logger.info(f"Loading model: {model_name}...")
         logger.info("(This may take a few minutes on first run as the model downloads)")
@@ -278,6 +279,47 @@ class GemmaTranslator(HuggingFaceTranslator):
         return results
 
 
+class ChatTranslator(HuggingFaceTranslator):
+    """Translation backend for chat based models."""
+    
+    def __init__(self, 
+            model_name: str,
+            tokenizer: PreTrainedTokenizerBase | None = None,
+            max_chunk_tokens: int = FALLBACK_MAX_CHUNK_TOKENS,
+            batch_size: int | None = None,
+            fetch: bool = False,
+            prompt_template: str | None = None
+        ):
+        super().__init__(model_name=model_name, tokenizer=tokenizer, max_chunk_tokens=max_chunk_tokens, batch_size=batch_size, fetch=fetch)
+        self.prompt_template = prompt_template
+
+    def _load_pipeline(self, model_name, fetch):
+        from transformers import AutoModelForCausalLM, AutoTokenizer
+
+        model = AutoModelForCausalLM.from_pretrained(
+            model_name,
+            device_map="auto",
+            torch_dtype=torch.bfloat16,
+            local_files_only=not fetch,
+        )
+        tokenizer = AutoTokenizer.from_pretrained(model_name, local_files_only=not fetch)
+        return pipeline("text-generation", model=model, tokenizer=tokenizer)
+
+    def _build_messages(self, text, source_lang, target_lang) -> list[dict]:
+        prompt = self.prompt_template.format(
+            source_lang=source_lang,
+            target_lang=target_lang,
+            text=text,
+        )
+        logger.info(f"Chat prompt: {prompt}")
+        return [{"role": "user", "content": prompt}]
+
+    def translate(self, text, source_lang, target_lang) -> str:
+        messages = self._build_messages(text=text, source_lang=source_lang, target_lang=target_lang)
+        out = self.pipe(messages, do_sample=False, max_new_tokens=self.max_chunk_tokens)
+        return out[0]["generated_text"][-1]["content"]
+
+
 def build_translator(
     model_name: str,
     *,
@@ -314,28 +356,24 @@ def build_translator(
     )
 
     if backend == "gemma":
-        logger.info("building a gemma translator")
         return GemmaTranslator(**kwargs)
     elif backend == "seq2seq":
         pass  # TODO: return Seq2SeqTranslator(**kwargs)
     elif backend == "chat":
-        pass  # TODO: return ChatTranslator(**kwargs, prompt_template=prompt_template)
+        return ChatTranslator(**kwargs, prompt_template=prompt_template)
 
     # Auto-detect from config.json
     arch = (config.architectures or [""])[0]
     model_type = getattr(config, "model_type", "")
 
     if model_type in GEMMA_TYPES and _is_image_text_model(config):
-        logger.info("building a gemma translator")
+        logger.info("Using a gemma backend")
         return GemmaTranslator(**kwargs)
-    elif model_type in SEQ2SEQ_TYPES or any(
-        a in arch for a in ["Marian", "M2M100", "MBart"]
-    ):
-        pass  # TODO: return Seq2SeqTranslator(**kwargs)
-    # else: ChatTranslator is the default for any CausalLM
-    #     TODO: return ChatTranslator(**kwargs, prompt_template=prompt_template)
+        # elif model_type in SEQ2SEQ_TYPES or any(
+        #     a in arch for a in ["Marian", "M2M100", "MBart"]
+        # ):
+        # TODO: return Seq2SeqTranslator(**kwargs)
+    else: 
+        logger.info("Using a chat backend")
+        return ChatTranslator(**kwargs, prompt_template=prompt_template)
 
-    raise NotImplementedError(
-        f"Auto-detected backend for model_type='{model_type}' is not yet implemented. "
-        "Use --backend gemma to force the GemmaTranslator."
-    )
