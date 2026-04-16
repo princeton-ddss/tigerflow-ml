@@ -36,7 +36,7 @@ from .utils import SkippedFileError, TranslationError, read_file_with_fallback
 
 _DEFAULT_PROMPT = (
     "Translate the following text from {source_lang} to {target_lang}. "
-    "Output only the translation, nothing else.\n\n{text}"
+    "Output only the translated text, nothing else. Text: {text}"
 )
 
 
@@ -64,13 +64,13 @@ class _TranslateBase:
             typer.Option(help="Maximum tokens per chunk"),
         ] = None
 
-        # prompt: Annotated[
-        #     str,
-        #     typer.Option(
-        #         help="Prompt template for text-generation models. "
-        #         "Use {source_lang}, {target_lang}, and {text} as placeholders."
-        #     ),
-        # ] = _DEFAULT_PROMPT
+        prompt: Annotated[
+            str,
+            typer.Option(
+                help="Prompt template for text-generation models. "
+                "Use {source_lang}, {target_lang}, and {text} as placeholders."
+            ),
+        ] = _DEFAULT_PROMPT
 
         batch_size: Annotated[
             int | None,
@@ -125,7 +125,7 @@ class _TranslateBase:
         assert chunk_size is not None
         tokenizer = _get_tokenizer(context.model, context.fetch)
         logger.info(f"Model: {context.model}")
-        logger.info("\nInitializing HuggingFace backend...")
+        logger.info("Initializing HuggingFace backend...")
         context.translator = build_translator(
             context.model,
             tokenizer=tokenizer,
@@ -133,6 +133,7 @@ class _TranslateBase:
             config=config,
             batch_size=context.batch_size,
             fetch=context.fetch,
+            prompt_template=context.prompt
         )
 
     @staticmethod

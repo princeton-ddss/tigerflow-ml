@@ -13,7 +13,7 @@ Translate `.txt` documents into English (or another target language) using any c
 
 Once you have tigerflow ready to go, you'll want to download the HuggingFace model you wish to use. You can use any LLM, which will use the prompt:
 
-    "Translate the following text from {source_lang} to {target_lang}. Output only the translation, nothing else.\n\n{text}"
+    "Translate the following text from {source_lang} to {target_lang}. Output only the translated text, nothing else. Text: {text}"
 
 
 Or you can use any translation specific model you like. For the purpose of this tutorial, we will use the `google/translategemma-12b-it` model (to use this family of model, you will need to accept the [TranslateGemma license](https://huggingface.co/google/translategemma-12b-it) on HuggingFace).
