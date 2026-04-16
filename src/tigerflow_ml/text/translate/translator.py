@@ -13,9 +13,16 @@ import torch
 from transformers import pipeline
 
 from .chunking import FALLBACK_MAX_CHUNK_TOKENS, chunk_text_by_tokens, count_tokens
+from .detection import to_flores
 from .utils import TranslationError
 
-SEQ2SEQ_TYPES = {"marian", "m2m_100", "mbart", "nllb", "t5", "mt5", "madlad"}
+# NLLB uses FLORES-200 codes ("eng_Latn") with convert_tokens_to_ids()
+NLLB_TYPES = {"nllb"}
+# M2M-100 uses ISO 639-1 codes ("en") with tokenizer.get_lang_id()
+M2M_TYPES = {"m2m_100"}
+# Model types that use a "<2{lang}>" target-language prefix in the input text
+T5_TYPES = {"t5", "mt5"}
+SEQ2SEQ_TYPES = {"marian"} | NLLB_TYPES | M2M_TYPES | T5_TYPES | {"mbart"}
 GEMMA_TYPES = {"gemma", "gemma2", "gemma3"}
 
 
@@ -279,6 +286,93 @@ class GemmaTranslator(HuggingFaceTranslator):
         return results
 
 
+class Seq2SeqTranslator(HuggingFaceTranslator):
+    """Translation backend for seq2seq models (Helsinki-NLP, NLLB-200, M2M-100, MADLAD-400)."""
+
+    def __init__(
+        self,
+        model_name: str,
+        tokenizer: PreTrainedTokenizerBase | None = None,
+        max_chunk_tokens: int = FALLBACK_MAX_CHUNK_TOKENS,
+        batch_size: int | None = None,
+        fetch: bool = False,
+        config: Any = None,
+    ):
+        self._model_type = getattr(config, "model_type", "") if config is not None else ""
+        super().__init__(
+            model_name=model_name,
+            tokenizer=tokenizer,
+            max_chunk_tokens=max_chunk_tokens,
+            batch_size=batch_size,
+            fetch=fetch,
+        )
+
+    def _load_pipeline(self, model_name: str, fetch: bool) -> Any:
+        from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
+
+        seq2seq_tokenizer = AutoTokenizer.from_pretrained(
+            model_name,
+            local_files_only=not fetch,
+        )
+        model = AutoModelForSeq2SeqLM.from_pretrained(
+            model_name,
+            device_map="auto",
+            dtype=torch.bfloat16,
+            local_files_only=not fetch,
+        )
+        # Return a namespace so callers can access .model and .tokenizer
+        # the same way the pipeline abstraction does.
+        class _Seq2SeqPipe:
+            def __init__(self, model, tokenizer):
+                self.model = model
+                self.tokenizer = tokenizer
+
+        return _Seq2SeqPipe(model, seq2seq_tokenizer)
+
+    def translate(self, text: str, source_lang: str, target_lang: str) -> str:
+        """Translate one chunk using model.generate() directly."""
+        tok = self.pipe.tokenizer
+        model = self.pipe.model
+
+        if self._model_type in NLLB_TYPES:
+            tok.src_lang = to_flores(source_lang)
+            inputs = tok(text, return_tensors="pt").to(model.device)
+            forced_bos_token_id = tok.convert_tokens_to_ids(to_flores(target_lang))
+            output_ids = model.generate(
+                **inputs,
+                forced_bos_token_id=forced_bos_token_id,
+                max_new_tokens=self.max_chunk_tokens,
+            )
+        elif self._model_type in M2M_TYPES:
+            tok.src_lang = source_lang
+            inputs = tok(text, return_tensors="pt").to(model.device)
+            forced_bos_token_id = tok.get_lang_id(target_lang)
+            output_ids = model.generate(
+                **inputs,
+                forced_bos_token_id=forced_bos_token_id,
+                max_new_tokens=self.max_chunk_tokens,
+            )
+        elif self._model_type in T5_TYPES:
+            inputs = tok(f"<2{target_lang}> {text}", return_tensors="pt").to(model.device)
+            output_ids = model.generate(**inputs, max_new_tokens=self.max_chunk_tokens)
+        else:
+            # MarianMT (Helsinki-NLP) and mBART: no lang-code setup needed
+            inputs = tok(text, return_tensors="pt").to(model.device)
+            output_ids = model.generate(**inputs, max_new_tokens=self.max_chunk_tokens)
+
+        result: str = tok.decode(output_ids[0], skip_special_tokens=True)
+
+        if not result or not result.strip():
+            raise TranslationError("Translation returned empty result")
+
+        if self.is_truncated(result):
+            raise TranslationError(
+                f"Output truncated (hit {self.max_chunk_tokens} token limit)"
+            )
+
+        return result
+
+
 class ChatTranslator(HuggingFaceTranslator):
     """Translation backend for chat based models."""
     
@@ -311,7 +405,6 @@ class ChatTranslator(HuggingFaceTranslator):
             target_lang=target_lang,
             text=text,
         )
-        logger.info(f"Chat prompt: {prompt}")
         return [{"role": "user", "content": prompt}]
 
     def translate(self, text, source_lang, target_lang) -> str:
@@ -355,25 +448,26 @@ def build_translator(
         fetch=fetch,
     )
 
-    if backend == "gemma":
-        return GemmaTranslator(**kwargs)
-    elif backend == "seq2seq":
-        pass  # TODO: return Seq2SeqTranslator(**kwargs)
-    elif backend == "chat":
-        return ChatTranslator(**kwargs, prompt_template=prompt_template)
+    # if backend == "gemma":
+    #     return GemmaTranslator(**kwargs)
+    # elif backend == "seq2seq":
+    #     return Seq2SeqTranslator(**kwargs, config=config)
+    # elif backend == "chat":
+    #     return ChatTranslator(**kwargs, prompt_template=prompt_template)
 
     # Auto-detect from config.json
-    arch = (config.architectures or [""])[0]
     model_type = getattr(config, "model_type", "")
+    arch = (config.architectures or [""])[0]
 
     if model_type in GEMMA_TYPES and _is_image_text_model(config):
         logger.info("Using a gemma backend")
         return GemmaTranslator(**kwargs)
-        # elif model_type in SEQ2SEQ_TYPES or any(
-        #     a in arch for a in ["Marian", "M2M100", "MBart"]
-        # ):
-        # TODO: return Seq2SeqTranslator(**kwargs)
-    else: 
+    elif model_type in SEQ2SEQ_TYPES or any(
+        a in arch for a in ["Marian", "M2M100", "MBart"]
+    ):
+        logger.info("Using a seq2seq backend")
+        return Seq2SeqTranslator(**kwargs, config=config)
+    else:
         logger.info("Using a chat backend")
         return ChatTranslator(**kwargs, prompt_template=prompt_template)
 

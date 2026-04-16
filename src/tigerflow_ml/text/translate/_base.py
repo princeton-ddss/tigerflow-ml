@@ -72,6 +72,12 @@ class _TranslateBase:
             ),
         ] = _DEFAULT_PROMPT
 
+        # backend: Annotated[
+        #     Literal["auto", "seq2seq", "chat", "gemma"],
+        #     typer.Option(help="Translation backend. 'auto' detects from model config."),
+        # ] = "auto"
+
+
         batch_size: Annotated[
             int | None,
             typer.Option(help="Chunks to translate in parallel (default: auto)"),

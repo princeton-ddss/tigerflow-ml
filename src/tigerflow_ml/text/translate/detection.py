@@ -79,3 +79,50 @@ def _detect_sample(sample: str) -> str | None:
         return str(detect(sample))
     except LangDetectException:
         return None
+
+
+"""
+FLORES-200 language code mapping for NLLB-200 and M2M-100 models.
+
+These models reject ISO 639-1 codes (e.g. "en") and require FLORES-200 codes
+(e.g. "eng_Latn"). Call to_flores() when model_type is "nllb" or "m2m_100".
+Helsinki-NLP models do not use lang codes at all.
+"""
+# ISO 639-1 → FLORES-200
+FLORES_CODES: dict[str, str] = {
+    "ar": "arb_Arab",
+    "ca": "cat_Latn",
+    "cs": "ces_Latn",
+    "da": "dan_Latn",
+    "de": "deu_Latn",
+    "el": "ell_Grek",
+    "en": "eng_Latn",
+    "es": "spa_Latn",
+    "eu": "eus_Latn",
+    "fi": "fin_Latn",
+    "fr": "fra_Latn",
+    "he": "heb_Hebr",
+    "hu": "hun_Latn",
+    "it": "ita_Latn",
+    "ja": "jpn_Jpan",
+    "ko": "kor_Hang",
+    "nb": "nob_Latn",
+    "nl": "nld_Latn",
+    "nn": "nno_Latn",
+    "no": "nob_Latn",
+    "pl": "pol_Latn",
+    "pt": "por_Latn",
+    "ru": "rus_Cyrl",
+    "sk": "slk_Latn",
+    "sv": "swe_Latn",
+    "tr": "tur_Latn",
+    "zh": "zho_Hans",
+}
+
+def to_flores(code: str) -> str:
+    """Convert an ISO 639-1 code to its FLORES-200 equivalent.
+
+    If the code is already a FLORES-200 code (contains '_') or is not in the
+    mapping, it is returned unchanged.
+    """
+    return FLORES_CODES.get(code, code)
