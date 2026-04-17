@@ -15,13 +15,10 @@ from .chunking import FALLBACK_MAX_CHUNK_TOKENS, chunk_text_by_tokens, count_tok
 from .detection import to_flores
 from .utils import TranslationError
 
-# NLLB uses FLORES-200 codes ("eng_Latn") with convert_tokens_to_ids()
-NLLB_TYPES = {"nllb"}
-# M2M-100 uses ISO 639-1 codes ("en") with tokenizer.get_lang_id()
 M2M_TYPES = {"m2m_100"}
 # Model types that use a "<2{lang}>" target-language prefix in the input text
 T5_TYPES = {"t5", "mt5"}
-SEQ2SEQ_TYPES = {"marian"} | NLLB_TYPES | M2M_TYPES | T5_TYPES | {"mbart"}
+SEQ2SEQ_TYPES = {"marian"} | M2M_TYPES | T5_TYPES | {"mbart"}
 GEMMA_TYPES = {"gemma", "gemma2", "gemma3"}
 
 
@@ -187,7 +184,7 @@ class GemmaTranslator(HuggingFaceTranslator):
             "image-text-to-text",
             model=model_name,
             device_map="auto",
-            torch_dtype=torch.bfloat16,
+            dtype=torch.bfloat16,
             local_files_only=not fetch,
         )
         return pipe
@@ -336,19 +333,16 @@ class Seq2SeqTranslator(HuggingFaceTranslator):
         tok = self.pipe.tokenizer
         model = self.pipe.model
 
-        if self._model_type in NLLB_TYPES:
-            tok.src_lang = to_flores(source_lang)
+        if self._model_type in M2M_TYPES:
+            if hasattr(tok, "get_lang_id"):
+                # M2M100Tokenizer: uses ISO 639-1 codes
+                tok.src_lang = source_lang
+                forced_bos_token_id = tok.get_lang_id(target_lang)
+            else:
+                # NllbTokenizer: also model_type=m2m_100 but needs FLORES-200 codes
+                tok.src_lang = to_flores(source_lang)
+                forced_bos_token_id = tok.convert_tokens_to_ids(to_flores(target_lang))
             inputs = tok(text, return_tensors="pt").to(model.device)
-            forced_bos_token_id = tok.convert_tokens_to_ids(to_flores(target_lang))
-            output_ids = model.generate(
-                **inputs,
-                forced_bos_token_id=forced_bos_token_id,
-                max_new_tokens=self.max_chunk_tokens,
-            )
-        elif self._model_type in M2M_TYPES:
-            tok.src_lang = source_lang
-            inputs = tok(text, return_tensors="pt").to(model.device)
-            forced_bos_token_id = tok.get_lang_id(target_lang)
             output_ids = model.generate(
                 **inputs,
                 forced_bos_token_id=forced_bos_token_id,
@@ -404,7 +398,7 @@ class ChatTranslator(HuggingFaceTranslator):
         model = AutoModelForCausalLM.from_pretrained(
             model_name,
             device_map="auto",
-            torch_dtype=torch.bfloat16,
+            dtype=torch.bfloat16,
             local_files_only=not fetch,
         )
         tokenizer = AutoTokenizer.from_pretrained(
