@@ -38,7 +38,7 @@ python -m tigerflow_ml.text.translate.slurm --help
 To run this task directly, run:
 
 ```
-python -m tigerflow_ml.text.translate.slurm --input-dir /path/to/inputs/ --input-ext .txt --output-dir /path/to/outputs/ --output-ext .txt --max-workers 1 --cpus 1 --memory 10G --time 24:00:00 --gpus 1 --sbatch-option "--constraint=gpu80" --setup-command "export HF_HOME=./.hf" --setup-command "source .venv/bin/activate" --model google/translategemma-27b-it
+python -m tigerflow_ml.text.translate.slurm --input-dir /path/to/inputs/ --input-ext .txt --output-dir /path/to/outputs/ --output-ext .txt --max-workers 1 --cpus 1 --memory 10G --time 24:00:00 --gpus 1 --sbatch-option "--constraint=gpu80" --setup-command "export HF_HOME=./.hf" --setup-command "source .venv/bin/activate" --setup-command "export TRANSFORMERS_OFFLINE=1" --model google/translategemma-27b-it
 ```
 
 Here's a breakdown of what each of these arguments does:
@@ -52,7 +52,7 @@ Here's a breakdown of what each of these arguments does:
 - `--memory` : The memory allocated per worker
 - `--gpus` : The number of GPUs allocated per worker.
 - `--sbatch-option` : Additional Slurm options for workers -- when using large models, setting `--constraint=gpu80` ensures the GPUs will have sufficient memory.
-- `--setup-command` : Shell command to run before the task starts -- this is where you would activate your virtual environment and make sure `HF_HOME` is pointing to the directory where the model is saved.
+- `--setup-command` : Shell command to run before the task starts -- this is where you would activate your virtual environment and make sure `HF_HOME` is pointing to the directory where the model is saved. Setting `TRANSFORMERS_OFFLINE` to 1 will prevent some models from trying to access the internet.
 - `--model` : The HuggingFace model repo ID for your translation model.
 
 Some other arguments you can use are:
