@@ -21,11 +21,6 @@ FALLBACK_MAX_CHUNK_TOKENS = 900
 MAX_CHUNK_TOKENS = 63500
 
 
-# Seq2seq models have separate encoder and decoder context windows, so the full
-# encoder window is available for input — no halving needed.
-_SEQ2SEQ_TYPES = {"marian", "m2m_100", "t5", "mt5", "mbart"}
-
-
 def compute_chunk_size(
     config: PretrainedConfig, prompt_overhead: int = 248
 ) -> int | None:
@@ -35,12 +30,7 @@ def compute_chunk_size(
     Uses the first matching context-window field found, checking the top-level
     config and then text_config (for multimodal models like Gemma3).
 
-    For causal LMs the chunk is half the usable window (the other half is
-    reserved for the generated translation) and the full prompt_overhead is
-    subtracted.  For seq2seq models the encoder and decoder are independent, so
-    the full encoder window is used for input; only a small prefix overhead (5
-    tokens) is subtracted.  For sliding_window the local window is already
-    small enough to use directly.
+    For sliding_window the local window is already small enough to use directly.
     """
     # Fields that represent the model's full context window
     full_context_fields = [
@@ -53,9 +43,6 @@ def compute_chunk_size(
     ]
     # Fields that represent a local attention window — already small, so don't halve
     sliding_fields = ["sliding_window"]
-
-    model_type = getattr(config, "model_type", "")
-    is_seq2seq = model_type in _SEQ2SEQ_TYPES
 
     # For multimodal models (e.g. Gemma3) the relevant fields live in text_config
     configs_to_check = [config]
@@ -71,11 +58,8 @@ def compute_chunk_size(
 
     for cfg in configs_to_check:
         if (value := _first_positive(cfg, sliding_fields)) is not None:
-            overhead = 5 if is_seq2seq else prompt_overhead
-            return max(value - overhead, 1)
+            return max(value - prompt_overhead, 1)
         if (value := _first_positive(cfg, full_context_fields)) is not None:
-            if is_seq2seq:
-                return max(value - 5, 1)
             return max((value - prompt_overhead) // 2, 1)
 
     return None

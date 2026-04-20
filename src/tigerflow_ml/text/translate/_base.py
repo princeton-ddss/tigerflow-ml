@@ -73,7 +73,7 @@ class _TranslateBase:
         ] = _DEFAULT_PROMPT
 
         # backend: Annotated[
-        #   Literal["auto", "seq2seq", "chat", "gemma"],
+        #   Literal["auto", "chat", "gemma"],
         #   typer.Option(help="Translation backend. 'auto' detects from model config."),
         # ] = "auto"
 
