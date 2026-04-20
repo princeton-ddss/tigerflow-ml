@@ -20,6 +20,7 @@ venv/
 .pytest_cache/
 .coverage
 htmlcov/
+.hf/
 
 # Type checking
 .ty/
