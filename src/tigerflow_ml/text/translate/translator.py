@@ -275,7 +275,8 @@ class GemmaTranslator(HuggingFaceTranslator):
 
 
 class ChatTranslator(HuggingFaceTranslator):
-    """Translation backend for chat based models."""
+    """Translation backend for chat-based LLMs
+    (text-generation and image-text-to-text)."""
 
     def __init__(
         self,
@@ -285,7 +286,9 @@ class ChatTranslator(HuggingFaceTranslator):
         batch_size: int | None = None,
         fetch: bool = False,
         prompt_template: str = "",
+        is_vlm: bool = False,
     ):
+        self._is_vlm = is_vlm  # set before super().__init__ calls _load_pipeline
         super().__init__(
             model_name=model_name,
             tokenizer=tokenizer,
@@ -296,6 +299,16 @@ class ChatTranslator(HuggingFaceTranslator):
         self.prompt_template = prompt_template
 
     def _load_pipeline(self, model_name, fetch):
+        logger.info(f"Loading model: {model_name}...")
+        logger.info("(This may take a few minutes on first run as the model downloads)")
+        if self._is_vlm:
+            return pipeline(
+                "image-text-to-text",
+                model=model_name,
+                device_map="auto",
+                dtype=torch.bfloat16,
+                local_files_only=not fetch,
+            )
         from transformers import AutoModelForCausalLM, AutoTokenizer
 
         model = AutoModelForCausalLM.from_pretrained(
@@ -315,14 +328,30 @@ class ChatTranslator(HuggingFaceTranslator):
             target_lang=target_lang,
             text=text,
         )
+        if self._is_vlm:
+            return [{"role": "user", "content": [{"type": "text", "text": prompt}]}]
         return [{"role": "user", "content": prompt}]
 
     def translate(self, text, source_lang, target_lang) -> str:
         messages = self._build_messages(
             text=text, source_lang=source_lang, target_lang=target_lang
         )
-        out = self.pipe(messages, do_sample=False, max_new_tokens=self.max_chunk_tokens)
-        return out[0]["generated_text"][-1]["content"]
+        if self._is_vlm:
+            out = self.pipe(
+                text=messages, do_sample=False, max_new_tokens=self.max_chunk_tokens
+            )
+        else:
+            out = self.pipe(
+                messages, do_sample=False, max_new_tokens=self.max_chunk_tokens
+            )
+        result: str = out[0]["generated_text"][-1]["content"]
+        if not result or not result.strip():
+            raise TranslationError("Translation returned empty result")
+        if self.is_truncated(result):
+            raise TranslationError(
+                f"Output truncated (hit {self.max_chunk_tokens} token limit)"
+            )
+        return result
 
 
 def build_translator(
@@ -369,8 +398,12 @@ def build_translator(
     model_type = getattr(config, "model_type", "")
 
     if "gemma" in model_type and _is_image_text_model(config):
-        logger.info("Using a gemma backend")
+        logger.info("Using Gemma image-text-to-text backend")
         return GemmaTranslator(**kwargs)
     else:
-        logger.info("Using a chat backend")
-        return ChatTranslator(**kwargs, prompt_template=prompt_template)
+        is_vlm = _is_image_text_model(config)
+        logger.info(
+            "Using chat backend "
+            "({'image-text-to-text' if is_vlm else 'text-generation'})"
+        )
+        return ChatTranslator(**kwargs, prompt_template=prompt_template, is_vlm=is_vlm)
