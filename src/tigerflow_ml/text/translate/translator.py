@@ -320,31 +320,39 @@ class ChatTranslator(HuggingFaceTranslator):
         tokenizer = AutoTokenizer.from_pretrained(
             model_name, local_files_only=not fetch
         )
+        self._has_chat_template = bool(getattr(tokenizer, "chat_template", None))
         return pipeline("text-generation", model=model, tokenizer=tokenizer)
 
-    def _build_messages(self, text, source_lang, target_lang) -> list[dict]:
-        prompt = self.prompt_template.format(
+    def _build_prompt(self, text, source_lang, target_lang) -> str:
+        return self.prompt_template.format(
             source_lang=source_lang,
             target_lang=target_lang,
             text=text,
         )
-        if self._is_vlm:
-            return [{"role": "user", "content": [{"type": "text", "text": prompt}]}]
-        return [{"role": "user", "content": prompt}]
 
     def translate(self, text, source_lang, target_lang) -> str:
-        messages = self._build_messages(
-            text=text, source_lang=source_lang, target_lang=target_lang
-        )
+        prompt = self._build_prompt(text, source_lang, target_lang)
         if self._is_vlm:
+            messages = [{"role": "user", "content": [{"type": "text", "text": prompt}]}]
             out = self.pipe(
                 text=messages, do_sample=False, max_new_tokens=self.max_chunk_tokens
             )
+            result: str = out[0]["generated_text"][-1]["content"]
+        elif self._has_chat_template:
+            out = self.pipe(
+                [{"role": "user", "content": prompt}],
+                do_sample=False,
+                max_new_tokens=self.max_chunk_tokens,
+            )
+            result = out[0]["generated_text"][-1]["content"]
         else:
             out = self.pipe(
-                messages, do_sample=False, max_new_tokens=self.max_chunk_tokens
+                prompt,
+                do_sample=False,
+                max_new_tokens=self.max_chunk_tokens,
+                return_full_text=False,
             )
-        result: str = out[0]["generated_text"][-1]["content"]
+            result = out[0]["generated_text"]
         if not result or not result.strip():
             raise TranslationError("Translation returned empty result")
         if self.is_truncated(result):
@@ -404,6 +412,6 @@ def build_translator(
         is_vlm = _is_image_text_model(config)
         logger.info(
             "Using chat backend "
-            "({'image-text-to-text' if is_vlm else 'text-generation'})"
+            f"({'image-text-to-text' if is_vlm else 'text-generation'})"
         )
         return ChatTranslator(**kwargs, prompt_template=prompt_template, is_vlm=is_vlm)
