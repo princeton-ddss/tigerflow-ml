@@ -16,7 +16,7 @@ Once you have tigerflow ready to go, you'll want to download the HuggingFace mod
     "Translate the following text from {source_lang} to {target_lang}. Output only the translated text, nothing else. Text: {text}"
 
 
-Or you can use any translation specific model you like. For the purpose of this tutorial, we will use the `google/translategemma-12b-it` model (to use this family of model, you will need to accept the [TranslateGemma license](https://huggingface.co/google/translategemma-12b-it) on HuggingFace).
+Or you can use any translation specific model you like. For the purpose of this tutorial, we will use the `google/translategemma-27b-it` model (to use this family of model, you will need to accept the [TranslateGemma license](https://huggingface.co/google/translategemma-27b-it) on HuggingFace).
 
 First, make sure you are in a directory/virtual environment with `tigerflow-ml` installed. Authenticate and download the HuggingFace model to the local cache:
 
@@ -25,7 +25,12 @@ hf auth login
 HF_HOME=./.hf hf download google/translategemma-27b-it
 ```
 
-Setting `HF_HOME=./.hf` defines the directory where the model's files will be downloaded. Using `./.hf` means the files will be downloaded to the current working directory (`./`) and will be in a new directory named `.hf`.
+Setting `HF_HOME=./.hf` defines the directory where the model's files will be downloaded. Using `./.hf` means the files will be downloaded to the current working directory (`./`) and will be in a new directory named `.hf`. If you encounter any issues with downloadind the model, even after accepting the license, you can also try:
+
+```bash
+export HF_TOKEN="hf_token"
+HF_HOME=./.hf hf download google/translategemma-27b-it
+```
 
 ### Running the task
 
@@ -38,7 +43,7 @@ python -m tigerflow_ml.text.translate.slurm --help
 To run this task directly, run:
 
 ```
-python -m tigerflow_ml.text.translate.slurm --input-dir /path/to/inputs/ --input-ext .txt --output-dir /path/to/outputs/ --output-ext .txt --max-workers 1 --cpus 1 --memory 10G --time 24:00:00 --gpus 1 --sbatch-option "--constraint=gpu80" --setup-command "export HF_HOME=./.hf" --setup-command "source .venv/bin/activate" --setup-command "export TRANSFORMERS_OFFLINE=1" --model google/translategemma-12b-it
+python -m tigerflow_ml.text.translate.slurm --input-dir path/to/inputs/ --input-ext .txt --output-dir path/to/outputs/ --output-ext .txt --max-workers 1 --cpus 1 --memory 10G --time 24:00:00 --gpus 1 --sbatch-option "--constraint=gpu80" --setup-command "export HF_HOME=./.hf" --setup-command "source .venv/bin/activate" --setup-command "export TRANSFORMERS_OFFLINE=1" --model google/google/translategemma-27b-it
 ```
 
 Here's a breakdown of what each of these arguments does:
