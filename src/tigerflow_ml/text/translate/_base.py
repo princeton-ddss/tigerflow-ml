@@ -28,6 +28,7 @@ from .chunking import (
     MAX_CHUNK_TOKENS,
     chunk_text_by_tokens,
     compute_chunk_size,
+    compute_prompt_overhead,
     count_tokens,
 )
 from .detection import LANGUAGES, detect_language, get_language_name
@@ -44,10 +45,10 @@ class _TranslateBase:
     """Translate documents using Hugging Face models."""
 
     class Params(HFParams):
-        model: Annotated[
-            str,
-            typer.Option(help="HuggingFace model repo ID"),
-        ] = "google/translategemma-12b-it"
+        # model: Annotated[
+        #     str,
+        #     typer.Option(help="HuggingFace model repo ID"),
+        # ] = "google/translategemma-12b-it"
 
         source_lang: Annotated[
             str | None,
@@ -61,7 +62,7 @@ class _TranslateBase:
 
         chunk_size: Annotated[
             int | None,
-            typer.Option(help="Maximum tokens per chunk"),
+            typer.Option(help="The maximum number of tokens translated at a time"),
         ] = None
 
         prompt: Annotated[
@@ -89,8 +90,6 @@ class _TranslateBase:
 
     @staticmethod
     def setup(context: SetupContext):
-        chunk_size = context.chunk_size
-
         try:
             config = AutoConfig.from_pretrained(
                 context.model, local_files_only=not context.fetch
@@ -98,37 +97,45 @@ class _TranslateBase:
         except Exception as e:
             logger.error(f"Failed to parse model config file: {e}")
 
+        tokenizer = _get_tokenizer(context.model, context.fetch)
+
+        # Gemma uses an internal structured message format; all other backends
+        # use the user-supplied prompt template, so compute its actual token cost.
+        model_type = getattr(config, "model_type", "")
+        is_gemma_vlm = "gemma" in model_type and (
+            hasattr(config, "vision_config") or hasattr(config, "image_token_id")
+        )
+        if is_gemma_vlm:
+            prompt_overhead = 248
+        else:
+            prompt_overhead = compute_prompt_overhead(context.prompt, tokenizer)
+            logger.info(f"Prompt overhead: {prompt_overhead} tokens")
+
+        chunk_size: int | None = context.chunk_size
         try:
-            computed_chunk_size = compute_chunk_size(config)
+            computed_chunk_size = compute_chunk_size(config, prompt_overhead)
             logger.info(f"Calculated max chunk size: {computed_chunk_size} tokens")
-            # if user did not provide a chunk size, use calculated
             if chunk_size is None:
                 chunk_size = computed_chunk_size
-            # if user provided a chunk size that is too large
-            else:
-                if chunk_size > computed_chunk_size:
-                    logger.warning(
-                        f"Warning: --chunk-size {chunk_size} exceeds maximum of"
-                        f" {computed_chunk_size}, clamping"
-                    )
-                    chunk_size = computed_chunk_size
+            # elif chunk_size > computed_chunk_size:
+            #     logger.warning(
+            #         f"Warning: --chunk-size {chunk_size} exceeds maximum of"
+            #         f" {computed_chunk_size}, clamping"
+            #     )
+            #     chunk_size = computed_chunk_size
         except Exception:
-            # if user did not provide a chunk size, use FALLBACK_MAX_CHUNK_TOKENS
             if chunk_size is None:
                 chunk_size = FALLBACK_MAX_CHUNK_TOKENS
                 logger.info(f"Chunk size: {chunk_size} tokens")
 
-            # if user provided a chunk size that is too large
-            else:
-                if chunk_size > MAX_CHUNK_TOKENS:
-                    logger.warning(
-                        f"Warning: --chunk-size {chunk_size} exceeds maximum of"
-                        f" {MAX_CHUNK_TOKENS}, clamping"
-                    )
-                    chunk_size = MAX_CHUNK_TOKENS
+        assert chunk_size is not None  # to satisfy mypy
+        if chunk_size > MAX_CHUNK_TOKENS:
+            logger.warning(
+                f"Warning: --chunk-size {chunk_size} exceeds maximum of"
+                f" {MAX_CHUNK_TOKENS}, clamping"
+            )
+            chunk_size = MAX_CHUNK_TOKENS
 
-        assert chunk_size is not None
-        tokenizer = _get_tokenizer(context.model, context.fetch)
         logger.info(f"Model: {context.model}")
         logger.info("Initializing HuggingFace backend...")
         context.translator = build_translator(

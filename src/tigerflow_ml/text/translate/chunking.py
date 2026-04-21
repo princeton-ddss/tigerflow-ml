@@ -19,6 +19,7 @@ FALLBACK_MAX_CHUNK_TOKENS = 900
 # context windows range in sizes, assuming a 128K token context
 # window on the larger end to be the cap.
 MAX_CHUNK_TOKENS = 63500
+MIN_CHUNK_TOKENS = 250
 
 
 def compute_chunk_size(
@@ -58,9 +59,9 @@ def compute_chunk_size(
 
     for cfg in configs_to_check:
         if (value := _first_positive(cfg, sliding_fields)) is not None:
-            return max(value - prompt_overhead, 1)
+            return max(value - prompt_overhead, MIN_CHUNK_TOKENS)
         if (value := _first_positive(cfg, full_context_fields)) is not None:
-            return max((value - prompt_overhead) // 2, 1)
+            return max((value - prompt_overhead) // 2, MIN_CHUNK_TOKENS)
 
     return None
 
@@ -68,6 +69,21 @@ def compute_chunk_size(
 def count_tokens(text: str, tokenizer: PreTrainedTokenizerBase) -> int:
     """Count tokens in text, excluding BOS/EOS special tokens."""
     return len(tokenizer.encode(text, add_special_tokens=False))
+
+
+def compute_prompt_overhead(
+    prompt_template: str,
+    tokenizer: PreTrainedTokenizerBase,
+    source_lang: str = "en",
+    target_lang: str = "de",
+) -> int:
+    """Count tokens consumed by the prompt template, excluding the {text} slot."""
+    prompt_without_text = prompt_template.format(
+        source_lang=source_lang,
+        target_lang=target_lang,
+        text="",
+    )
+    return count_tokens(prompt_without_text, tokenizer)
 
 
 def chunk_text_by_tokens(
