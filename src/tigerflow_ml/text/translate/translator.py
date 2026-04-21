@@ -5,6 +5,7 @@ Translators handle single-chunk translation only. Chunking, retry logic,
 and orchestration are handled by the orchestration module.
 """
 
+import re
 from typing import Any, Protocol
 
 import torch
@@ -360,6 +361,15 @@ class ChatTranslator(HuggingFaceTranslator):
         return result
 
 
+def get_model_type(
+    model_name: str,
+) -> str:
+    tgemma_pattern = r"translategemma-\d+b-it"
+    if re.search(tgemma_pattern, model_name):
+        return "tgemma"
+    return "chat"
+
+
 def build_translator(
     model_name: str,
     *,
@@ -381,7 +391,7 @@ def build_translator(
         batch_size: Pipeline batch size (None = auto).
         fetch: Allow downloading from HuggingFace Hub.
         config: Pre-loaded model config, used for auto-detection.
-        backend: One of "auto", "gemma", or "chat".
+        backend: One of "auto", "tgemma", or "chat".
         prompt_template: Prompt template for chat backends.
 
     Returns:
@@ -401,11 +411,9 @@ def build_translator(
         is_vlm = _is_image_text_model(config)
         return ChatTranslator(**kwargs, prompt_template=prompt_template, is_vlm=is_vlm)
 
-    # Auto-detect from config.json
-    model_type = getattr(config, "model_type", "")
-
-    if "gemma" in model_type and _is_image_text_model(config):
-        logger.info("Using Gemma image-text-to-text backend")
+    # Auto-detect from model name and config
+    if get_model_type(model_name) == "tgemma":
+        logger.info("Using tgemma image-text-to-text backend")
         return GemmaTranslator(**kwargs)
     else:
         is_vlm = _is_image_text_model(config)

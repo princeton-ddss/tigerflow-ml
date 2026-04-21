@@ -32,7 +32,7 @@ from .chunking import (
     count_tokens,
 )
 from .detection import LANGUAGES, detect_language, get_language_name
-from .translator import HuggingFaceTranslator, build_translator
+from .translator import HuggingFaceTranslator, build_translator, get_model_type
 from .utils import SkippedFileError, TranslationError, read_file_with_fallback
 
 _DEFAULT_PROMPT = (
@@ -106,11 +106,8 @@ class _TranslateBase:
 
         # Gemma uses an internal structured message format; all other backends
         # use the user-supplied prompt template, so compute its actual token cost.
-        model_type = getattr(config, "model_type", "")
-        is_gemma_vlm = "gemma" in model_type and (
-            hasattr(config, "vision_config") or hasattr(config, "image_token_id")
-        )
-        if is_gemma_vlm:
+        model_type = get_model_type(context.model)
+        if model_type == "tgemma":
             prompt_overhead = 248
         else:
             prompt_overhead = compute_prompt_overhead(
@@ -124,12 +121,6 @@ class _TranslateBase:
             logger.info(f"Calculated max chunk size: {computed_chunk_size} tokens")
             if chunk_size is None:
                 chunk_size = computed_chunk_size
-            # elif chunk_size > computed_chunk_size:
-            #     logger.warning(
-            #         f"Warning: --chunk-size {chunk_size} exceeds maximum of"
-            #         f" {computed_chunk_size}, clamping"
-            #     )
-            #     chunk_size = computed_chunk_size
         except Exception:
             if chunk_size is None:
                 chunk_size = FALLBACK_MAX_CHUNK_TOKENS

@@ -13,6 +13,7 @@ from tigerflow_ml.text.translate.translator import (
     ChatTranslator,
     GemmaTranslator,
     build_translator,
+    get_model_type,
 )
 from tigerflow_ml.text.translate.utils import TranslationError
 
@@ -332,6 +333,18 @@ class TestTranslateBatchRetryChatBackend:
             )
 
 
+class TestGetModelType:
+    def test_tgemma_variants(self):
+        assert get_model_type("google/translategemma-27b-it") == "tgemma"
+        assert get_model_type("google/translategemma-12b-it") == "tgemma"
+        assert get_model_type("google/translategemma-2b-it") == "tgemma"
+
+    def test_non_tgemma_returns_chat(self):
+        assert get_model_type("Qwen/Qwen2.5-VL-7B-Instruct") == "chat"
+        assert get_model_type("meta-llama/Llama-3-8b") == "chat"
+        assert get_model_type("google/gemma-3-27b-it") == "chat"
+
+
 class TestBuildTranslatorFactory:
     def test_tgemma_backend_returns_gemma_translator(self, mock_tokenizer):
         with patch.object(GemmaTranslator, "_load_pipeline", return_value=MagicMock()):
@@ -375,16 +388,15 @@ class TestBuildTranslatorFactory:
         assert isinstance(translator, ChatTranslator)
         assert translator._is_vlm is True
 
-    def test_auto_gemma_vlm_returns_gemma_translator(self, mock_tokenizer):
-        config = SimpleNamespace(model_type="gemma3", vision_config=object())
+    def test_auto_tgemma_name_returns_gemma_translator(self, mock_tokenizer):
         with patch.object(GemmaTranslator, "_load_pipeline", return_value=MagicMock()):
             translator = build_translator(
-                "any/model",
+                "google/translategemma-27b-it",
                 tokenizer=mock_tokenizer,
                 max_chunk_tokens=100,
                 batch_size=1,
                 fetch=False,
-                config=config,
+                config=SimpleNamespace(),
                 backend="auto",
             )
         assert isinstance(translator, GemmaTranslator)
