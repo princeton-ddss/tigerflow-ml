@@ -172,7 +172,6 @@ class GemmaTranslator(HuggingFaceTranslator):
     def _load_pipeline(self, model_name: str, fetch: bool) -> Any:
 
         logger.info(f"Loading model: {model_name}...")
-        logger.info("(This may take a few minutes on first run as the model downloads)")
         pipe = pipeline(
             "image-text-to-text",
             model=model_name,
@@ -300,7 +299,6 @@ class ChatTranslator(HuggingFaceTranslator):
 
     def _load_pipeline(self, model_name, fetch):
         logger.info(f"Loading model: {model_name}...")
-        logger.info("(This may take a few minutes on first run as the model downloads)")
         if self._is_vlm:
             return pipeline(
                 "image-text-to-text",
@@ -397,10 +395,11 @@ def build_translator(
         fetch=fetch,
     )
 
-    # if backend == "gemma":
-    #     return GemmaTranslator(**kwargs)
-    # elif backend == "chat":
-    #     return ChatTranslator(**kwargs, prompt_template=prompt_template)
+    if backend == "tgemma":
+        return GemmaTranslator(**kwargs)
+    elif backend == "chat":
+        is_vlm = _is_image_text_model(config)
+        return ChatTranslator(**kwargs, prompt_template=prompt_template, is_vlm=is_vlm)
 
     # Auto-detect from config.json
     model_type = getattr(config, "model_type", "")

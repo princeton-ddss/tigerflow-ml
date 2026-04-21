@@ -14,7 +14,7 @@ python -m tigerflow_ml.text.translate.slurm --input-dir ../tgemma/tests/input/
 
 from collections.abc import Callable
 from pathlib import Path
-from typing import Annotated, cast
+from typing import Annotated, Literal, cast
 
 import typer
 from tigerflow.logconfig import logger
@@ -73,10 +73,12 @@ class _TranslateBase:
             ),
         ] = _DEFAULT_PROMPT
 
-        # backend: Annotated[
-        #   Literal["auto", "chat", "gemma"],
-        #   typer.Option(help="Translation backend. 'auto' detects from model config."),
-        # ] = "auto"
+        model_backend: Annotated[
+            Literal["auto", "chat", "tgemma"],
+            typer.Option(
+                help="Translation model backend. 'auto' detects from model config."
+            ),
+        ] = "auto"
 
         batch_size: Annotated[
             int | None,
@@ -151,6 +153,7 @@ class _TranslateBase:
             batch_size=context.batch_size,
             fetch=context.allow_fetch,
             prompt_template=context.prompt_template,
+            backend=context.model_backend,
         )
 
     @staticmethod

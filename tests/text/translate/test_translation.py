@@ -346,7 +346,7 @@ class TestBuildTranslatorFactory:
             )
         assert isinstance(translator, GemmaTranslator)
 
-    def test_chat_backend_returns_chat_translator(self, mock_tokenizer):
+    def test_chat_backend_text_only_model(self, mock_tokenizer):
         with patch.object(ChatTranslator, "_load_pipeline", return_value=MagicMock()):
             translator = build_translator(
                 "any/model",
@@ -358,6 +358,22 @@ class TestBuildTranslatorFactory:
                 backend="chat",
             )
         assert isinstance(translator, ChatTranslator)
+        assert translator._is_vlm is False
+
+    def test_chat_backend_vlm_sets_is_vlm(self, mock_tokenizer):
+        config = SimpleNamespace(model_type="qwen2_5_vl", vision_config=object())
+        with patch.object(ChatTranslator, "_load_pipeline", return_value=MagicMock()):
+            translator = build_translator(
+                "any/model",
+                tokenizer=mock_tokenizer,
+                max_chunk_tokens=100,
+                batch_size=1,
+                fetch=False,
+                config=config,
+                backend="chat",
+            )
+        assert isinstance(translator, ChatTranslator)
+        assert translator._is_vlm is True
 
     def test_auto_gemma_vlm_returns_gemma_translator(self, mock_tokenizer):
         config = SimpleNamespace(model_type="gemma3", vision_config=object())
