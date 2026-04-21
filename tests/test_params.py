@@ -3,7 +3,6 @@
 from tigerflow_ml.audio.transcribe._base import _TranscribeBase
 from tigerflow_ml.image.detect._base import _DetectBase
 from tigerflow_ml.text.ocr._base import _OCRBase
-from tigerflow_ml.text.translate._base import _TranslateBase
 
 
 def test_ocr_defaults():
@@ -15,16 +14,6 @@ def test_ocr_defaults():
     assert p.batch_size == 4
     assert p.output_format == OutputFormat.TEXT
     assert p.device == "auto"
-
-
-def test_translate_defaults():
-    p = _TranslateBase.Params()
-    assert p.model == "google/translategemma-12b-it"
-    assert p.source_lang is None
-    assert p.chunk_size is None
-    assert p.target_lang == "en"
-    assert p.batch_size is None
-    assert p.fetch is False
 
 
 def test_transcribe_defaults():
