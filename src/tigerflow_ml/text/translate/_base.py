@@ -65,7 +65,7 @@ class _TranslateBase:
             typer.Option(help="The maximum number of tokens translated at a time"),
         ] = None
 
-        prompt: Annotated[
+        prompt_template: Annotated[
             str,
             typer.Option(
                 help="Prompt template for text-generation models. "
@@ -83,21 +83,24 @@ class _TranslateBase:
             typer.Option(help="Chunks to translate in parallel (default: auto)"),
         ] = None
 
-        fetch: Annotated[
+        allow_fetch: Annotated[
             bool,
-            typer.Option(help="Allow downloading from HuggingFace Hub"),
+            typer.Option(
+                help="Allow downloading from HuggingFace Hub. "
+                "Do not allow if running on a compute node without network access"
+            ),
         ] = False
 
     @staticmethod
     def setup(context: SetupContext):
         try:
             config = AutoConfig.from_pretrained(
-                context.model, local_files_only=not context.fetch
+                context.model, local_files_only=not context.allow_fetch
             )
         except Exception as e:
             logger.error(f"Failed to parse model config file: {e}")
 
-        tokenizer = _get_tokenizer(context.model, context.fetch)
+        tokenizer = _get_tokenizer(context.model, context.allow_fetch)
 
         # Gemma uses an internal structured message format; all other backends
         # use the user-supplied prompt template, so compute its actual token cost.
@@ -108,7 +111,9 @@ class _TranslateBase:
         if is_gemma_vlm:
             prompt_overhead = 248
         else:
-            prompt_overhead = compute_prompt_overhead(context.prompt, tokenizer)
+            prompt_overhead = compute_prompt_overhead(
+                context.prompt_template, tokenizer
+            )
             logger.info(f"Prompt overhead: {prompt_overhead} tokens")
 
         chunk_size: int | None = context.chunk_size
@@ -144,8 +149,8 @@ class _TranslateBase:
             max_chunk_tokens=chunk_size,
             config=config,
             batch_size=context.batch_size,
-            fetch=context.fetch,
-            prompt_template=context.prompt,
+            fetch=context.allow_fetch,
+            prompt_template=context.prompt_template,
         )
 
     @staticmethod
