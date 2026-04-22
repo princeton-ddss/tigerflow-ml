@@ -19,9 +19,9 @@ class HFParams:
     ] = "main"
 
     cache_dir: Annotated[
-        str,
+        str | None,
         typer.Option(help="HuggingFace cache directory for model files"),
-    ] = ""
+    ] = None
 
     device: Annotated[
         str,
