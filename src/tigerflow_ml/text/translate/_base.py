@@ -82,7 +82,10 @@ class _TranslateBase:
 
         batch_size: Annotated[
             int | None,
-            typer.Option(help="Chunks to translate in parallel (default: auto)"),
+            typer.Option(
+                help="Chunks to translate in parallel (default: auto)",
+                min=1,
+            ),
         ] = None
 
         allow_fetch: Annotated[
