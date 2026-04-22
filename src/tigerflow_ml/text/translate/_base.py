@@ -26,6 +26,7 @@ from tigerflow_ml.params import HFParams
 from .chunking import (
     FALLBACK_MAX_CHUNK_TOKENS,
     MAX_CHUNK_TOKENS,
+    MIN_CHUNK_TOKENS,
     chunk_text_by_tokens,
     compute_chunk_size,
     compute_prompt_overhead,
@@ -45,11 +46,6 @@ class _TranslateBase:
     """Translate documents using Hugging Face models."""
 
     class Params(HFParams):
-        # model: Annotated[
-        #     str,
-        #     typer.Option(help="HuggingFace model repo ID"),
-        # ] = "google/translategemma-12b-it"
-
         source_lang: Annotated[
             str | None,
             typer.Option(help="Source language code (e.g. 'en', 'de', 'zh')"),
@@ -62,7 +58,11 @@ class _TranslateBase:
 
         chunk_size: Annotated[
             int | None,
-            typer.Option(help="The maximum number of tokens translated at a time"),
+            typer.Option(
+                help="The maximum number of tokens translated at a time",
+                min=MIN_CHUNK_TOKENS,
+                max=MAX_CHUNK_TOKENS,
+            ),
         ] = None
 
         prompt_template: Annotated[
