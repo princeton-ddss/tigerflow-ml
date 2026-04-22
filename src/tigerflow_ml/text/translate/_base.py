@@ -98,14 +98,24 @@ class _TranslateBase:
 
     @staticmethod
     def setup(context: SetupContext):
+
         try:
             config = AutoConfig.from_pretrained(
-                context.model, local_files_only=not context.allow_fetch
+                context.model,
+                local_files_only=not context.allow_fetch,
+                cache_dir=context.cache_dir,
+                revision=context.revision,
             )
         except Exception as e:
             logger.error(f"Failed to parse model config file: {e}")
+            raise
 
-        tokenizer = _get_tokenizer(context.model, context.allow_fetch)
+        tokenizer = _get_tokenizer(
+            context.model,
+            fetch=context.allow_fetch,
+            cache_dir=context.cache_dir,
+            revision=context.revision,
+        )
 
         # Gemma uses an internal structured message format; all other backends
         # use the user-supplied prompt template, so compute its actual token cost.
@@ -148,6 +158,8 @@ class _TranslateBase:
             fetch=context.allow_fetch,
             prompt_template=context.prompt_template,
             backend=context.model_backend,
+            revision=context.revision,
+            cache_dir=context.cache_dir,
         )
 
     @staticmethod
@@ -168,10 +180,15 @@ class _TranslateBase:
         logger.info("Translation complete!")
 
 
-def _get_tokenizer(model_name: str, fetch: bool) -> PreTrainedTokenizerBase:
+def _get_tokenizer(
+    model_name: str,
+    fetch: bool,
+    cache_dir: str | None = None,
+    revision: str | None = None,
+) -> PreTrainedTokenizerBase:
     """Load tokenizer, downloading if needed and allowed."""
     try:
-        return _load_tokenizer(model_name)
+        return _load_tokenizer(model_name, cache_dir=cache_dir, revision=revision)
     except OSError:
         if not fetch:
             logger.error(f"Error: Tokenizer for '{model_name}' not found in cache.")
@@ -179,12 +196,12 @@ def _get_tokenizer(model_name: str, fetch: bool) -> PreTrainedTokenizerBase:
             logger.error(f"    hf download {model_name} --include 'tokenizer*'")
             raise typer.Exit(1)
         logger.info("Downloading tokenizer from HuggingFace Hub...")
-        _download_tokenizer(model_name)
-        return _load_tokenizer(model_name)
+        _download_tokenizer(model_name, cache_dir=cache_dir, revision=revision)
+        return _load_tokenizer(model_name, cache_dir=cache_dir, revision=revision)
 
 
 def _load_tokenizer(
-    model_name: str, cache_dir: str | None = None
+    model_name: str, cache_dir: str | None = None, revision: str | None = None
 ) -> PreTrainedTokenizerBase:
     """
     Load a HuggingFace tokenizer from local cache.
@@ -202,12 +219,14 @@ def _load_tokenizer(
     return cast(
         PreTrainedTokenizerBase,
         AutoTokenizer.from_pretrained(
-            model_name, local_files_only=True, cache_dir=cache_dir
+            model_name, local_files_only=True, cache_dir=cache_dir, revision=revision
         ),
     )
 
 
-def _download_tokenizer(model_name: str, cache_dir: str | None = None) -> None:
+def _download_tokenizer(
+    model_name: str, cache_dir: str | None = None, revision: str | None = None
+) -> None:
     """
     Download tokenizer files from HuggingFace Hub.
 
@@ -221,6 +240,7 @@ def _download_tokenizer(model_name: str, cache_dir: str | None = None) -> None:
         model_name,
         allow_patterns=["tokenizer*", "special_tokens_map.json"],
         cache_dir=cache_dir,
+        revision=revision,
     )
 
 

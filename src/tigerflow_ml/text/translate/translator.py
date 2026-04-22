@@ -5,6 +5,7 @@ Translators handle single-chunk translation only. Chunking, retry logic,
 and orchestration are handled by the orchestration module.
 """
 
+import os
 import re
 from typing import Any, Protocol
 
@@ -45,10 +46,18 @@ class HuggingFaceTranslator:
         max_chunk_tokens: int = FALLBACK_MAX_CHUNK_TOKENS,
         batch_size: int | None = None,
         fetch: bool = False,
+        cache_dir: str | None = None,
+        revision: str | None = None,
     ):
         self.tokenizer = tokenizer
         self.max_chunk_tokens = max_chunk_tokens
-        self.pipe: Any = self._load_pipeline(model_name, fetch)
+        # pipeline() doesn't forward cache_dir to its internal AutoConfig call,
+        # so set the env var so all HF lookups use the right cache.
+        if cache_dir:
+            os.environ["HF_HUB_CACHE"] = cache_dir
+        self.pipe: Any = self._load_pipeline(
+            model_name=model_name, fetch=fetch, cache_dir=cache_dir, revision=revision
+        )
         logger.info("Model loaded!")
 
         if batch_size is None:
@@ -57,7 +66,9 @@ class HuggingFaceTranslator:
         else:
             self.batch_size = batch_size
 
-    def _load_pipeline(self, model_name: str, fetch: bool) -> Any:
+    def _load_pipeline(
+        self, model_name: str, fetch: bool, cache_dir: str | None, revision: str | None
+    ) -> Any:
         raise NotImplementedError
 
     def translate(self, text: str, source_lang: str, target_lang: str) -> str:
@@ -170,7 +181,9 @@ class HuggingFaceTranslator:
 class GemmaTranslator(HuggingFaceTranslator):
     """Translation backend for TranslateGemma image-text-to-text models."""
 
-    def _load_pipeline(self, model_name: str, fetch: bool) -> Any:
+    def _load_pipeline(
+        self, model_name: str, fetch: bool, cache_dir: str | None, revision: str | None
+    ) -> Any:
 
         logger.info(f"Loading model: {model_name}...")
         pipe = pipeline(
@@ -179,6 +192,8 @@ class GemmaTranslator(HuggingFaceTranslator):
             device_map="auto",
             dtype=torch.bfloat16,
             local_files_only=not fetch,
+            revision=revision,
+            model_kwargs={"cache_dir": cache_dir},
         )
         return pipe
 
@@ -285,6 +300,8 @@ class ChatTranslator(HuggingFaceTranslator):
         max_chunk_tokens: int = FALLBACK_MAX_CHUNK_TOKENS,
         batch_size: int | None = None,
         fetch: bool = False,
+        cache_dir: str | None = None,
+        revision: str | None = None,
         prompt_template: str = "",
         is_vlm: bool = False,
     ):
@@ -295,10 +312,18 @@ class ChatTranslator(HuggingFaceTranslator):
             max_chunk_tokens=max_chunk_tokens,
             batch_size=batch_size,
             fetch=fetch,
+            cache_dir=cache_dir,
+            revision=revision,
         )
         self.prompt_template = prompt_template
 
-    def _load_pipeline(self, model_name, fetch):
+    def _load_pipeline(
+        self,
+        model_name: str,
+        fetch: bool,
+        cache_dir: str | None = None,
+        revision: str | None = None,
+    ):
         logger.info(f"Loading model: {model_name}...")
         if self._is_vlm:
             return pipeline(
@@ -307,6 +332,8 @@ class ChatTranslator(HuggingFaceTranslator):
                 device_map="auto",
                 dtype=torch.bfloat16,
                 local_files_only=not fetch,
+                revision=revision,
+                model_kwargs={"cache_dir": cache_dir},
             )
         from transformers import AutoModelForCausalLM, AutoTokenizer
 
@@ -315,12 +342,23 @@ class ChatTranslator(HuggingFaceTranslator):
             device_map="auto",
             dtype=torch.bfloat16,
             local_files_only=not fetch,
+            cache_dir=cache_dir,
+            revision=revision,
         )
         tokenizer = AutoTokenizer.from_pretrained(
-            model_name, local_files_only=not fetch
+            model_name,
+            local_files_only=not fetch,
+            cache_dir=cache_dir,
+            revision=revision,
         )
         self._has_chat_template = bool(getattr(tokenizer, "chat_template", None))
-        return pipeline("text-generation", model=model, tokenizer=tokenizer)
+        return pipeline(
+            "text-generation",
+            model=model,
+            tokenizer=tokenizer,
+            model_kwargs={"cache_dir": cache_dir},
+            revision=revision,
+        )
 
     def _build_prompt(self, text, source_lang, target_lang) -> str:
         return self.prompt_template.format(
@@ -364,6 +402,8 @@ class ChatTranslator(HuggingFaceTranslator):
 def get_model_type(
     model_name: str,
 ) -> str:
+    """Determine if a model is of type 'tgemma' or 'chat' based on
+    the model name."""
     tgemma_pattern = r"translategemma-\d+b-it"
     if re.search(tgemma_pattern, model_name):
         return "tgemma"
@@ -380,6 +420,8 @@ def build_translator(
     config: PretrainedConfig,
     backend: str = "auto",
     prompt_template: str = "",
+    revision: str | None = None,
+    cache_dir: str | None = None,
 ) -> HuggingFaceTranslator:
     """
     Instantiate the appropriate translation backend.
@@ -393,6 +435,8 @@ def build_translator(
         config: Pre-loaded model config, used for auto-detection.
         backend: One of "auto", "tgemma", or "chat".
         prompt_template: Prompt template for chat backends.
+        revision: Model revision (branch, tag, or commit hash)
+        cache_dir: HuggingFace cache directory for model files
 
     Returns:
         A concrete HuggingFaceTranslator subclass.
@@ -403,6 +447,8 @@ def build_translator(
         max_chunk_tokens=max_chunk_tokens,
         batch_size=batch_size,
         fetch=fetch,
+        cache_dir=cache_dir,
+        revision=revision,
     )
 
     if backend == "tgemma":

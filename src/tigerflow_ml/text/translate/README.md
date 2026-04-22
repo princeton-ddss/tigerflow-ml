@@ -43,7 +43,7 @@ python -m tigerflow_ml.text.translate.slurm --help
 To run this task directly, run:
 
 ```
-python -m tigerflow_ml.text.translate.slurm --input-dir path/to/inputs/ --input-ext .txt --output-dir path/to/outputs/ --output-ext .txt --max-workers 1 --cpus 1 --memory 10G --time 24:00:00 --gpus 1 --sbatch-option "--constraint=gpu80" --setup-command "export HF_HOME=./.hf" --setup-command "source .venv/bin/activate" --setup-command "export TRANSFORMERS_OFFLINE=1" --model google/google/translategemma-27b-it
+python -m tigerflow_ml.text.translate.slurm --input-dir path/to/inputs/ --input-ext .txt --output-dir path/to/outputs/ --output-ext .txt --max-workers 1 --cpus 1 --memory 10G --time 24:00:00 --gpus 1 --sbatch-option "--constraint=gpu80" --setup-command "export HF_HOME=./.hf" --setup-command "source .venv/bin/activate" --setup-command "export TRANSFORMERS_OFFLINE=1" --model google/translategemma-27b-it
 ```
 
 Here's a breakdown of what each of these arguments does:
@@ -69,7 +69,7 @@ Some other arguments you can use are:
 - `--fetch` : If included, allows downloading from the HuggingFace Hub. Only include `--fetch` if your hardware will have internet access.
 - `--task-name` : The task name, which defaults to "Translate"
 - `--revision` : The model revision
-- `--cache-dir` : The HuggingFace cache directory for model files. This would be an alternative for specifying the path using `HF_HOME` in a `setup-command`
+- `--cache-dir` : The HuggingFace cache directory for model files. This would be an alternative for specifying the path using `HF_HOME` in a `setup-command`. It is important to note that, when using `cache-dir`, you need to specify the pathway to `/hub` (ie. `./.hf/hub`).
 - `--device` : Device to use (cuda, cpu, or auto)
 
 ### Running as a part of a pipeline
