@@ -48,9 +48,11 @@ class HuggingFaceTranslator:
         fetch: bool = False,
         cache_dir: str | None = None,
         revision: str | None = None,
+        device: str = "auto",
     ):
         self.tokenizer = tokenizer
         self.max_chunk_tokens = max_chunk_tokens
+        self.device = device
         # pipeline() doesn't forward cache_dir to its internal AutoConfig call,
         # so set the env var so all HF lookups use the right cache.
         if cache_dir:
@@ -189,7 +191,7 @@ class GemmaTranslator(HuggingFaceTranslator):
         pipe = pipeline(
             "image-text-to-text",
             model=model_name,
-            device_map="auto",
+            device_map=self.device,
             dtype=torch.bfloat16,
             local_files_only=not fetch,
             revision=revision,
@@ -304,6 +306,7 @@ class ChatTranslator(HuggingFaceTranslator):
         revision: str | None = None,
         prompt_template: str = "",
         is_vlm: bool = False,
+        device: str = "auto",
     ):
         self._is_vlm = is_vlm  # set before super().__init__ calls _load_pipeline
         super().__init__(
@@ -314,6 +317,7 @@ class ChatTranslator(HuggingFaceTranslator):
             fetch=fetch,
             cache_dir=cache_dir,
             revision=revision,
+            device=device,
         )
         self.prompt_template = prompt_template
 
@@ -329,7 +333,7 @@ class ChatTranslator(HuggingFaceTranslator):
             return pipeline(
                 "image-text-to-text",
                 model=model_name,
-                device_map="auto",
+                device_map=self.device,
                 dtype=torch.bfloat16,
                 local_files_only=not fetch,
                 revision=revision,
@@ -339,7 +343,7 @@ class ChatTranslator(HuggingFaceTranslator):
 
         model = AutoModelForCausalLM.from_pretrained(
             model_name,
-            device_map="auto",
+            device_map=self.device,
             dtype=torch.bfloat16,
             local_files_only=not fetch,
             cache_dir=cache_dir,
@@ -358,6 +362,7 @@ class ChatTranslator(HuggingFaceTranslator):
             tokenizer=tokenizer,
             model_kwargs={"cache_dir": cache_dir},
             revision=revision,
+            device_map=self.device,
         )
 
     def _build_prompt(self, text, source_lang, target_lang) -> str:
@@ -422,6 +427,7 @@ def build_translator(
     prompt_template: str = "",
     revision: str | None = None,
     cache_dir: str | None = None,
+    device: str = "auto",
 ) -> HuggingFaceTranslator:
     """
     Instantiate the appropriate translation backend.
@@ -437,6 +443,7 @@ def build_translator(
         prompt_template: Prompt template for chat backends.
         revision: Model revision (branch, tag, or commit hash)
         cache_dir: HuggingFace cache directory for model files
+        device: Device to use (cuda, cpu, or auto)
 
     Returns:
         A concrete HuggingFaceTranslator subclass.
@@ -449,6 +456,7 @@ def build_translator(
         fetch=fetch,
         cache_dir=cache_dir,
         revision=revision,
+        device=device,
     )
 
     if backend == "tgemma":

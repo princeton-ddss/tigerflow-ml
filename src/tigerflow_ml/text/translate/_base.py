@@ -160,6 +160,7 @@ class _TranslateBase:
             backend=context.model_backend,
             revision=context.revision,
             cache_dir=context.cache_dir,
+            device=context.device,
         )
 
     @staticmethod
