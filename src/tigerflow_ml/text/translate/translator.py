@@ -48,10 +48,13 @@ class HuggingFaceTranslator:
         fetch: bool = False,
         cache_dir: str | None = None,
         revision: str | None = None,
-        device: str = "auto",
+        device: str | int = "auto",
     ):
         self.tokenizer = tokenizer
         self.max_chunk_tokens = max_chunk_tokens
+        if device == "auto":
+            device = 0 if torch.cuda.is_available() else -1
+
         self.device = device
         # pipeline() doesn't forward cache_dir to its internal AutoConfig call,
         # so set the env var so all HF lookups use the right cache.
@@ -60,7 +63,7 @@ class HuggingFaceTranslator:
         self.pipe: Any = self._load_pipeline(
             model_name=model_name, fetch=fetch, cache_dir=cache_dir, revision=revision
         )
-        logger.info("Model loaded!")
+        logger.info(f"Model loaded on {next(self.pipe.model.parameters()).device}")
 
         if batch_size is None:
             self.batch_size = self._auto_batch_size()
@@ -191,7 +194,7 @@ class GemmaTranslator(HuggingFaceTranslator):
         pipe = pipeline(
             "image-text-to-text",
             model=model_name,
-            device_map=self.device,
+            device=self.device,
             dtype=torch.bfloat16,
             local_files_only=not fetch,
             revision=revision,
@@ -333,7 +336,7 @@ class ChatTranslator(HuggingFaceTranslator):
             return pipeline(
                 "image-text-to-text",
                 model=model_name,
-                device_map=self.device,
+                device=self.device,
                 dtype=torch.bfloat16,
                 local_files_only=not fetch,
                 revision=revision,
@@ -343,7 +346,7 @@ class ChatTranslator(HuggingFaceTranslator):
 
         model = AutoModelForCausalLM.from_pretrained(
             model_name,
-            device_map=self.device,
+            device=self.device,
             dtype=torch.bfloat16,
             local_files_only=not fetch,
             cache_dir=cache_dir,
@@ -362,7 +365,7 @@ class ChatTranslator(HuggingFaceTranslator):
             tokenizer=tokenizer,
             model_kwargs={"cache_dir": cache_dir},
             revision=revision,
-            device_map=self.device,
+            device=self.device,
         )
 
     def _build_prompt(self, text, source_lang, target_lang) -> str:
