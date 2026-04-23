@@ -13,4 +13,4 @@ def test_translate_defaults():
     assert p.prompt_template == _DEFAULT_PROMPT
     assert p.revision == "main"
     assert p.device == "auto"
-    assert p.cache_dir == ""
+    assert p.cache_dir is None
