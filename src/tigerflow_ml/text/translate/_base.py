@@ -133,8 +133,18 @@ class _TranslateBase:
         if chunk_size is None:
             try:
                 computed_chunk_size = compute_chunk_size(config, prompt_overhead)
-                logger.info(f"Calculated max chunk size: {computed_chunk_size} tokens")
-                chunk_size = computed_chunk_size
+                if computed_chunk_size is None:
+                    logger.warning(
+                        "Failed to compute an optimal chunk size, likely because "
+                        "of an unexpected config format. Falling back to a chunk "
+                        f"size of {FALLBACK_MAX_CHUNK_TOKENS} tokens"
+                    )
+                    chunk_size = FALLBACK_MAX_CHUNK_TOKENS
+                else:
+                    logger.info(
+                        f"Calculated max chunk size: {computed_chunk_size} tokens"
+                    )
+                    chunk_size = computed_chunk_size
             except Exception:
                 chunk_size = FALLBACK_MAX_CHUNK_TOKENS
                 logger.info(f"Chunk size: {chunk_size} tokens")
