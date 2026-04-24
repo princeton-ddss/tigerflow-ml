@@ -184,6 +184,46 @@ def _make_chat_hf_translator(mock_tokenizer, max_chunk_tokens=5, batch_size=4):
     return translator
 
 
+def _make_chat_hf_translator_vlm(mock_tokenizer, max_chunk_tokens=5, batch_size=4):
+    """Instantiate ChatTranslator in VLM mode without loading a model."""
+    translator = object.__new__(ChatTranslator)
+    translator.tokenizer = mock_tokenizer
+    translator.max_chunk_tokens = max_chunk_tokens
+    translator.batch_size = batch_size
+    translator.prompt_template = "Translate from {source_lang} to {target_lang}."
+    translator.pipe = MagicMock()
+    translator._is_vlm = True
+    translator._has_chat_template = False
+    return translator
+
+
+def _make_chat_hf_translator_with_template(
+    mock_tokenizer, max_chunk_tokens=5, batch_size=4
+):
+    """Instantiate ChatTranslator with a chat template without loading a model."""
+    translator = object.__new__(ChatTranslator)
+    translator.tokenizer = mock_tokenizer
+    translator.max_chunk_tokens = max_chunk_tokens
+    translator.batch_size = batch_size
+    translator.prompt_template = "Translate from {source_lang} to {target_lang}."
+    translator.pipe = MagicMock()
+    translator._is_vlm = False
+    translator._has_chat_template = True
+    return translator
+
+
+def _pipe_single_output(text):
+    """HF pipeline return value for a single-message call: one-item list of dicts."""
+    return [
+        {
+            "generated_text": [
+                {"role": "user", "content": ""},
+                {"role": "assistant", "content": text},
+            ]
+        }
+    ]
+
+
 def _pipe_batch_output(*texts):
     """HF pipeline return value for a batch call: list of N wrapped outputs."""
     return [
@@ -199,21 +239,14 @@ def _pipe_batch_output(*texts):
     ]
 
 
-def _pipe_single_output(text):
-    """HF pipeline return value for a single-message call: one-item list of dicts."""
-    return [
-        {
-            "generated_text": [
-                {"role": "user", "content": ""},
-                {"role": "assistant", "content": text},
-            ]
-        }
-    ]
-
-
 def _pipe_plain_output(text):
     """HF text-generation output (no chat template): plain generated_text string."""
     return [{"generated_text": text}]
+
+
+def _pipe_plain_batch_output(*texts):
+    """HF text-generation batch output: list of N single-item lists."""
+    return [[{"generated_text": t}] for t in texts]
 
 
 class TestTranslateBatchRetryTgemmaBackend:
@@ -277,20 +310,20 @@ class TestTranslateBatchRetryTgemmaBackend:
 
 
 class TestTranslateBatchRetryChatBackend:
-    """ChatTranslator: sequential translate_batch, one pipe call per chunk."""
+    """ChatTranslator (plain text-generation): batched translate_batch."""
 
     def test_only_truncated_chunk_is_retried(self, mock_tokenizer):
         """Truncated chunk triggers retry; other chunks pass through unmodified."""
         translator = _make_chat_hf_translator(mock_tokenizer, max_chunk_tokens=5)
 
         truncated_output = "a b c d e f"  # 6 tokens → is_truncated() == True
-        # Sequential: one pipe call per chunk; chunk 2 truncated → 2 sub-chunk retries
+        # One batch call for all 3 chunks; chunk 2 truncated → 2 sub-chunk retries
         translator.pipe.side_effect = [
-            _pipe_plain_output("translated one"),  # chunk 1
-            _pipe_plain_output(truncated_output),  # chunk 2 → truncated
-            _pipe_plain_output("retried two a"),  # chunk 2 sub-chunk 1
-            _pipe_plain_output("retried two b"),  # chunk 2 sub-chunk 2
-            _pipe_plain_output("translated three"),  # chunk 3
+            _pipe_plain_batch_output(
+                "translated one", truncated_output, "translated three"
+            ),  # batch
+            _pipe_plain_output("retried two a"),  # sub-chunk 1 of chunk 2
+            _pipe_plain_output("retried two b"),  # sub-chunk 2 of chunk 2
         ]
 
         # chunk 2 is "Word one two.\n\nWord three four." (6 tokens); 60% split → max=3
@@ -304,33 +337,153 @@ class TestTranslateBatchRetryChatBackend:
         assert results[0] == "translated one"
         assert results[1] == "retried two a\n\nretried two b"
         assert results[2] == "translated three"
-        assert translator.pipe.call_count == 5  # 3 direct + 2 sub-chunk retries
+        assert translator.pipe.call_count == 3  # 1 batch + 2 sub-chunk retries
 
     def test_no_retry_when_no_truncation(self, mock_tokenizer):
-        """All chunks fit → pipe called once per chunk, no retries."""
+        """All chunks fit → pipe called once for the whole batch, no retries."""
         translator = _make_chat_hf_translator(mock_tokenizer, max_chunk_tokens=5)
-        translator.pipe.side_effect = [
-            _pipe_plain_output("one"),
-            _pipe_plain_output("two"),
-        ]
+        translator.pipe.return_value = _pipe_plain_batch_output("one", "two")
 
         results = translator.translate_batch(["chunk one", "chunk two"], "de", "en")
 
         assert results == ["one", "two"]
-        assert translator.pipe.call_count == 2
+        assert translator.pipe.call_count == 1
 
     def test_retry_raises_after_max_depth(self, mock_tokenizer):
         """Persistent truncation exhausts MAX_DEPTH retry levels and raises."""
         translator = _make_chat_hf_translator(mock_tokenizer, max_chunk_tokens=5)
 
-        # Every pipe call returns a truncated result regardless of input size
         always_truncated = "a b c d e f"  # 6 tokens ≥ 5
-        translator.pipe.side_effect = [_pipe_plain_output(always_truncated)] * 10
+        translator.pipe.side_effect = [_pipe_plain_batch_output(always_truncated)] + [
+            _pipe_plain_output(always_truncated)
+        ] * 10
 
         with pytest.raises(TranslationError, match="retry"):
             translator.translate_batch(
                 ["Word one two.\n\nWord three four."], "de", "en"
             )
+
+    def test_empty_result_retries_as_single_item(self, mock_tokenizer):
+        """Empty result in batch silently retries the chunk via translate()."""
+        translator = _make_chat_hf_translator(mock_tokenizer, max_chunk_tokens=5)
+
+        translator.pipe.side_effect = [
+            _pipe_plain_batch_output("", "good result"),  # chunk 1 empty in batch
+            _pipe_plain_output("retry result"),  # single-item retry for chunk 1
+        ]
+
+        results = translator.translate_batch(["chunk one", "chunk two"], "de", "en")
+
+        assert results == ["retry result", "good result"]
+        assert translator.pipe.call_count == 2
+
+
+class TestTranslateBatchRetryChatVlm:
+    """ChatTranslator (VLM / image-text-to-text): batched translate_batch."""
+
+    def test_no_retry_when_no_truncation(self, mock_tokenizer):
+        """All chunks fit → pipe called once with text= kwarg, no retries."""
+        translator = _make_chat_hf_translator_vlm(mock_tokenizer, max_chunk_tokens=5)
+        translator.pipe.return_value = _pipe_batch_output("one", "two")
+
+        results = translator.translate_batch(["chunk one", "chunk two"], "de", "en")
+
+        assert results == ["one", "two"]
+        assert translator.pipe.call_count == 1
+        # VLM pipeline receives inputs as text= keyword argument
+        assert "text" in translator.pipe.call_args.kwargs
+
+    def test_only_truncated_chunk_is_retried(self, mock_tokenizer):
+        """Truncated chunk retries via translate(); other chunks unmodified."""
+        translator = _make_chat_hf_translator_vlm(mock_tokenizer, max_chunk_tokens=5)
+
+        truncated_output = "a b c d e f"  # 6 tokens → is_truncated() == True
+        translator.pipe.side_effect = [
+            _pipe_batch_output("translated one", truncated_output, "translated three"),
+            _pipe_single_output("retried two a"),  # sub-chunk 1 of chunk 2
+            _pipe_single_output("retried two b"),  # sub-chunk 2 of chunk 2
+        ]
+
+        results = translator.translate_batch(
+            ["chunk one", "Word one two.\n\nWord three four.", "chunk three"],
+            "de",
+            "en",
+        )
+
+        assert results[0] == "translated one"
+        assert results[1] == "retried two a\n\nretried two b"
+        assert results[2] == "translated three"
+        assert translator.pipe.call_count == 3  # 1 batch + 2 sub-chunk retries
+
+    def test_empty_result_retries_as_single_item(self, mock_tokenizer):
+        """Empty result in batch silently retries the chunk via translate()."""
+        translator = _make_chat_hf_translator_vlm(mock_tokenizer, max_chunk_tokens=5)
+
+        translator.pipe.side_effect = [
+            _pipe_batch_output("", "good result"),  # chunk 1 empty in batch
+            _pipe_single_output("retry result"),  # single-item retry for chunk 1
+        ]
+
+        results = translator.translate_batch(["chunk one", "chunk two"], "de", "en")
+
+        assert results == ["retry result", "good result"]
+        assert translator.pipe.call_count == 2
+
+
+class TestTranslateBatchRetryChatTemplate:
+    """ChatTranslator (text-generation with chat template): batched translate_batch."""
+
+    def test_no_retry_when_no_truncation(self, mock_tokenizer):
+        """All chunks fit → pipe called once with message dicts, no retries."""
+        translator = _make_chat_hf_translator_with_template(
+            mock_tokenizer, max_chunk_tokens=5
+        )
+        translator.pipe.return_value = _pipe_batch_output("one", "two")
+
+        results = translator.translate_batch(["chunk one", "chunk two"], "de", "en")
+
+        assert results == ["one", "two"]
+        assert translator.pipe.call_count == 1
+
+    def test_only_truncated_chunk_is_retried(self, mock_tokenizer):
+        """Truncated chunk retries via translate(); other chunks unmodified."""
+        translator = _make_chat_hf_translator_with_template(
+            mock_tokenizer, max_chunk_tokens=5
+        )
+
+        truncated_output = "a b c d e f"  # 6 tokens → is_truncated() == True
+        translator.pipe.side_effect = [
+            _pipe_batch_output("translated one", truncated_output, "translated three"),
+            _pipe_single_output("retried two a"),  # sub-chunk 1 of chunk 2
+            _pipe_single_output("retried two b"),  # sub-chunk 2 of chunk 2
+        ]
+
+        results = translator.translate_batch(
+            ["chunk one", "Word one two.\n\nWord three four.", "chunk three"],
+            "de",
+            "en",
+        )
+
+        assert results[0] == "translated one"
+        assert results[1] == "retried two a\n\nretried two b"
+        assert results[2] == "translated three"
+        assert translator.pipe.call_count == 3  # 1 batch + 2 sub-chunk retries
+
+    def test_empty_result_retries_as_single_item(self, mock_tokenizer):
+        """Empty result in batch silently retries the chunk via translate()."""
+        translator = _make_chat_hf_translator_with_template(
+            mock_tokenizer, max_chunk_tokens=5
+        )
+
+        translator.pipe.side_effect = [
+            _pipe_batch_output("", "good result"),  # chunk 1 empty in batch
+            _pipe_single_output("retry result"),  # single-item retry for chunk 1
+        ]
+
+        results = translator.translate_batch(["chunk one", "chunk two"], "de", "en")
+
+        assert results == ["retry result", "good result"]
+        assert translator.pipe.call_count == 2
 
 
 class TestGetModelType:
