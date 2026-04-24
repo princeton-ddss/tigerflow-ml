@@ -20,6 +20,13 @@ class SkippedFileError(Exception):
     pass
 
 
+class ConfigParsingError(Exception):
+    """Raised when errors occur while trying
+    to access, read, or parse model configs"""
+
+    pass
+
+
 # Encoding fallback chain for reading files.
 # Note: utf-8-sig handles both BOM and non-BOM UTF-8 files (strips BOM if present).
 # latin-1 always succeeds (maps all 256 byte values), so it must be last.

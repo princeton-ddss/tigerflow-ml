@@ -11,6 +11,8 @@ from typing import cast
 
 from transformers import PretrainedConfig, PreTrainedTokenizerBase
 
+from .utils import ConfigParsingError
+
 # TranslateGemma context window is 2048 tokens (input + output).
 # Reserve ~248 tokens for the prompt template and split the rest
 # evenly between the input chunk and the generated translation.
@@ -22,9 +24,7 @@ MAX_CHUNK_TOKENS = 63500
 MIN_CHUNK_TOKENS = 250
 
 
-def compute_chunk_size(
-    config: PretrainedConfig, prompt_overhead: int = 248
-) -> int | None:
+def compute_chunk_size(config: PretrainedConfig, prompt_overhead: int = 248) -> int:
     """
     Derive max input chunk tokens from a model config.
 
@@ -32,6 +32,9 @@ def compute_chunk_size(
     config and then text_config (for multimodal models like Gemma3).
 
     For sliding_window the local window is already small enough to use directly.
+
+    Raises:
+        ConfigParsingError if no relevant fields are found
     """
     # Fields that represent the model's full context window
     full_context_fields = [
@@ -63,7 +66,11 @@ def compute_chunk_size(
         if (value := _first_positive(cfg, full_context_fields)) is not None:
             return max((value - prompt_overhead) // 2, MIN_CHUNK_TOKENS)
 
-    return None
+    raise ConfigParsingError(
+        "Could not compute an optimal chunk size from the model's config file. "
+        "This is likely because of an unexpected format, or missing fields. "
+        "Please raise an issue on Github specifying the model being used."
+    )
 
 
 def count_tokens(text: str, tokenizer: PreTrainedTokenizerBase) -> int:

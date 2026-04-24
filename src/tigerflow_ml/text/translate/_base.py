@@ -34,7 +34,12 @@ from .chunking import (
 )
 from .detection import LANGUAGES, detect_language, get_language_name
 from .translator import HuggingFaceTranslator, build_translator, get_model_type
-from .utils import SkippedFileError, TranslationError, read_file_with_fallback
+from .utils import (
+    ConfigParsingError,
+    SkippedFileError,
+    TranslationError,
+    read_file_with_fallback,
+)
 
 _DEFAULT_PROMPT = (
     "Translate the following text from {source_lang} to {target_lang}. "
@@ -107,8 +112,7 @@ class _TranslateBase:
                 revision=context.revision,
             )
         except Exception as e:
-            logger.error(f"Failed to parse model config file: {e}")
-            raise
+            raise ConfigParsingError(f"Failed to load model config: {e}")
 
         tokenizer = _get_tokenizer(
             context.model,
@@ -133,25 +137,15 @@ class _TranslateBase:
         if chunk_size is None:
             try:
                 computed_chunk_size = compute_chunk_size(config, prompt_overhead)
-                if computed_chunk_size is None:
-                    logger.warning(
-                        "Failed to compute an optimal chunk size, likely because "
-                        "of an unexpected config format. Falling back to a chunk "
-                        f"size of {FALLBACK_MAX_CHUNK_TOKENS} tokens"
-                    )
-                    chunk_size = FALLBACK_MAX_CHUNK_TOKENS
-                else:
-                    logger.info(
-                        f"Calculated max chunk size: {computed_chunk_size} tokens"
-                    )
-                    chunk_size = computed_chunk_size
-            except Exception:
+                logger.info(f"Calculated max chunk size: {computed_chunk_size} tokens")
+                chunk_size = computed_chunk_size
+            except ConfigParsingError as err:
+                logger.warning(err)
                 chunk_size = FALLBACK_MAX_CHUNK_TOKENS
-                logger.info(f"Chunk size: {chunk_size} tokens")
+                logger.warning(f"Falling back to a chunk size of {chunk_size} tokens")
         else:
             logger.info(f"Chunk size: {chunk_size} tokens")
 
-        assert chunk_size is not None  # to satisfy mypy
         if chunk_size > MAX_CHUNK_TOKENS:
             logger.warning(
                 f"Warning: --chunk-size {chunk_size} exceeds maximum of"
