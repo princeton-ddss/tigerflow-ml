@@ -7,7 +7,7 @@ and orchestration are handled by the orchestration module.
 
 import os
 import re
-from typing import Any, Protocol
+from typing import Any, Protocol, cast
 
 import torch
 from tigerflow.logconfig import logger
@@ -339,7 +339,7 @@ class ChatTranslator(HuggingFaceTranslator):
     ):
         logger.info(f"Loading model: {model_name}...")
         if self._is_vlm:
-            return pipeline(
+            pipe = pipeline(
                 "image-text-to-text",
                 model=model_name,
                 device=self.device,
@@ -348,6 +348,10 @@ class ChatTranslator(HuggingFaceTranslator):
                 revision=revision,
                 model_kwargs={"cache_dir": cache_dir},
             )
+            cast(
+                PreTrainedTokenizerBase, pipe.tokenizer
+            ).padding_side = "left"  # cast for type checker
+            return pipe
         from transformers import AutoModelForCausalLM, AutoTokenizer
 
         model = AutoModelForCausalLM.from_pretrained(
@@ -363,6 +367,7 @@ class ChatTranslator(HuggingFaceTranslator):
             cache_dir=cache_dir,
             revision=revision,
         )
+        setattr(tokenizer, "padding_side", "left")
         self._has_chat_template = bool(getattr(tokenizer, "chat_template", None))
         return pipeline(
             "text-generation",
