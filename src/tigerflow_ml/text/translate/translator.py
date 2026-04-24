@@ -97,9 +97,15 @@ class HuggingFaceTranslator:
             )
             # KV cache per sequence:
             # 2(K+V) * layers * kv_heads * head_dim * tokens * 2 bytes (bfloat16)
-            # 1.5x overhead for activations and intermediate buffers
+            # 1.5x overhead for activations and intermediate buffers.
             per_seq_bytes = int(
-                2 * n_layers * n_kv_heads * head_dim * self.max_chunk_tokens * 2 * 1.5
+                2
+                * n_layers
+                * n_kv_heads
+                * head_dim
+                * (self.max_chunk_tokens * 2)
+                * 2
+                * 1.5
             )
             return max(1, min(int(free_bytes // per_seq_bytes), 256))
         except Exception:
@@ -426,66 +432,53 @@ class ChatTranslator(HuggingFaceTranslator):
                     f"{batch_start + 1}-{batch_end}/{len(texts)}..."
                 )
 
-            batch_prompts = [
-                self._build_prompt(c, source_lang, target_lang) for c in batch
-            ]
+            prompts = [self._build_prompt(c, source_lang, target_lang) for c in batch]
 
             if self._is_vlm:
-                batch_messages = [
-                    [{"role": "user", "content": [{"type": "text", "text": prompt}]}]
-                    for prompt in batch_prompts
+                inputs = [
+                    [{"role": "user", "content": [{"type": "text", "text": p}]}]
+                    for p in prompts
                 ]
                 outputs = self.pipe(
-                    text=batch_messages,
+                    text=inputs,
                     do_sample=False,
-                    max_new_tokens=self.max_chunk_tokens,
                     batch_size=len(batch),
+                    max_new_tokens=self.max_chunk_tokens,
                 )
-
+                batch_results = [o[0]["generated_text"][-1]["content"] for o in outputs]
             elif self._has_chat_template:
-                batch_messages = [
-                    [{"role": "user", "content": prompt}] for prompt in batch_prompts
-                ]
+                inputs = [[{"role": "user", "content": p}] for p in prompts]
                 outputs = self.pipe(
-                    text_inputs=batch_messages,
+                    inputs,
                     do_sample=False,
-                    max_new_tokens=self.max_chunk_tokens,
                     batch_size=len(batch),
+                    max_new_tokens=self.max_chunk_tokens,
                 )
-            if self._is_vlm or self._has_chat_template:
-                for i, output in enumerate(outputs):
-                    result = output["generated_text"][-1]["content"]
-                    if not result or not result.strip():
-                        raise TranslationError(
-                            "Translation returned empty result for chunk "
-                            f"{batch_start + i + 1}"
-                        )
-                    if self.is_truncated(result):
-                        result = self._retry_truncated(
-                            texts[batch_start + i], source_lang, target_lang
-                        )
-                    results.append(result)
-
+                batch_results = [o[0]["generated_text"][-1]["content"] for o in outputs]
             else:
                 outputs = self.pipe(
-                    batch_prompts,
+                    prompts,
                     do_sample=False,
+                    batch_size=len(batch),
                     max_new_tokens=self.max_chunk_tokens,
                     return_full_text=False,
-                    batch_size=len(batch),
                 )
-                for i, output in enumerate(outputs):
-                    result = output[0]["generated_text"]
-                    if not result or not result.strip():
-                        raise TranslationError(
-                            "Translation returned empty result for chunk "
-                            f"{batch_start + i + 1}"
-                        )
-                    if self.is_truncated(result):
-                        result = self._retry_truncated(
-                            texts[batch_start + i], source_lang, target_lang
-                        )
-                    results.append(result)
+                batch_results = [o[0]["generated_text"] for o in outputs]
+
+            for i, result in enumerate(batch_results):
+                if not result or not result.strip():
+                    logger.info(
+                        f"      Chunk {batch_start + i + 1} returned empty in batch, "
+                        "retrying as single item..."
+                    )
+                    result = self.translate(
+                        texts[batch_start + i], source_lang, target_lang
+                    )
+                if self.is_truncated(result):
+                    result = self._retry_truncated(
+                        texts[batch_start + i], source_lang, target_lang
+                    )
+                results.append(result)
 
         return results
 

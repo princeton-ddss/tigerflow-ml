@@ -129,15 +129,17 @@ class _TranslateBase:
             logger.info(f"Prompt overhead: {prompt_overhead} tokens")
 
         chunk_size: int | None = context.chunk_size
-        try:
-            computed_chunk_size = compute_chunk_size(config, prompt_overhead)
-            logger.info(f"Calculated max chunk size: {computed_chunk_size} tokens")
-            if chunk_size is None:
+
+        if chunk_size is None:
+            try:
+                computed_chunk_size = compute_chunk_size(config, prompt_overhead)
+                logger.info(f"Calculated max chunk size: {computed_chunk_size} tokens")
                 chunk_size = computed_chunk_size
-        except Exception:
-            if chunk_size is None:
+            except Exception:
                 chunk_size = FALLBACK_MAX_CHUNK_TOKENS
                 logger.info(f"Chunk size: {chunk_size} tokens")
+        else:
+            logger.info(f"Chunk size: {chunk_size} tokens")
 
         assert chunk_size is not None  # to satisfy mypy
         if chunk_size > MAX_CHUNK_TOKENS:
