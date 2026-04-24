@@ -83,7 +83,18 @@ def compute_prompt_overhead(
         target_lang=target_lang,
         text="",
     )
-    return count_tokens(prompt_without_text, tokenizer)
+    prompt_tokens = count_tokens(prompt_without_text, tokenizer)
+
+    if getattr(tokenizer, "chat_template", None):
+        empty = tokenizer.apply_chat_template(
+            [{"role": "user", "content": ""}],
+            tokenize=True,
+            add_generation_prompt=True,
+        )
+        chat_overhead = len(empty)
+    else:
+        chat_overhead = 0
+    return prompt_tokens + chat_overhead
 
 
 def chunk_text_by_tokens(
