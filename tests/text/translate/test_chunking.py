@@ -14,6 +14,7 @@ from tigerflow_ml.text.translate.chunking import (
     compute_prompt_overhead,
     count_tokens,
 )
+from tigerflow_ml.text.translate.utils import ConfigParsingError
 
 OVERHEAD = 250
 
@@ -302,11 +303,11 @@ class TestComputeChunkSize:
         result = compute_chunk_size(c, prompt_overhead=OVERHEAD)
         assert result == (8192 - OVERHEAD) // 2
 
-    def test_no_matching_fields_returns_none(self):
-        result = compute_chunk_size(
-            cfg(vocab_size=32000, hidden_size=4096), prompt_overhead=OVERHEAD
-        )
-        assert result is None
+    def test_no_matching_fields_raises_error(self):
+        with pytest.raises(ConfigParsingError):
+            compute_chunk_size(
+                cfg(vocab_size=32000, hidden_size=4096), prompt_overhead=OVERHEAD
+            )
 
     def test_none_field_value_is_skipped(self):
         # sliding_window present but None — should fall through to full context field
