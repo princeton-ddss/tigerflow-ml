@@ -10,7 +10,7 @@ Translate text documents using HuggingFace [TranslateGemma models](https://huggi
 | `--revision`        | `main`                   | Model revision (branch, tag, or commit hash)                                             |
 | `--cache-dir`       |                          | HuggingFace cache directory for model files                                              |
 | `--device`          | `auto`                   | Device to use (`cuda`, `cpu`, or `auto`)                                                 |
-| `--source-lang`     |                          | Source language code (e.g. `en`, `de`, `zh`) -- will attempt auto detection by default   |
+| `--source-lang`     |                          | Source language code (e.g. `en`, `de`, `zh`) -- will attempt auto detection by default (input text can't be short)  |
 | `--target-lang`     | `en`                     | Target language code (e.g. `de`, `en`, `fr`)                                             |
 | `--chunk-size`      |                          | Maximum number of tokens to be translated at a time -- will attempt auto detection with a fallback to 900 |
 | `--prompt-template` | *(see below)*            | Prompt template for text-generation models (uses `{source_lang}`, `{target_lang}`, and `{text}`).    |
@@ -43,16 +43,78 @@ HF_HOME=./.hf hf download google/translategemma-27b-it
 
 ## Examples
 
-<!--
-### Translate English to German
 
-Uses a TranslateGemma model to translate a short English text to German locally
+### Local translation with pre-downloaded TranslateGemma model
 
-### Translate Chinese to English
+Uses a TranslateGemma model to translate a short English text to German locally with a pre-downloaded model.
+Run with the command: `tigerflow run config.yaml ./input/ ./output/`.*
 
-Uses `...` (a chat model) to translate a short Chinese text to English locally.
+=== "Config"
 
--->
+    ```yaml title="config.yaml"
+    tasks:
+      - name: translate
+        kind: local
+        module: tigerflow_ml.text.translate.local
+        input_ext: .txt
+        output_ext: .txt
+        params:
+          model: google/translategemma-4b-it
+          cache-dir: ./.hf/hub/
+          target-lang: de
+    ```
+
+=== "Input"
+
+    ```text title="article.txt"
+    The quick brown fox jumps over the lazy dog. This sentence
+    contains every letter of the English alphabet. It has been
+    used as a typing exercise for over a century.
+    ```
+
+=== "Output"
+
+    ```text title="article.txt"
+    Der schnelle braune Fuchs springt über den faulen Hund.
+    Dieser Satz enthält alle Buchstaben des englischen Alphabets.
+    Er wird seit über einem Jahrhundert als Übung für das Tippen verwendet.
+    ```
+
+*This task can also be run from the command line with the command: `python -m tigerflow_ml.text.translate.local --input-dir ./input/ --input-ext .txt --output-dir ./output/ --output-ext .txt --model google/translategemma-4b-it --cache-dir ./.hf/hub/ --target-lang de`
+
+
+### Local translation fetching an LLM from Huggingface Hub
+
+Uses `google/gemma-3-4b-it` (an image-text-to-text chat model) to translate a short Chinese text to English locally with network access.
+
+=== "Config"
+
+    ```yaml title="config.yaml"
+    tasks:
+      - name: translate
+        kind: local
+        module: tigerflow_ml.text.translate.local
+        input_ext: .txt
+        output_ext: .txt
+        params:
+          source-lang: zh
+          model: google/gemma-3-4b-it
+          allow-fetch: True
+    ```
+
+=== "Input"
+
+    ```text title="abstract.txt"
+    人工智能正在改变所有学科的学术研究。
+    ```
+
+=== "Output"
+
+  ```text title="abstract.txt"
+  Artificial intelligence is changing academic research in all disciplines.
+  ```
+
+
 
 ### Run on HPC with Slurm
 
