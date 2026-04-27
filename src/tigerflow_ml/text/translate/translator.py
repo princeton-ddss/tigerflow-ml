@@ -53,9 +53,15 @@ class HuggingFaceTranslator:
         self.tokenizer = tokenizer
         self.max_chunk_tokens = max_chunk_tokens
         if device == "auto":
-            device = 0 if torch.cuda.is_available() else -1
-
-        self.device = device
+            if torch.cuda.is_available():
+                self._use_device_map = True
+                self.device = None
+            else:
+                self._use_device_map = False
+                self.device = "cpu"
+        else:
+            self._use_device_map = False
+            self.device = device
         # pipeline() doesn't forward cache_dir to its internal AutoConfig call,
         # so set the env var so all HF lookups use the right cache.
         if cache_dir:
@@ -86,7 +92,13 @@ class HuggingFaceTranslator:
         if not torch.cuda.is_available():
             return 1
         try:
-            free_bytes, _ = torch.cuda.mem_get_info()
+            if self._use_device_map and torch.cuda.device_count() > 1:
+                free_bytes = sum(
+                    torch.cuda.mem_get_info(i)[0]
+                    for i in range(torch.cuda.device_count())
+                )
+            else:
+                free_bytes, _ = torch.cuda.mem_get_info()
             cfg = self.pipe.model.config
             if hasattr(cfg, "text_config"):
                 cfg = cfg.text_config
@@ -197,15 +209,26 @@ class GemmaTranslator(HuggingFaceTranslator):
     ) -> Any:
 
         logger.info(f"Loading model: {model_name}...")
-        pipe = pipeline(
-            "image-text-to-text",
-            model=model_name,
-            device=self.device,
-            dtype=torch.bfloat16,
-            local_files_only=not fetch,
-            revision=revision,
-            model_kwargs={"cache_dir": cache_dir},
-        )
+        if self._use_device_map:
+            pipe = pipeline(
+                "image-text-to-text",
+                model=model_name,
+                device_map="auto",
+                dtype=torch.bfloat16,
+                local_files_only=not fetch,
+                revision=revision,
+                model_kwargs={"cache_dir": cache_dir},
+            )
+        else:
+            pipe = pipeline(
+                "image-text-to-text",
+                model=model_name,
+                device=self.device,
+                dtype=torch.bfloat16,
+                local_files_only=not fetch,
+                revision=revision,
+                model_kwargs={"cache_dir": cache_dir},
+            )
         return pipe
 
     def _build_messages(
@@ -339,27 +362,44 @@ class ChatTranslator(HuggingFaceTranslator):
     ):
         logger.info(f"Loading model: {model_name}...")
         if self._is_vlm:
-            pipe = pipeline(
-                "image-text-to-text",
-                model=model_name,
-                device=self.device,
-                dtype=torch.bfloat16,
-                local_files_only=not fetch,
-                revision=revision,
-                model_kwargs={"cache_dir": cache_dir},
-            )
+            if self._use_device_map:
+                pipe = pipeline(
+                    "image-text-to-text",
+                    model=model_name,
+                    device_map="auto",
+                    dtype=torch.bfloat16,
+                    local_files_only=not fetch,
+                    revision=revision,
+                    model_kwargs={"cache_dir": cache_dir},
+                )
+            else:
+                pipe = pipeline(
+                    "image-text-to-text",
+                    model=model_name,
+                    device=self.device,
+                    dtype=torch.bfloat16,
+                    local_files_only=not fetch,
+                    revision=revision,
+                    model_kwargs={"cache_dir": cache_dir},
+                )
             cast(
                 PreTrainedTokenizerBase, pipe.tokenizer
             ).padding_side = "left"  # cast for type checker
             return pipe
         from transformers import AutoModelForCausalLM, AutoTokenizer
 
+        # For non-VLM models loaded explicitly, device_map goes to from_pretrained;
+        # pipeline() must not receive device when the model already has a device_map.
+        pretrained_device_kwargs = (
+            {"device_map": "auto"} if self._use_device_map else {}
+        )
         model = AutoModelForCausalLM.from_pretrained(
             model_name,
             dtype=torch.bfloat16,
             local_files_only=not fetch,
             cache_dir=cache_dir,
             revision=revision,
+            **pretrained_device_kwargs,
         )
         tokenizer = AutoTokenizer.from_pretrained(
             model_name,
@@ -369,6 +409,14 @@ class ChatTranslator(HuggingFaceTranslator):
         )
         setattr(tokenizer, "padding_side", "left")
         self._has_chat_template = bool(getattr(tokenizer, "chat_template", None))
+        if self._use_device_map:
+            return pipeline(
+                "text-generation",
+                model=model,
+                tokenizer=tokenizer,
+                model_kwargs={"cache_dir": cache_dir},
+                revision=revision,
+            )
         return pipeline(
             "text-generation",
             model=model,
