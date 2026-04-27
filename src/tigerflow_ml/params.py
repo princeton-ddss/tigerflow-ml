@@ -11,7 +11,7 @@ class HFParams:
     model: Annotated[
         str,
         typer.Option(help="HuggingFace model repo ID"),
-    ] = ""
+    ]
 
     revision: Annotated[
         str,
