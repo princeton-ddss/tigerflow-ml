@@ -60,8 +60,9 @@ Run with the command: `tigerflow run config.yaml ./input/ ./output/`.*
         output_ext: .txt
         params:
           model: google/translategemma-4b-it
-          cache-dir: ./.hf/hub/
+          source-lang: en
           target-lang: de
+          cache-dir: /path/to/.hf/hub/
     ```
 
 === "Input"
@@ -80,7 +81,7 @@ Run with the command: `tigerflow run config.yaml ./input/ ./output/`.*
     Er wird seit über einem Jahrhundert als Übung für das Tippen verwendet.
     ```
 
-*This task can also be run from the command line with the command: `python -m tigerflow_ml.text.translate.local --input-dir ./input/ --input-ext .txt --output-dir ./output/ --output-ext .txt --model google/translategemma-4b-it --cache-dir ./.hf/hub/ --target-lang de`
+*This task can also be run from the command line with the command: `python -m tigerflow_ml.text.translate.local --input-dir ./input/ --input-ext .txt --output-dir ./output/ --output-ext .txt --model google/translategemma-4b-it --cache-dir /path/to/.hf/hub/ --target-lang de`
 
 
 ### Local translation fetching an LLM from Huggingface Hub
@@ -118,7 +119,7 @@ Uses `google/gemma-3-4b-it` (an image-text-to-text chat model) to translate a sh
 
 ### Run on HPC with Slurm
 
-For bulk translation of large document collections, use the Slurm variant to distribute work across compute nodes. This example uses a pre-downloaded `google/translategemma-27b-it` model stored in the cache directory `./.hf`.
+For bulk translation of large document collections, use the Slurm variant to distribute work across compute nodes. This example uses a pre-downloaded `google/translategemma-27b-it` model stored in the cache directory `.hf`.
 
 === "Config"
 
@@ -142,5 +143,5 @@ For bulk translation of large document collections, use the Slurm variant to dis
           - export TRANSFORMERS_OFFLINE=1
         params:
           model: google/translategemma-27b-it
-          cache-dir: ./.hf/hub
+          cache-dir: /path/to/.hf/hub/
     ```
