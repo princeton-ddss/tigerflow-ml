@@ -1,6 +1,6 @@
 # Translation
 
-Translate text documents using HuggingFace [TranslateGemma models](https://huggingface.co/collections/google/translategemma) or chat models.
+Translate text documents using HuggingFace [TranslateGemma](https://huggingface.co/collections/google/translategemma) models or chat models.
 
 ## Parameters
 
@@ -15,7 +15,7 @@ Translate text documents using HuggingFace [TranslateGemma models](https://huggi
 | `--chunk-size`      |                          | Maximum number of tokens to be translated at a time -- will attempt auto detection with a fallback to 900 |
 | `--prompt-template` | *(see below)*            | Prompt template for text-generation models (uses `{source_lang}`, `{target_lang}`, and `{text}`).    |
 | `--model-backend`   | `auto`                   | Model backend (`chat`, `tgemma`, or `auto`)                                              |
-| `--batch-size`      |                          | Maximum number of chunks to translate in parallel for long documents -- will attempt auto optimaization by default |
+| `--batch-size`      |                          | Maximum number of chunks to translate in parallel for long documents -- will attempt auto optimization by default |
 | `--allow-fetch`     | `--no-allow-fetch`       | Allow downloads from HuggingFace Hub (network access required)                           |
 
 
@@ -35,7 +35,7 @@ Any HuggingFace [`TranslateGemma`](https://huggingface.co/collections/google/tra
 Translate the following text from {source_lang} to {target_lang}. Output only the translated text, nothing else. Text: {text}"
 ```
 
-Most models will be time consuming to run on a CPU. In order to scale translation, we recommend running this task on a sufficiently large GPU. This might mean running on a HPC compute node without network access. If this is the case for you, you'll have to download the model files before running this task. To download a gated model, first run `hf auth login` or `export HF_TOKEN="hf_token"`. Then, download the model to a cache directory of your choice (here `./.hf`):
+Most models will be time consuming to run on a CPU. To scale translation, we recommend running this task on a sufficiently large GPU. This might mean running on a HPC compute node without network access. If this is the case for you, you'll have to download the model files before running this task. To download a gated model, first run `hf auth login` or `export HF_TOKEN="hf_token"`. Then, download the model to a cache directory of your choice (here `./.hf`):
 
 ```bash
 HF_HOME=./.hf hf download google/translategemma-27b-it
@@ -125,7 +125,7 @@ For bulk translation of large document collections, use the Slurm variant to dis
     ```yaml title="config.yaml"
     tasks:
       - name: translate
-        kind: local
+        kind: slurm
         module: tigerflow_ml.text.translate.slurm
         input_ext: .txt
         output_ext: .txt

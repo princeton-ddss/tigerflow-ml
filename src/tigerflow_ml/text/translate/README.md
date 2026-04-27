@@ -11,12 +11,12 @@ Translate `.txt` documents into English (or another target language) using any c
 
 ### Setup (login node)
 
-Once you have tigerflow ready to go, you'll want to download the HuggingFace model you wish to use. You can use any LLM, which will use the prompt:
+Once you have TigerFlow ready to go, you'll want to download the HuggingFace model you wish to use. You can use any LLM, which will use the prompt:
 
     "Translate the following text from {source_lang} to {target_lang}. Output only the translated text, nothing else. Text: {text}"
 
 
-Or you can use any translation specific model you like. For the purpose of this tutorial, we will use the `google/translategemma-27b-it` model (to use this family of model, you will need to accept the [TranslateGemma license](https://huggingface.co/google/translategemma-27b-it) on HuggingFace).
+Or you can use any translation specific model you like. For this tutorial, we will use the `google/translategemma-27b-it` model (to use this family of model, you will need to accept the [TranslateGemma license](https://huggingface.co/google/translategemma-27b-it) on HuggingFace).
 
 First, make sure you are in a directory/virtual environment with `tigerflow-ml` installed. Authenticate and download the HuggingFace model to the local cache:
 
@@ -25,7 +25,7 @@ hf auth login
 HF_HOME=./.hf hf download google/translategemma-27b-it
 ```
 
-Setting `HF_HOME=./.hf` defines the directory where the model's files will be downloaded. Using `./.hf` means the files will be downloaded to the current working directory (`./`) and will be in a new directory named `.hf`. If you encounter any issues with downloadind the model, even after accepting the license, you can also try:
+Setting `HF_HOME=./.hf` defines the directory where the model's files will be downloaded. Using `./.hf` means the files will be downloaded to the current working directory (`./`) and will be in a new directory named `.hf`. If you encounter any issues with downloading the model, even after accepting the license, you can also try:
 
 ```bash
 export HF_TOKEN="hf_token"
@@ -63,7 +63,7 @@ Here's a breakdown of what each of these arguments does:
 Some other arguments you can use are:
 
 - `--source-lang` : Source language code (e.g. 'en', 'de', 'zh'). If this is not specified, the input files' language is detected via `langdetect`
-- `--target-lang` : Target language code (e.g. 'de', 'en', 'fr'). This defaults to english (en).
+- `--target-lang` : Target language code (e.g. 'de', 'en', 'fr'). This defaults to English (en).
 - `--chunk-size` : The maximum tokens per chunk. The documents are translated one chunk at a time, so if your model cannot handle large inputs, this should be small. If no value is provided, the context window of the model will be determined using the downloaded `config.json` and an appropriate chunk size will be computed. If this process fails, it will fall back to a chunk size of `900`, which is optimized for the `translategemma` models.
 - `--batch-size` : The number of chunks to translate in parallel. If not specified, there will be an attempt to identify an optimal number based on resources available and model size. If this process fails, a batch size of `1` will be used.
 - `--fetch` : If included, allows downloading from the HuggingFace Hub. Only include `--fetch` if your hardware will have internet access.
@@ -73,3 +73,30 @@ Some other arguments you can use are:
 - `--device` : Device to use (cuda, cpu, or auto)
 
 ### Running as a part of a pipeline
+
+To run this task using a `config.yaml` file (optimal for pipelines), you can populate your config with:
+
+```yaml
+ tasks:
+      - name: translate
+        kind: slurm
+        module: tigerflow_ml.text.translate.slurm
+        input_ext: .txt
+        output_ext: .txt
+        max_workers: 1
+        worker_resources:
+          cpus: 1
+          gpus: 1
+          memory: 10G
+          time: 24:00:00
+          sbatch_options:
+            - "--constraint=gpu80"
+        setup_commands:
+          - source .venv/bin/activate
+          - export TRANSFORMERS_OFFLINE=1
+          - export HF_HOME=./.hf
+        params:
+          model: google/translategemma-27b-it
+```
+
+Run your final config with: `tigerflow run config.yaml ./input/ ./output/`
