@@ -21,6 +21,10 @@ venv/
 .coverage
 htmlcov/
 .hf/
+*.log
+*.out
+*.err
+*.txt
 
 # Type checking
 .ty/
@@ -37,8 +41,3 @@ site/
 examples/*/.cache/
 examples/*/input/
 examples/*/output/
-
-*.log
-*.out
-*.err
-*.txt
