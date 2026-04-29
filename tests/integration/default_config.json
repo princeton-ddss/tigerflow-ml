@@ -1,0 +1,29 @@
+{
+  "cache_dir": null,
+  "tasks": {
+    "ocr": {
+      "model": "stepfun-ai/GOT-OCR-2.0-hf",
+      "device": "auto"
+    },
+    "translate": {
+      "model": "google/madlad400-3b-mt",
+      "device": "auto"
+    },
+    "transcribe": {
+      "model": "openai/whisper-large-v3",
+      "device": "auto"
+    },
+    "detect": {
+      "model": "PekingU/rtdetr_r50vd",
+      "device": "auto"
+    }
+  },
+  "slurm": {
+    "default": {
+      "cpus": 4,
+      "gpus": 1,
+      "memory": "32GB",
+      "time": "00:30:00"
+    }
+  }
+}

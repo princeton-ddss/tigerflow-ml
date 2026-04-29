@@ -1437,6 +1437,16 @@ wheels = [
 ]
 
 [[package]]
+name = "pytest-dependency"
+version = "0.6.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "pytest" },
+    { name = "setuptools" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/c2/ea/84509533e0f6477960b8a9179d240d93c909c6543e4dd8209932026d7815/pytest_dependency-0.6.1.tar.gz", hash = "sha256:246c24d2a5fc743a942cec4408853640e56a05ba58d46e5b213a1d4b738a2464", size = 20837, upload-time = "2026-02-15T18:08:43.927Z" }
+
+[[package]]
 name = "python-dateutil"
 version = "2.9.0.post0"
 source = { registry = "https://pypi.org/simple" }
@@ -1785,7 +1795,7 @@ wheels = [
 
 [[package]]
 name = "tigerflow-ml"
-version = "0.1.0a0"
+version = "0.1.0a1"
 source = { editable = "." }
 dependencies = [
     { name = "accelerate" },
@@ -1807,6 +1817,7 @@ dev = [
     { name = "mkdocs-material" },
     { name = "pre-commit" },
     { name = "pytest" },
+    { name = "pytest-dependency" },
     { name = "ty" },
 ]
 docs = [
@@ -1819,6 +1830,7 @@ lint = [
 ]
 test = [
     { name = "pytest" },
+    { name = "pytest-dependency" },
 ]
 
 [package.metadata]
@@ -1842,6 +1854,7 @@ dev = [
     { name = "mkdocs-material", specifier = ">=9.7.0" },
     { name = "pre-commit", specifier = ">=4.0.0" },
     { name = "pytest", specifier = ">=9.0.2" },
+    { name = "pytest-dependency", specifier = ">=0.6" },
     { name = "ty", specifier = ">=0.0.17" },
 ]
 docs = [
@@ -1852,7 +1865,10 @@ lint = [
     { name = "pre-commit", specifier = ">=4.0.0" },
     { name = "ty", specifier = ">=0.0.17" },
 ]
-test = [{ name = "pytest", specifier = ">=9.0.2" }]
+test = [
+    { name = "pytest", specifier = ">=9.0.2" },
+    { name = "pytest-dependency", specifier = ">=0.6" },
+]
 
 [[package]]
 name = "timm"

@@ -30,11 +30,14 @@ Depends on `--output-format`:
 
 ## Models
 
-Any HuggingFace [`image-text-to-text`](https://huggingface.co/models?pipeline_tag=image-text-to-text) model is supported. The [GOT-OCR](https://huggingface.co/stepfun-ai/GOT-OCR-2.0-hf) model is recommended for general-purpose document OCR.
+Any HuggingFace [`image-text-to-text`](https://huggingface.co/models?pipeline_tag=image-text-to-text) model is supported. The [GOT-OCR](https://huggingface.co/stepfun-ai/GOT-OCR-2.0-hf) model is recommended for general-purpose English document OCR. For multilingual documents, see the alternatives below.
 
 | Model | Params | Description | License |
 |-------|--------|-------------|---------|
 | [`stepfun-ai/GOT-OCR-2.0-hf`](https://huggingface.co/stepfun-ai/GOT-OCR-2.0-hf) (default) | 600M | Full-page OCR with format preservation | Apache 2.0 |
+| [`rednote-hilab/dots.ocr`](https://huggingface.co/rednote-hilab/dots.ocr) | 3B | Multilingual document parsing (100+ languages) with layout detection | MIT |
+| [`zai-org/GLM-4.1V-9B-Thinking`](https://huggingface.co/zai-org/GLM-4.1V-9B-Thinking) | 10B | Bilingual (English/Chinese) VLM with reasoning, up to 4K image resolution | MIT |
+| [`Qwen/Qwen2.5-VL-7B-Instruct`](https://huggingface.co/Qwen/Qwen2.5-VL-7B-Instruct) | 7B | General-purpose VLM with strong OCR and multilingual support | Apache 2.0 |
 
 !!! tip
 
