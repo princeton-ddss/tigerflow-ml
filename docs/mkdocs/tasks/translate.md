@@ -29,7 +29,7 @@ Plain text, encoded as UTF-8.
 
 ## Models
 
-Any HuggingFace [`TranslateGemma`](https://huggingface.co/collections/google/translategemma) model is supported. Large language _chat_ models from the [`text-generation`](https://huggingface.co/models?pipeline_tag=text-generation) or [`image-text-to-text](https://huggingface.co/models?pipeline_tag=image-text-to-text) pipelines can also be used with a `prompt template`. The default prompt template is:
+Any HuggingFace [`TranslateGemma`](https://huggingface.co/collections/google/translategemma) model is supported. Large language _chat_ models from the [`text-generation`](https://huggingface.co/models?pipeline_tag=text-generation) or [`image-text-to-text`](https://huggingface.co/models?pipeline_tag=image-text-to-text) pipelines can also be used with a `prompt template`. The default prompt template is:
 
 ```text
 Translate the following text from {source_lang} to {target_lang}. Output only the translated text, nothing else. Text: {text}"
