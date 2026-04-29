@@ -3,21 +3,47 @@ Translate text documents using Hugging Face models.
 
 Supports Seq2Seq translation models (MADLAD-400, Helsinki-NLP/opus-mt-*, NLLB)
 and chat/causal LMs with a translation prompt.
+
+python -m tigerflow_ml.text.translate.slurm --input-dir ../tgemma/tests/input/
+--input-ext .txt --output-dir tests/test-outputs/rerun-test/ --output-ext .txt
+--max-workers 1 --cpus 1 --memory 10G --time 00:30:00 --gpus 1 --sbatch-option
+"--constraint=gpu80"
+--setup-command "export HF_HOME=/scratch/gpfs/TITIUNIK/nv5842/github/tgemma/.hf/"
+--setup-command "source .venv/bin/activate" --model google/translategemma-27b-it
 """
 
-import re
+from collections.abc import Callable
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Literal, cast
 
 import typer
 from tigerflow.logconfig import logger
 from tigerflow.utils import SetupContext
+from transformers import AutoConfig, AutoTokenizer, PreTrainedTokenizerBase
 
 from tigerflow_ml.params import HFParams
 
+from .chunking import (
+    FALLBACK_MAX_CHUNK_TOKENS,
+    MAX_CHUNK_TOKENS,
+    MIN_CHUNK_TOKENS,
+    chunk_text_by_tokens,
+    compute_chunk_size,
+    compute_prompt_overhead,
+    count_tokens,
+)
+from .detection import LANGUAGES, detect_language, get_language_name
+from .translator import HuggingFaceTranslator, build_translator, get_model_type
+from .utils import (
+    ConfigParsingError,
+    SkippedFileError,
+    TranslationError,
+    read_file_with_fallback,
+)
+
 _DEFAULT_PROMPT = (
     "Translate the following text from {source_lang} to {target_lang}. "
-    "Output only the translation, nothing else.\n\n{text}"
+    "Output only the translated text, nothing else. Text: {text}"
 )
 
 
@@ -25,27 +51,26 @@ class _TranslateBase:
     """Translate documents using Hugging Face models."""
 
     class Params(HFParams):
-        model: Annotated[
-            str,
-            typer.Option(help="HuggingFace model repo ID"),
-        ] = "google/madlad400-3b-mt"
-
         source_lang: Annotated[
-            str,
+            str | None,
             typer.Option(help="Source language code (e.g. 'en', 'de', 'zh')"),
-        ] = "en"
+        ] = None
 
         target_lang: Annotated[
             str,
             typer.Option(help="Target language code (e.g. 'de', 'en', 'fr')"),
-        ] = "de"
+        ] = "en"
 
-        max_length: Annotated[
-            int,
-            typer.Option(help="Maximum number of tokens to generate per chunk"),
-        ] = 512
+        chunk_size: Annotated[
+            int | None,
+            typer.Option(
+                help="The maximum number of tokens translated at a time",
+                min=MIN_CHUNK_TOKENS,
+                max=MAX_CHUNK_TOKENS,
+            ),
+        ] = None
 
-        prompt: Annotated[
+        prompt_template: Annotated[
             str,
             typer.Option(
                 help="Prompt template for text-generation models. "
@@ -53,232 +78,354 @@ class _TranslateBase:
             ),
         ] = _DEFAULT_PROMPT
 
-        encoding: Annotated[
-            str,
+        model_backend: Annotated[
+            Literal["auto", "chat", "tgemma"],
             typer.Option(
-                help="Input file encoding (non-UTF-8 may cause lossy tokenization)"
+                help="Translation model backend. 'auto' detects from model config."
             ),
-        ] = "utf-8-sig"
+        ] = "auto"
+
+        batch_size: Annotated[
+            int | None,
+            typer.Option(
+                help="Chunks to translate in parallel (default: auto)",
+                min=1,
+            ),
+        ] = None
+
+        allow_fetch: Annotated[
+            bool,
+            typer.Option(
+                help="Allow downloading from HuggingFace Hub. "
+                "Do not allow if running on a compute node without network access"
+            ),
+        ] = False
 
     @staticmethod
     def setup(context: SetupContext):
-        import torch
-        from transformers import AutoConfig
 
-        logger.info("Setting up translation model...")
-        logger.info("Model: {}", context.model)
-
-        device = context.device
-        if device == "auto":
-            device = "cuda" if torch.cuda.is_available() else "cpu"
-
-        # Detect model type
-        config = AutoConfig.from_pretrained(
-            context.model,
-            revision=context.revision,
-            cache_dir=context.cache_dir or None,
-        )
-        is_seq2seq = config.is_encoder_decoder
-
-        if is_seq2seq:
-            from transformers import AutoModelForSeq2SeqLM
-
-            logger.info("Using Seq2Seq translation model")
-
-            # Use model-specific tokenizer for Marian models
-            if config.model_type == "marian":
-                from transformers import MarianTokenizer
-
-                context.tokenizer = MarianTokenizer.from_pretrained(
-                    context.model,
-                    revision=context.revision,
-                    cache_dir=context.cache_dir or None,
-                )
-            else:
-                from transformers import AutoTokenizer
-
-                context.tokenizer = AutoTokenizer.from_pretrained(
-                    context.model,
-                    revision=context.revision,
-                    cache_dir=context.cache_dir or None,
-                )
-
-            context.translation_model = AutoModelForSeq2SeqLM.from_pretrained(
+        try:
+            config = AutoConfig.from_pretrained(
                 context.model,
+                local_files_only=not context.allow_fetch,
+                cache_dir=context.cache_dir,
                 revision=context.revision,
-                cache_dir=context.cache_dir or None,
             )
-            context.translation_model.to(device)
-            context.is_seq2seq = True
+        except Exception as e:
+            raise ConfigParsingError(f"Failed to load model config: {e}")
+
+        tokenizer = _get_tokenizer(
+            context.model,
+            fetch=context.allow_fetch,
+            cache_dir=context.cache_dir,
+            revision=context.revision,
+        )
+
+        # Gemma uses an internal structured message format; all other backends
+        # use the user-supplied prompt template, so compute its actual token cost.
+        model_type = get_model_type(context.model)
+        if model_type == "tgemma":
+            prompt_overhead = 248
         else:
-            from transformers import pipeline
-
-            logger.info("Using text-generation pipeline for translation")
-            context.pipeline = pipeline(
-                "text-generation",
-                model=context.model,
-                revision=context.revision,
-                device=device,
-                model_kwargs={"cache_dir": context.cache_dir or None},
+            prompt_overhead = compute_prompt_overhead(
+                context.prompt_template, tokenizer
             )
-            context.tokenizer = context.pipeline.tokenizer
-            if context.tokenizer is None:
-                msg = f"Model {context.model!r} does not have a tokenizer"
-                raise ValueError(msg)
-            context.is_seq2seq = False
+            logger.info(f"Prompt overhead: {prompt_overhead} tokens")
 
-            # Account for prompt overhead when chunking
-            template_without_text = context.prompt.replace("{text}", "").format(
-                source_lang=context.source_lang,
-                target_lang=context.target_lang,
-            )
-            prompt_overhead = len(
-                context.tokenizer.encode(
-                    template_without_text, add_special_tokens=False
-                )
-            )
-            context.max_input_tokens = (
-                context.tokenizer.model_max_length - prompt_overhead
-            )
-            context.translation_device = device
-            logger.info("Translation model ready on device: {}", device)
-            return
+        chunk_size: int | None = context.chunk_size
 
-        context.translation_device = device
-        context.uses_lang_prefix = "madlad" in context.model.lower()
-        if context.tokenizer is None:
-            msg = f"Model {context.model!r} does not have a tokenizer"
-            raise ValueError(msg)
-        context.max_input_tokens = context.tokenizer.model_max_length
+        if chunk_size is None:
+            try:
+                computed_chunk_size = compute_chunk_size(config, prompt_overhead)
+                logger.info(f"Calculated max chunk size: {computed_chunk_size} tokens")
+                chunk_size = computed_chunk_size
+            except ConfigParsingError as err:
+                logger.warning(err)
+                chunk_size = FALLBACK_MAX_CHUNK_TOKENS
+                logger.warning(f"Falling back to a chunk size of {chunk_size} tokens")
+        else:
+            logger.info(f"Chunk size: {chunk_size} tokens")
 
-        logger.info("Translation model ready on device: {}", device)
+        if chunk_size > MAX_CHUNK_TOKENS:
+            logger.warning(
+                f"Warning: --chunk-size {chunk_size} exceeds maximum of"
+                f" {MAX_CHUNK_TOKENS}, clamping"
+            )
+            chunk_size = MAX_CHUNK_TOKENS
+
+        logger.info(f"Model: {context.model}")
+        logger.info("Initializing HuggingFace backend...")
+        context.translator = build_translator(
+            context.model,
+            tokenizer=tokenizer,
+            max_chunk_tokens=chunk_size,
+            config=config,
+            batch_size=context.batch_size,
+            fetch=context.allow_fetch,
+            prompt_template=context.prompt_template,
+            backend=context.model_backend,
+            revision=context.revision,
+            cache_dir=context.cache_dir,
+            device=context.device,
+        )
 
     @staticmethod
     def run(context: SetupContext, input_file: Path, output_file: Path):
-        import torch
-
-        logger.info("Translating: {}", input_file)
-
-        with open(input_file, encoding=context.encoding) as f:
-            text = f.read()
-
-        # Account for language prefix tokens in chunk budget
-        max_tokens = context.max_input_tokens
-        if context.is_seq2seq and getattr(context, "uses_lang_prefix", False):
-            prefix = f"<2{context.target_lang}> "
-            prefix_tokens = len(
-                context.tokenizer.encode(prefix, add_special_tokens=False)
+        try:
+            _translate_file(
+                context.translator,
+                input_file,
+                output_file,
+                context.source_lang,
+                context.target_lang,
+                logger.info,
             )
-            max_tokens -= prefix_tokens
+        except SkippedFileError as e:
+            logger.warning(f"  Skipping: {e}")
+            return
 
-        chunks = _chunk_text(text, context.tokenizer, max_tokens)
-        logger.info("Split into {} chunk(s)", len(chunks))
-
-        translated_parts = []
-        for i, chunk in enumerate(chunks):
-            if context.is_seq2seq:
-                input_text = chunk
-                if getattr(context, "uses_lang_prefix", False):
-                    input_text = f"<2{context.target_lang}> {chunk}"
-
-                inputs = context.tokenizer(
-                    input_text,
-                    return_tensors="pt",
-                    truncation=True,
-                    max_length=context.max_input_tokens,
-                )
-                inputs = {
-                    k: v.to(context.translation_device) for k, v in inputs.items()
-                }
-
-                with torch.no_grad():
-                    output_ids = context.translation_model.generate(
-                        **inputs,
-                        max_new_tokens=context.max_length,
-                    )
-
-                output = context.tokenizer.decode(
-                    output_ids[0], skip_special_tokens=True
-                )
-            else:
-                prompt = context.prompt.format(
-                    source_lang=context.source_lang,
-                    target_lang=context.target_lang,
-                    text=chunk,
-                )
-                result = context.pipeline(
-                    prompt,
-                    max_new_tokens=context.max_length,
-                    do_sample=False,
-                )
-                output = result[0]["generated_text"]
-                # Remove the prompt from the output
-                if output.startswith(prompt):
-                    output = output[len(prompt) :].strip()
-
-            translated_parts.append(output)
-            logger.info(
-                "Chunk {}: {} chars -> {} chars", i + 1, len(chunk), len(output)
-            )
-
-        translated = " ".join(translated_parts)
-
-        with open(output_file, "w", encoding="utf-8") as f:
-            f.write(translated)
-
-        logger.info("Done")
+        logger.info("Translation complete!")
 
 
-def _split_sentences(text: str) -> list[str]:
-    """Split text into sentences on .!? followed by whitespace."""
-    parts = re.split(r"(?<=[.!?])\s+", text.strip())
-    return [s for s in parts if s]
+def _get_tokenizer(
+    model_name: str,
+    fetch: bool,
+    cache_dir: str | None = None,
+    revision: str | None = None,
+) -> PreTrainedTokenizerBase:
+    """Load tokenizer, downloading if needed and allowed."""
+    try:
+        return _load_tokenizer(model_name, cache_dir=cache_dir, revision=revision)
+    except OSError:
+        if not fetch:
+            logger.error(f"Error: Tokenizer for '{model_name}' not found in cache.")
+            logger.error("  Run with --fetch to download, or manually with:")
+            logger.error(f"    hf download {model_name} --include 'tokenizer*'")
+            raise typer.Exit(1)
+        logger.info("Downloading tokenizer from HuggingFace Hub...")
+        _download_tokenizer(model_name, cache_dir=cache_dir, revision=revision)
+        return _load_tokenizer(model_name, cache_dir=cache_dir, revision=revision)
 
 
-def _chunk_text(text: str, tokenizer, max_tokens: int) -> list[str]:
-    """Pack sentences into chunks that fit within the token limit."""
-    sentences = _split_sentences(text)
-    chunks: list[str] = []
-    current: list[str] = []
-    current_tokens = 0
-
-    for sentence in sentences:
-        token_count = len(tokenizer.encode(sentence, add_special_tokens=False))
-
-        if token_count > max_tokens:
-            # Flush current chunk
-            if current:
-                chunks.append(" ".join(current))
-                current = []
-                current_tokens = 0
-            # Force-split the long sentence at token boundaries
-            chunks.extend(_split_by_tokens(sentence, tokenizer, max_tokens))
-            continue
-
-        if current_tokens + token_count > max_tokens:
-            chunks.append(" ".join(current))
-            current = []
-            current_tokens = 0
-
-        current.append(sentence)
-        current_tokens += token_count
-
-    if current:
-        chunks.append(" ".join(current))
-
-    return chunks
-
-
-def _split_by_tokens(text: str, tokenizer, max_tokens: int) -> list[str]:
-    """Last resort: split text at token boundaries.
-
-    Note: the encode/decode round-trip may not preserve the original
-    text exactly (e.g., unknown characters, whitespace normalization,
-    Unicode normalization).
+def _load_tokenizer(
+    model_name: str, cache_dir: str | None = None, revision: str | None = None
+) -> PreTrainedTokenizerBase:
     """
-    token_ids = tokenizer.encode(text, add_special_tokens=False)
-    chunks = []
-    for i in range(0, len(token_ids), max_tokens):
-        chunk_ids = token_ids[i : i + max_tokens]
-        chunks.append(tokenizer.decode(chunk_ids, skip_special_tokens=True))
-    return chunks
+    Load a HuggingFace tokenizer from local cache.
+
+    Args:
+        model_name: HuggingFace model name.
+        cache_dir: Optional cache directory override.
+
+    Returns:
+        Loaded tokenizer.
+
+    Raises:
+        OSError: If tokenizer not found in cache.
+    """
+    return cast(
+        PreTrainedTokenizerBase,
+        AutoTokenizer.from_pretrained(
+            model_name, local_files_only=True, cache_dir=cache_dir, revision=revision
+        ),
+    )
+
+
+def _download_tokenizer(
+    model_name: str, cache_dir: str | None = None, revision: str | None = None
+) -> None:
+    """
+    Download tokenizer files from HuggingFace Hub.
+
+    Args:
+        model_name: HuggingFace model name.
+        cache_dir: Optional cache directory override.
+    """
+    from huggingface_hub import snapshot_download
+
+    snapshot_download(
+        model_name,
+        allow_patterns=["tokenizer*", "special_tokens_map.json"],
+        cache_dir=cache_dir,
+        revision=revision,
+    )
+
+
+def _translate_file(
+    translator: HuggingFaceTranslator,
+    input_file: Path,
+    output_file: Path,
+    source_lang: str | None = None,
+    target_lang: str = "en",
+    on_progress: Callable[..., None] = print,
+) -> str:
+    """
+    Translate a single file.
+
+    Args:
+        translator: Translator instance.
+        input_file: Path to input file.
+        output_file: Path to output file.
+        source_lang: Source language code (auto-detect if None).
+        target_lang: Target language code.
+        on_progress: Callback for progress messages.
+
+    Raises:
+        SkippedFileError: If file should be skipped.
+        TranslationError: If translation fails.
+    """
+    on_progress(f"Processing: {input_file.name}")
+
+    content = read_file_with_fallback(input_file)
+
+    if not content.strip():
+        raise SkippedFileError("Empty file")
+
+    on_progress(f"  File size: {len(content):,} characters")
+
+    # Detect language
+    detected_lang = source_lang
+    if detected_lang is None:
+        detected_lang = detect_language(content)
+        if detected_lang is None:
+            raise TranslationError(
+                "Could not detect language (text may be too short or mixed)"
+            )
+        on_progress(
+            f"  Detected language: {get_language_name(detected_lang)} ({detected_lang})"
+        )
+    else:
+        on_progress(
+            f"  Source language: {get_language_name(detected_lang)} ({detected_lang})"
+        )
+
+    if detected_lang == target_lang:
+        raise SkippedFileError(f"Already in {get_language_name(target_lang)}")
+
+    if detected_lang not in LANGUAGES:
+        on_progress(
+            f"  Note: '{detected_lang}' not in common language list,"
+            " attempting anyway..."
+        )
+
+    # Translate
+    on_progress(
+        f"  Translating to: {get_language_name(target_lang)} ({target_lang})..."
+    )
+    translated = _translate_text(content, translator, detected_lang, target_lang)
+
+    # Sanity check
+    if len(translated) > 100 and detected_lang != "en":
+        if content[:100] == translated[:100]:
+            on_progress(
+                "  Warning: Output appears identical to input -"
+                " translation may have failed"
+            )
+
+    # Write output
+    with open(output_file, "w", encoding="utf-8") as f:
+        f.write(translated)
+
+    on_progress(f"  Output size: {len(translated):,} characters")
+
+    return translated
+
+
+def _translate_text(
+    text: str,
+    translator: HuggingFaceTranslator,
+    source_lang: str,
+    target_lang: str = "en",
+    max_retries: int = 3,
+) -> str:
+    """
+    Translate text, chunking if necessary.
+
+    Handles the chunk -> translate -> merge flow, with retry logic for
+    chunks that produce truncated output.
+
+    Args:
+        text: Full document text to translate.
+        translator: Translator backend to use.
+        source_lang: Source language code.
+        target_lang: Target language code.
+        max_retries: Maximum retry attempts for truncated chunks.
+
+    Returns:
+        Translated document text.
+    """
+    tokenizer = translator.tokenizer
+    assert tokenizer is not None
+    max_tokens = translator.max_chunk_tokens
+
+    if count_tokens(text, tokenizer) <= max_tokens:
+        return _translate_chunk_with_retry(
+            text,
+            translator,
+            source_lang,
+            target_lang,
+            tokenizer,
+            max_tokens,
+            max_retries,
+        )
+
+    chunks = chunk_text_by_tokens(text, tokenizer, max_tokens=max_tokens)
+    logger.info(f"    Document is long - splitting into {len(chunks)} chunks...")
+
+    return "\n\n".join(translator.translate_batch(chunks, source_lang, target_lang))
+
+
+def _translate_chunk_with_retry(
+    text: str,
+    translator: HuggingFaceTranslator,
+    source_lang: str,
+    target_lang: str,
+    tokenizer: PreTrainedTokenizerBase,
+    max_tokens: int,
+    max_retries: int,
+    chunk_num: int | None = None,
+    total_chunks: int | None = None,
+    retry_depth: int = 0,
+) -> str:
+    """Translate a chunk, retrying with smaller sub-chunks if truncated."""
+    try:
+        return translator.translate(text, source_lang, target_lang)
+    except TranslationError as e:
+        if "truncated" not in str(e).lower():
+            raise
+
+        if retry_depth >= max_retries:
+            raise TranslationError(
+                f"Output still truncated after {max_retries} retry attempts. "
+                f"Input may be too complex to translate within token limits."
+            ) from e
+
+        input_tokens = count_tokens(text, tokenizer)
+        half = max(int(input_tokens * 0.6), 1)
+
+        prefix = f"Chunk {chunk_num}/{total_chunks}: " if chunk_num else ""
+        logger.info(
+            f"      {prefix}Output truncated, splitting ({input_tokens} tokens) "
+            f"and retrying (attempt {retry_depth + 1}/{max_retries})..."
+        )
+
+        sub_chunks = chunk_text_by_tokens(text, tokenizer, max_tokens=half)
+        parts = []
+        for j, sub in enumerate(sub_chunks, 1):
+            logger.info(
+                f"      Sub-chunk {j}/{len(sub_chunks)} "
+                f"({count_tokens(sub, tokenizer)} tokens)..."
+            )
+            result = _translate_chunk_with_retry(
+                sub,
+                translator,
+                source_lang,
+                target_lang,
+                tokenizer,
+                max_tokens,
+                max_retries,
+                retry_depth=retry_depth + 1,
+            )
+            parts.append(result)
+
+        return "\n\n".join(parts)
