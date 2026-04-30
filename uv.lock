@@ -1845,7 +1845,7 @@ requires-dist = [
     { name = "tigerflow", specifier = ">=0.3.0" },
     { name = "timm" },
     { name = "torch", specifier = ">=2.0" },
-    { name = "transformers", specifier = ">=4.45" },
+    { name = "transformers", specifier = ">=4.51" },
 ]
 
 [package.metadata.requires-dev]

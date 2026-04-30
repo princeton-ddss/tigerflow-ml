@@ -25,7 +25,7 @@ classifiers = [
 requires-python = ">=3.10,<3.14"
 dependencies = [
     "tigerflow>=0.3.0",
-    "transformers>=4.45",
+    "transformers>=4.51",
     "torch>=2.0",
     "Pillow",
     "pymupdf>=1.27.1",
@@ -89,3 +89,6 @@ include = ["src"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+markers = [
+    "dependency: marks a test as dependent on another (pytest-dependency)",
+]
