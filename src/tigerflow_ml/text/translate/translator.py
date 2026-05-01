@@ -109,7 +109,12 @@ class HuggingFaceTranslator:
             )
             # KV cache per sequence:
             # 2(K+V) * layers * kv_heads * head_dim * tokens * 2 bytes (bfloat16)
-            # 1.5x overhead for activations and intermediate buffers.
+            # VLMs have substantially higher activation memory than text-only models
+            # during prefill; use a 4x overhead for them vs 1.5x for text-only.
+
+            # is_vlm = _is_image_text_model(self.pipe.model.config)
+            # overhead = 4.0 if is_vlm else 1.5
+            overhead = 1.5
             per_seq_bytes = int(
                 2
                 * n_layers
@@ -117,9 +122,10 @@ class HuggingFaceTranslator:
                 * head_dim
                 * (self.max_chunk_tokens * 2)
                 * 2
-                * 1.5
+                * overhead
             )
-            return max(1, min(int(free_bytes // per_seq_bytes), 256))
+            max_batch = 256  # 32 if is_vlm
+            return max(1, min(int(free_bytes // per_seq_bytes), max_batch))
         except Exception:
             return 1
 
@@ -487,36 +493,58 @@ class ChatTranslator(HuggingFaceTranslator):
 
             prompts = [self._build_prompt(c, source_lang, target_lang) for c in batch]
 
-            if self._is_vlm:
-                inputs = [
-                    [{"role": "user", "content": [{"type": "text", "text": p}]}]
-                    for p in prompts
-                ]
-                outputs = self.pipe(
-                    text=inputs,
-                    do_sample=False,
-                    batch_size=len(batch),
-                    max_new_tokens=self.max_chunk_tokens,
+            try:
+                if self._is_vlm:
+                    inputs = [
+                        [{"role": "user", "content": [{"type": "text", "text": p}]}]
+                        for p in prompts
+                    ]
+                    outputs = self.pipe(
+                        text=inputs,
+                        do_sample=False,
+                        batch_size=len(batch),
+                        max_new_tokens=self.max_chunk_tokens,
+                    )
+                    batch_results = [
+                        o[0]["generated_text"][-1]["content"] for o in outputs
+                    ]
+                elif self._has_chat_template:
+                    inputs = [[{"role": "user", "content": p}] for p in prompts]
+                    outputs = self.pipe(
+                        inputs,
+                        do_sample=False,
+                        batch_size=len(batch),
+                        max_new_tokens=self.max_chunk_tokens,
+                    )
+                    batch_results = [
+                        o[0]["generated_text"][-1]["content"] for o in outputs
+                    ]
+                else:
+                    outputs = self.pipe(
+                        prompts,
+                        do_sample=False,
+                        batch_size=len(batch),
+                        max_new_tokens=self.max_chunk_tokens,
+                        return_full_text=False,
+                    )
+                    batch_results = [o[0]["generated_text"] for o in outputs]
+            except (torch.OutOfMemoryError, RuntimeError) as e:
+                logger.warning(
+                    f"      Batch failed ({type(e).__name__}: {e}), "
+                    "retrying as individual items..."
                 )
-                batch_results = [o[0]["generated_text"][-1]["content"] for o in outputs]
-            elif self._has_chat_template:
-                inputs = [[{"role": "user", "content": p}] for p in prompts]
-                outputs = self.pipe(
-                    inputs,
-                    do_sample=False,
-                    batch_size=len(batch),
-                    max_new_tokens=self.max_chunk_tokens,
-                )
-                batch_results = [o[0]["generated_text"][-1]["content"] for o in outputs]
-            else:
-                outputs = self.pipe(
-                    prompts,
-                    do_sample=False,
-                    batch_size=len(batch),
-                    max_new_tokens=self.max_chunk_tokens,
-                    return_full_text=False,
-                )
-                batch_results = [o[0]["generated_text"] for o in outputs]
+                if torch.cuda.is_available():
+                    torch.cuda.empty_cache()
+                for idx, text in enumerate(batch):
+                    logger.info(f"        Translating chunk {batch_start + idx}")
+                    try:
+                        result = self.translate(text, source_lang, target_lang)
+                    except TranslationError as trans_err:
+                        if "truncated" not in str(trans_err).lower():
+                            raise
+                        result = self._retry_truncated(text, source_lang, target_lang)
+                    results.append(result)
+                continue
 
             for i, result in enumerate(batch_results):
                 if not result or not result.strip():
