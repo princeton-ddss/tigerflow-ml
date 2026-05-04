@@ -223,7 +223,7 @@ class GemmaTranslator(HuggingFaceTranslator):
                 dtype=torch.bfloat16,
                 local_files_only=not fetch,
                 revision=revision,
-                model_kwargs={"cache_dir": cache_dir},
+                model_kwargs={"cache_dir": cache_dir, "low_cpu_mem_usage": True},
             )
         else:
             pipe = pipeline(
@@ -376,7 +376,7 @@ class ChatTranslator(HuggingFaceTranslator):
                     dtype=torch.bfloat16,
                     local_files_only=not fetch,
                     revision=revision,
-                    model_kwargs={"cache_dir": cache_dir},
+                    model_kwargs={"cache_dir": cache_dir, "low_cpu_mem_usage": True},
                 )
             else:
                 pipe = pipeline(
@@ -397,7 +397,9 @@ class ChatTranslator(HuggingFaceTranslator):
         # For non-VLM models loaded explicitly, device_map goes to from_pretrained;
         # pipeline() must not receive device when the model already has a device_map.
         pretrained_device_kwargs = (
-            {"device_map": "auto"} if self._use_device_map else {}
+            {"device_map": "auto", "low_cpu_mem_usage": True}
+            if self._use_device_map
+            else {}
         )
         model = AutoModelForCausalLM.from_pretrained(
             model_name,
