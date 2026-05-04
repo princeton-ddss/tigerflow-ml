@@ -18,9 +18,7 @@ from .utils import ConfigParsingError
 # evenly between the input chunk and the generated translation.
 FALLBACK_MAX_CHUNK_TOKENS = 900
 
-# context windows range in sizes, assuming a 128K token context
-# window on the larger end to be the cap.
-MAX_CHUNK_TOKENS = 63500
+MAX_CHUNK_TOKENS = 8182
 MIN_CHUNK_TOKENS = 250
 
 
