@@ -16,6 +16,7 @@ Translate text documents using HuggingFace [TranslateGemma](https://huggingface.
 | `--prompt-template` | *(see below)*            | Prompt template for text-generation models (uses `{source_lang}`, `{target_lang}`, and `{text}`).    |
 | `--model-backend`   | `auto`                   | Model backend (`chat`, `tgemma`, or `auto`)                                              |
 | `--batch-size`      |                          | Maximum number of chunks to translate in parallel for long documents -- will attempt auto optimization by default |
+| `--vram-fraction`   | `0.9`                    | Fraction of free VRAM used when auto-computing batch size (lower values reduce OOM risk) |
 | `--allow-fetch`     | `--no-allow-fetch`       | Allow downloads from HuggingFace Hub (network access required)                           |
 
 

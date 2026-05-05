@@ -71,6 +71,8 @@ Some other arguments you can use are:
 - `--revision` : The model revision
 - `--cache-dir` : The HuggingFace cache directory for model files. This would be an alternative for specifying the path using `HF_HOME` in a `setup-command`. It is important to note that, when using `cache-dir`, you need to specify the pathway to `/hub` (ie. `./.hf/hub`).
 - `--device` : Device to use (cuda, cpu, or auto)
+- `--vram-fraction` : Fraction of free VRAM used when auto-computing batch size (lower values reduce OOM risk). Defaults to `0.9`
+
 
 ### Running as a part of a pipeline
 
