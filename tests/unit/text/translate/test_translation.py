@@ -509,6 +509,7 @@ class TestBuildTranslatorFactory:
                 fetch=False,
                 config=SimpleNamespace(),
                 backend="tgemma",
+                vram_fraction=0.9,
             )
         assert isinstance(translator, GemmaTranslator)
 
@@ -522,6 +523,7 @@ class TestBuildTranslatorFactory:
                 fetch=False,
                 config=SimpleNamespace(),
                 backend="chat",
+                vram_fraction=0.9,
             )
         assert isinstance(translator, ChatTranslator)
         assert translator._is_vlm is False
@@ -537,6 +539,7 @@ class TestBuildTranslatorFactory:
                 fetch=False,
                 config=config,
                 backend="chat",
+                vram_fraction=0.9,
             )
         assert isinstance(translator, ChatTranslator)
         assert translator._is_vlm is True
@@ -551,6 +554,7 @@ class TestBuildTranslatorFactory:
                 fetch=False,
                 config=SimpleNamespace(),
                 backend="auto",
+                vram_fraction=0.9,
             )
         assert isinstance(translator, GemmaTranslator)
 
@@ -567,6 +571,7 @@ class TestBuildTranslatorFactory:
                 fetch=False,
                 config=config,
                 backend="auto",
+                vram_fraction=0.9,
             )
         assert isinstance(translator, ChatTranslator)
         assert translator._is_vlm is True
@@ -584,6 +589,7 @@ class TestBuildTranslatorFactory:
                 fetch=False,
                 config=config,
                 backend="auto",
+                vram_fraction=0.9,
             )
         assert isinstance(translator, ChatTranslator)
         assert translator._is_vlm is False

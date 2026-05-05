@@ -26,7 +26,6 @@ def _log_memory_info() -> None:
     if torch.cuda.is_available():
         num_gpus = torch.cuda.device_count()
         for i in range(num_gpus):
-            # Total memory and memory currently reserved/allocated
             total_mem = torch.cuda.get_device_properties(i).total_memory
             reserved_mem = torch.cuda.memory_reserved(i)
             allocated_mem = torch.cuda.memory_allocated(i)
@@ -43,8 +42,32 @@ def _log_memory_info() -> None:
     mem_free_bytes = os.sysconf("SC_PAGE_SIZE") * os.sysconf("SC_AVPHYS_PAGES")
     logger.info(
         f"CPU RAM - Total: {mem_bytes / (1024**3):.2f} GB | "
-        f"Available: {mem_free_bytes / (1024**3):.2f} GB"
+        f"Free (excl. cache): {mem_free_bytes / (1024**3):.2f} GB"
     )
+
+    # Process RSS: how much RAM this process actually holds (not OS page cache)
+    try:
+        with open("/proc/self/status") as f:
+            for line in f:
+                if line.startswith("VmRSS:"):
+                    rss_gb = int(line.split()[1]) / (1024**2)
+                    logger.info(f"  Process RSS: {rss_gb:.2f} GB")
+                    break
+    except OSError:
+        pass
+
+    # Page cache: shows how much of "used" RAM is just OS-cached disk reads
+    try:
+        cached_kb = None
+        with open("/proc/meminfo") as f:
+            for line in f:
+                if line.startswith("Cached:"):
+                    cached_kb = int(line.split()[1])
+                    break
+        if cached_kb is not None:
+            logger.info(f"  Page cache: {cached_kb / (1024**2):.2f} GB")
+    except OSError:
+        pass
 
 
 class Translator(Protocol):
@@ -67,6 +90,7 @@ class HuggingFaceTranslator:
     def __init__(
         self,
         model_name: str,
+        vram_fraction: float,
         tokenizer: PreTrainedTokenizerBase | None = None,
         max_chunk_tokens: int = FALLBACK_MAX_CHUNK_TOKENS,
         batch_size: int | None = None,
@@ -99,11 +123,18 @@ class HuggingFaceTranslator:
         )
         logger.info(f"Model loaded on {self.pipe.model.device}")
         if hasattr(self.pipe.model, "hf_device_map"):
-            logger.info(f"  device map: {self.pipe.model.hf_device_map}")
+            device_map = self.pipe.model.hf_device_map
+            logger.info(f"  device map: {device_map}")
+            cpu_layers = [k for k, v in device_map.items() if v in ("cpu", "disk")]
+            if cpu_layers:
+                logger.warning(
+                    f" {len(cpu_layers)} layer(s) offloaded to CPU/disk: "
+                    f"{cpu_layers[:5]}" + (" ..." if len(cpu_layers) > 5 else "")
+                )
         _log_memory_info()
 
         if batch_size is None:
-            self.batch_size = self._auto_batch_size()
+            self.batch_size = self._auto_batch_size(vram_fraction)
             logger.info(f"Auto batch size: {self.batch_size}")
         else:
             self.batch_size = batch_size
@@ -116,20 +147,22 @@ class HuggingFaceTranslator:
     def translate(self, text: str, source_lang: str, target_lang: str) -> str:
         raise NotImplementedError
 
-    def _auto_batch_size(self) -> int:
+    def _auto_batch_size(self, vram_fraction) -> int:
         """Estimate batch size from free VRAM and model KV-cache footprint."""
-        import torch
 
         if not torch.cuda.is_available():
             return 1
         try:
             if self._use_device_map and torch.cuda.device_count() > 1:
-                free_bytes = sum(
-                    torch.cuda.mem_get_info(i)[0]
-                    for i in range(torch.cuda.device_count())
-                )
+                free_bytes_per_GPU = []
+                for i in range(torch.cuda.device_count()):
+                    free_bytes_per_GPU.append(torch.cuda.mem_get_info(i)[0])
+                free_bytes = min(free_bytes_per_GPU)
             else:
                 free_bytes, _ = torch.cuda.mem_get_info()
+
+            free_bytes = free_bytes * vram_fraction
+
             cfg = self.pipe.model.config
             if hasattr(cfg, "text_config"):
                 cfg = cfg.text_config
@@ -140,22 +173,17 @@ class HuggingFaceTranslator:
             )
             # KV cache per sequence:
             # 2(K+V) * layers * kv_heads * head_dim * tokens * 2 bytes (bfloat16)
-            # VLMs have substantially higher activation memory than text-only models
-            # during prefill; use a 4x overhead for them vs 1.5x for text-only.
-
-            # is_vlm = _is_image_text_model(self.pipe.model.config)
-            # overhead = 4.0 if is_vlm else 1.5
             overhead = 1.5
             per_seq_bytes = int(
                 2
                 * n_layers
                 * n_kv_heads
                 * head_dim
-                * (self.max_chunk_tokens * 2)
+                * (self.max_chunk_tokens * 2)  # tokens
                 * 2
                 * overhead
             )
-            max_batch = 256  # 32 if is_vlm
+            max_batch = 64
             return max(1, min(int(free_bytes // per_seq_bytes), max_batch))
         except Exception:
             return 1
@@ -367,6 +395,7 @@ class ChatTranslator(HuggingFaceTranslator):
     def __init__(
         self,
         model_name: str,
+        vram_fraction: float,
         tokenizer: PreTrainedTokenizerBase | None = None,
         max_chunk_tokens: int = FALLBACK_MAX_CHUNK_TOKENS,
         batch_size: int | None = None,
@@ -387,6 +416,7 @@ class ChatTranslator(HuggingFaceTranslator):
             cache_dir=cache_dir,
             revision=revision,
             device=device,
+            vram_fraction=vram_fraction,
         )
         self.prompt_template = prompt_template
 
@@ -610,6 +640,7 @@ def build_translator(
     model_name: str,
     *,
     tokenizer: PreTrainedTokenizerBase,
+    vram_fraction: float,
     max_chunk_tokens: int,
     batch_size: int | None,
     fetch: bool,
@@ -635,6 +666,7 @@ def build_translator(
         revision: Model revision (branch, tag, or commit hash)
         cache_dir: HuggingFace cache directory for model files
         device: Device to use (cuda, cpu, or auto)
+        vram_fraction: The fraction of free VRAM to use
 
     Returns:
         A concrete HuggingFaceTranslator subclass.
@@ -648,6 +680,7 @@ def build_translator(
         cache_dir=cache_dir,
         revision=revision,
         device=device,
+        vram_fraction=vram_fraction,
     )
 
     if backend == "tgemma":

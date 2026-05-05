@@ -101,6 +101,15 @@ class _TranslateBase:
             ),
         ] = False
 
+        vram_fraction: Annotated[
+            float,
+            typer.Option(
+                help="The fraction of free VRAM to use when calculating batch size",
+                min=0.01,
+                max=1,
+            ),
+        ] = 0.9
+
     @staticmethod
     def setup(context: SetupContext):
 
@@ -167,6 +176,7 @@ class _TranslateBase:
             revision=context.revision,
             cache_dir=context.cache_dir,
             device=context.device,
+            vram_fraction=context.vram_fraction,
         )
 
     @staticmethod
