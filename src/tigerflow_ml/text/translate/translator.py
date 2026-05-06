@@ -12,6 +12,7 @@ from typing import Any, Protocol, cast
 import torch
 from tigerflow.logconfig import logger
 from transformers import PretrainedConfig, PreTrainedTokenizerBase, pipeline
+from vllm import LLM, SamplingParams
 
 from .chunking import DEFAULT_CHUNK_SIZE, chunk_text_by_tokens, count_tokens
 from .utils import TranslationError
@@ -609,6 +610,74 @@ class ChatTranslator(HuggingFaceTranslator):
         return results
 
 
+class vllmTranslator:
+    def __init__(
+        self,
+        model_name: str,
+        vram_fraction: float,
+        tokenizer: PreTrainedTokenizerBase | None = None,
+        max_chunk_tokens: int = DEFAULT_CHUNK_SIZE,
+        fetch: bool = False,
+        cache_dir: str | None = None,
+        revision: str | None = None,
+        device: str | int = "auto",
+        prompt_template: str = "",
+    ):
+        if not fetch:
+            os.environ["HF_HUB_OFFLINE"] = "1"
+
+        device_kwarg = {} if device == "auto" else {"device": device}
+
+        self.model = LLM(
+            model=model_name,
+            download_dir=cache_dir,
+            gpu_memory_utilization=vram_fraction if device != "cpu" else 0.0,
+            revision=revision,
+            **device_kwarg,
+        )
+
+        self.tokenizer = tokenizer
+        self.max_chunk_tokens = max_chunk_tokens
+        self.sampling_params = SamplingParams(max_tokens=max_chunk_tokens)
+        self.prompt_template = prompt_template
+
+        logger.info("Model loaded using vLLM!")
+
+    def _build_message(
+        self, text: str, source_lang: str, target_lang: str
+    ) -> list[dict]:
+
+        prompt = self.prompt_template.format(
+            source_lang=source_lang,
+            target_lang=target_lang,
+            text=text,
+        )
+
+        message = [
+            {
+                "role": "system",
+                "content": "You are an expert linguist",
+            },  # TODO: make system prompt an argument
+            {"role": "user", "content": prompt},
+        ]
+
+        return message
+
+    def translate(self, text: str, source_lang: str, target_lang: str):
+        message = self._build_message(text, source_lang, target_lang)
+        output = self.model.chat(message, sampling_params=self.sampling_params)
+        return output[0].outputs[0].text
+
+    def translate_batch(
+        self, texts: list[str], source_lang: str, target_lang: str
+    ) -> list[str]:
+        messages = [self._build_message(t, source_lang, target_lang) for t in texts]
+        outputs = self.model.chat(
+            messages, sampling_params=self.sampling_params
+        )  # vLLM accepts a list
+        return [o.outputs[0].text for o in outputs]
+
+
 def get_model_type(
     model_name: str,
 ) -> str:
@@ -634,7 +703,7 @@ def build_translator(
     revision: str | None = None,
     cache_dir: str | None = None,
     device: str = "auto",
-) -> HuggingFaceTranslator:
+) -> Translator:
     """
     Instantiate the appropriate translation backend.
 
@@ -653,34 +722,28 @@ def build_translator(
         vram_fraction: The fraction of free VRAM to use
 
     Returns:
-        A concrete HuggingFaceTranslator subclass.
+        A concrete Translator subclass.
     """
     kwargs: dict[str, Any] = dict(
         model_name=model_name,
-        tokenizer=tokenizer,
         max_chunk_tokens=max_chunk_tokens,
-        batch_size=batch_size,
         fetch=fetch,
         cache_dir=cache_dir,
         revision=revision,
         device=device,
         vram_fraction=vram_fraction,
+        tokenizer=tokenizer,
     )
 
     if backend == "tgemma":
-        return GemmaTranslator(**kwargs)
+        return GemmaTranslator(**kwargs, batch_size=batch_size)
     elif backend == "chat":
-        is_vlm = _is_image_text_model(config)
-        return ChatTranslator(**kwargs, prompt_template=prompt_template, is_vlm=is_vlm)
+        return vllmTranslator(**kwargs, prompt_template=prompt_template)
 
     # Auto-detect from model name and config
     if get_model_type(model_name) == "tgemma":
         logger.info("Using tgemma image-text-to-text backend")
-        return GemmaTranslator(**kwargs)
+        return GemmaTranslator(**kwargs, batch_size=batch_size)
     else:
-        is_vlm = _is_image_text_model(config)
-        logger.info(
-            "Using chat backend "
-            f"({'image-text-to-text' if is_vlm else 'text-generation'})"
-        )
-        return ChatTranslator(**kwargs, prompt_template=prompt_template, is_vlm=is_vlm)
+        logger.info("Using chat backend through vLLM")
+        return vllmTranslator(**kwargs, prompt_template=prompt_template)

@@ -83,6 +83,7 @@ class _TranslateBase:
             ),
         ] = "auto"
 
+        # TODO: update message -- chat models use vllm to handle batching
         batch_size: Annotated[
             int | None,
             typer.Option(
