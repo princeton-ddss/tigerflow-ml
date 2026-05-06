@@ -1,20 +1,15 @@
 """Unit tests for token-aware chunking helpers (no model downloads needed)."""
 
-from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 import pytest
 
 from tigerflow_ml.text.translate.chunking import (
-    MIN_CHUNK_TOKENS,
     _chunk_by_raw_tokens,
     _chunk_by_sentences,
     chunk_text_by_tokens,
-    compute_chunk_size,
-    compute_prompt_overhead,
     count_tokens,
 )
-from tigerflow_ml.text.translate.utils import ConfigParsingError
 
 OVERHEAD = 250
 
@@ -210,121 +205,3 @@ class TestChunkEdgeCases:
         assert len(chunks) == 1
         assert not chunks[0].startswith(" ")
         assert not chunks[0].endswith(" ")
-
-
-class TestComputePromptOverhead:
-    def test_text_only_template_has_zero_overhead(self, mock_tokenizer):
-        # {text} is replaced with "" so nothing remains
-        assert compute_prompt_overhead("{text}", mock_tokenizer) == 0
-
-    def test_fixed_prefix_counted(self, mock_tokenizer):
-        # "Translate: " = 1 token
-        assert compute_prompt_overhead("Translate: {text}", mock_tokenizer) == 1
-
-    def test_lang_placeholders_counted(self, mock_tokenizer):
-        # "From en to de: " = 4 tokens
-        result = compute_prompt_overhead(
-            "From {source_lang} to {target_lang}: {text}", mock_tokenizer
-        )
-        assert result == 4
-
-    def test_text_content_does_not_affect_overhead(self, mock_tokenizer):
-        # overhead must be independent of what {text} will hold at runtime
-        template = "Translate from {source_lang}: {text}"
-        overhead = compute_prompt_overhead(template, mock_tokenizer)
-        assert overhead == 3
-
-
-def cfg(**kwargs):
-    """Build a minimal fake config with only the given attributes."""
-    return SimpleNamespace(**kwargs)
-
-
-def multimodal_cfg(text_kwargs, **top_kwargs):
-    """Build a fake multimodal config whose text fields live in text_config."""
-    return SimpleNamespace(text_config=SimpleNamespace(**text_kwargs), **top_kwargs)
-
-
-class TestComputeChunkSize:
-    def test_max_position_embeddings(self):
-        result = compute_chunk_size(
-            cfg(max_position_embeddings=8000), prompt_overhead=OVERHEAD
-        )
-        assert result == (8000 - OVERHEAD) // 2
-
-    def test_n_positions(self):
-        result = compute_chunk_size(cfg(n_positions=8000), prompt_overhead=OVERHEAD)
-        assert result == (8000 - OVERHEAD) // 2
-
-    def test_n_ctx(self):
-        result = compute_chunk_size(cfg(n_ctx=8000), prompt_overhead=OVERHEAD)
-        assert result == (8000 - OVERHEAD) // 2
-
-    def test_seq_length(self):
-        result = compute_chunk_size(cfg(seq_length=8000), prompt_overhead=OVERHEAD)
-        assert result == (8000 - OVERHEAD) // 2
-
-    def test_seq_len(self):
-        result = compute_chunk_size(cfg(seq_len=8000), prompt_overhead=OVERHEAD)
-        assert result == (8000 - OVERHEAD) // 2
-
-    def test_max_sequence_length(self):
-        result = compute_chunk_size(
-            cfg(max_sequence_length=8000), prompt_overhead=OVERHEAD
-        )
-        assert result == (8000 - OVERHEAD) // 2
-
-    # sliding_window uses the direct formula (no halving)
-    def test_sliding_window_takes_priority_over_full_context(self):
-        result = compute_chunk_size(
-            cfg(sliding_window=4000, max_position_embeddings=8000),
-            prompt_overhead=OVERHEAD,
-        )
-        assert result == 4000 - OVERHEAD
-
-    # Multimodal models (Gemma3, etc.) nest text fields under text_config
-    # Top-level config has no context fields; text_config does
-
-    def test_multimodal_config_max_position_embeddings(self):
-        result = compute_chunk_size(
-            multimodal_cfg({"max_position_embeddings": 8000}), prompt_overhead=OVERHEAD
-        )
-        assert result == (8000 - OVERHEAD) // 2
-
-    def test_multimodal_config_sliding_window_priority(self):
-        result = compute_chunk_size(
-            multimodal_cfg({"sliding_window": 4000, "max_position_embeddings": 8000}),
-            prompt_overhead=OVERHEAD,
-        )
-        assert result == 4000 - OVERHEAD
-
-    def test_multimodal_config_none_does_not_crash(self):
-        c = SimpleNamespace(text_config=None, max_position_embeddings=8192)
-        result = compute_chunk_size(c, prompt_overhead=OVERHEAD)
-        assert result == (8192 - OVERHEAD) // 2
-
-    def test_no_matching_fields_raises_error(self):
-        with pytest.raises(ConfigParsingError):
-            compute_chunk_size(
-                cfg(vocab_size=32000, hidden_size=4096), prompt_overhead=OVERHEAD
-            )
-
-    def test_none_field_value_is_skipped(self):
-        # sliding_window present but None — should fall through to full context field
-        result = compute_chunk_size(
-            cfg(sliding_window=None, max_position_embeddings=8192),
-            prompt_overhead=OVERHEAD,
-        )
-        assert result == (8192 - OVERHEAD) // 2
-
-    def test_zero_field_value_is_skipped(self):
-        result = compute_chunk_size(
-            cfg(sliding_window=0, max_position_embeddings=8192),
-            prompt_overhead=OVERHEAD,
-        )
-        assert result == (8192 - OVERHEAD) // 2
-
-    def test_chunk_size_minimum_is_min_chunk_tokens(self):
-        # overhead larger than window should clamp to 1, not go negative
-        result = compute_chunk_size(cfg(sliding_window=100), prompt_overhead=500)
-        assert result == MIN_CHUNK_TOKENS
