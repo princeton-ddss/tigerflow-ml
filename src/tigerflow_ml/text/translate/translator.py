@@ -13,7 +13,7 @@ import torch
 from tigerflow.logconfig import logger
 from transformers import PretrainedConfig, PreTrainedTokenizerBase, pipeline
 
-from .chunking import FALLBACK_MAX_CHUNK_TOKENS, chunk_text_by_tokens, count_tokens
+from .chunking import DEFAULT_CHUNK_SIZE, chunk_text_by_tokens, count_tokens
 from .utils import TranslationError
 
 
@@ -22,7 +22,18 @@ def _is_image_text_model(config: PretrainedConfig) -> bool:
     return hasattr(config, "vision_config") or hasattr(config, "image_token_id")
 
 
-def _log_memory_info() -> None:
+def _log_gpu_info(model) -> None:
+
+    if hasattr(model, "hf_device_map"):
+        device_map = model.hf_device_map
+        logger.info(f"  device map: {device_map}")
+        cpu_layers = [k for k, v in device_map.items() if v in ("cpu", "disk")]
+        if cpu_layers:
+            logger.warning(
+                f" {len(cpu_layers)} layer(s) offloaded to CPU/disk: "
+                f"{cpu_layers[:5]}" + (" ..." if len(cpu_layers) > 5 else "")
+            )
+
     if torch.cuda.is_available():
         num_gpus = torch.cuda.device_count()
         for i in range(num_gpus):
@@ -30,44 +41,18 @@ def _log_memory_info() -> None:
             reserved_mem = torch.cuda.memory_reserved(i)
             allocated_mem = torch.cuda.memory_allocated(i)
 
+            driver_free, _ = torch.cuda.mem_get_info(i)
+            pytorch_cache_free = reserved_mem - allocated_mem
+            usable = driver_free + pytorch_cache_free
+
             logger.info(f"GPU {i}: {torch.cuda.get_device_name(i)}")
             logger.info(f"  Total:     {total_mem / (1024**3):.2f} GB")
             logger.info(f"  Allocated: {allocated_mem / (1024**3):.2f} GB")
+            logger.info(f"  Cached:    {pytorch_cache_free / (1024**3):.2f} GB")
             logger.info(
-                f"  Cached:    {(reserved_mem - allocated_mem) / (1024**3):.2f} GB"
+                f"  Driver free (all processes): {driver_free / (1024**3):.2f} GB"
             )
-            logger.info(f"  Free:      {(total_mem - reserved_mem) / (1024**3):.2f} GB")
-
-    mem_bytes = os.sysconf("SC_PAGE_SIZE") * os.sysconf("SC_PHYS_PAGES")
-    mem_free_bytes = os.sysconf("SC_PAGE_SIZE") * os.sysconf("SC_AVPHYS_PAGES")
-    logger.info(
-        f"CPU RAM - Total: {mem_bytes / (1024**3):.2f} GB | "
-        f"Free (excl. cache): {mem_free_bytes / (1024**3):.2f} GB"
-    )
-
-    # Process RSS: how much RAM this process actually holds (not OS page cache)
-    try:
-        with open("/proc/self/status") as f:
-            for line in f:
-                if line.startswith("VmRSS:"):
-                    rss_gb = int(line.split()[1]) / (1024**2)
-                    logger.info(f"  Process RSS: {rss_gb:.2f} GB")
-                    break
-    except OSError:
-        pass
-
-    # Page cache: shows how much of "used" RAM is just OS-cached disk reads
-    try:
-        cached_kb = None
-        with open("/proc/meminfo") as f:
-            for line in f:
-                if line.startswith("Cached:"):
-                    cached_kb = int(line.split()[1])
-                    break
-        if cached_kb is not None:
-            logger.info(f"  Page cache: {cached_kb / (1024**2):.2f} GB")
-    except OSError:
-        pass
+            logger.info(f"  Usable (driver free + cache): {usable / (1024**3):.2f} GB")
 
 
 class Translator(Protocol):
@@ -92,7 +77,7 @@ class HuggingFaceTranslator:
         model_name: str,
         vram_fraction: float,
         tokenizer: PreTrainedTokenizerBase | None = None,
-        max_chunk_tokens: int = FALLBACK_MAX_CHUNK_TOKENS,
+        max_chunk_tokens: int = DEFAULT_CHUNK_SIZE,
         batch_size: int | None = None,
         fetch: bool = False,
         cache_dir: str | None = None,
@@ -116,22 +101,12 @@ class HuggingFaceTranslator:
         if cache_dir:
             os.environ["HF_HUB_CACHE"] = cache_dir
 
-        _log_memory_info()
-
         self.pipe: Any = self._load_pipeline(
             model_name=model_name, fetch=fetch, cache_dir=cache_dir, revision=revision
         )
         logger.info(f"Model loaded on {self.pipe.model.device}")
-        if hasattr(self.pipe.model, "hf_device_map"):
-            device_map = self.pipe.model.hf_device_map
-            logger.info(f"  device map: {device_map}")
-            cpu_layers = [k for k, v in device_map.items() if v in ("cpu", "disk")]
-            if cpu_layers:
-                logger.warning(
-                    f" {len(cpu_layers)} layer(s) offloaded to CPU/disk: "
-                    f"{cpu_layers[:5]}" + (" ..." if len(cpu_layers) > 5 else "")
-                )
-        _log_memory_info()
+
+        _log_gpu_info(self.pipe.model)
 
         if batch_size is None:
             self.batch_size = self._auto_batch_size(vram_fraction)
@@ -154,12 +129,21 @@ class HuggingFaceTranslator:
             return 1
         try:
             if self._use_device_map and torch.cuda.device_count() > 1:
-                free_bytes_per_GPU = []
+                usable_per_gpu = []
                 for i in range(torch.cuda.device_count()):
-                    free_bytes_per_GPU.append(torch.cuda.mem_get_info(i)[0])
-                free_bytes = min(free_bytes_per_GPU)
+                    driver_free, _ = torch.cuda.mem_get_info(i)
+                    cache_free = torch.cuda.memory_reserved(
+                        i
+                    ) - torch.cuda.memory_allocated(i)
+                    usable_per_gpu.append(driver_free + cache_free)
+                logger.info(f"Usable bytes per gpu: {usable_per_gpu}")
+                free_bytes = min(usable_per_gpu)
             else:
-                free_bytes, _ = torch.cuda.mem_get_info()
+                driver_free, _ = torch.cuda.mem_get_info()
+                cache_free = (
+                    torch.cuda.memory_reserved() - torch.cuda.memory_allocated()
+                )
+                free_bytes = driver_free + cache_free
 
             free_bytes = free_bytes * vram_fraction
 
@@ -397,7 +381,7 @@ class ChatTranslator(HuggingFaceTranslator):
         model_name: str,
         vram_fraction: float,
         tokenizer: PreTrainedTokenizerBase | None = None,
-        max_chunk_tokens: int = FALLBACK_MAX_CHUNK_TOKENS,
+        max_chunk_tokens: int = DEFAULT_CHUNK_SIZE,
         batch_size: int | None = None,
         fetch: bool = False,
         cache_dir: str | None = None,

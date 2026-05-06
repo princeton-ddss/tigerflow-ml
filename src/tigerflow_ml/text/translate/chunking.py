@@ -9,66 +9,15 @@ import re
 from collections.abc import Callable
 from typing import cast
 
-from transformers import PretrainedConfig, PreTrainedTokenizerBase
-
-from .utils import ConfigParsingError
+from transformers import PreTrainedTokenizerBase
 
 # TranslateGemma context window is 2048 tokens (input + output).
 # Reserve ~248 tokens for the prompt template and split the rest
 # evenly between the input chunk and the generated translation.
-FALLBACK_MAX_CHUNK_TOKENS = 900
+DEFAULT_CHUNK_SIZE = 900
 
 MAX_CHUNK_TOKENS = 8182
 MIN_CHUNK_TOKENS = 250
-
-
-def compute_chunk_size(config: PretrainedConfig, prompt_overhead: int = 248) -> int:
-    """
-    Derive max input chunk tokens from a model config.
-
-    Uses the first matching context-window field found, checking the top-level
-    config and then text_config (for multimodal models like Gemma3).
-
-    For sliding_window the local window is already small enough to use directly.
-
-    Raises:
-        ConfigParsingError if no relevant fields are found
-    """
-    # Fields that represent the model's full context window
-    full_context_fields = [
-        "n_ctx",
-        "seq_length",
-        "seq_len",
-        "max_sequence_length",
-        "n_positions",
-        "max_position_embeddings",
-    ]
-    # Fields that represent a local attention window — already small, so don't halve
-    sliding_fields = ["sliding_window"]
-
-    # For multimodal models (e.g. Gemma3) the relevant fields live in text_config
-    configs_to_check = [config]
-    if hasattr(config, "text_config") and config.text_config is not None:
-        configs_to_check.append(config.text_config)
-
-    def _first_positive(cfg, fields):
-        for field in fields:
-            value = getattr(cfg, field, None)
-            if value is not None and value > 0:
-                return value
-        return None
-
-    for cfg in configs_to_check:
-        if (value := _first_positive(cfg, sliding_fields)) is not None:
-            return max(value - prompt_overhead, MIN_CHUNK_TOKENS)
-        if (value := _first_positive(cfg, full_context_fields)) is not None:
-            return max((value - prompt_overhead) // 2, MIN_CHUNK_TOKENS)
-
-    raise ConfigParsingError(
-        "Could not compute an optimal chunk size from the model's config file. "
-        "This is likely because of an unexpected format, or missing fields. "
-        "Please raise an issue on Github specifying the model being used."
-    )
 
 
 def count_tokens(text: str, tokenizer: PreTrainedTokenizerBase) -> int:
@@ -76,36 +25,10 @@ def count_tokens(text: str, tokenizer: PreTrainedTokenizerBase) -> int:
     return len(tokenizer.encode(text, add_special_tokens=False))
 
 
-def compute_prompt_overhead(
-    prompt_template: str,
-    tokenizer: PreTrainedTokenizerBase,
-    source_lang: str = "en",
-    target_lang: str = "de",
-) -> int:
-    """Count tokens consumed by the prompt template, excluding the {text} slot."""
-    prompt_without_text = prompt_template.format(
-        source_lang=source_lang,
-        target_lang=target_lang,
-        text="",
-    )
-    prompt_tokens = count_tokens(prompt_without_text, tokenizer)
-
-    if getattr(tokenizer, "chat_template", None):
-        empty = tokenizer.apply_chat_template(
-            [{"role": "user", "content": ""}],
-            tokenize=True,
-            add_generation_prompt=True,
-        )
-        chat_overhead = len(empty)
-    else:
-        chat_overhead = 0
-    return prompt_tokens + chat_overhead
-
-
 def chunk_text_by_tokens(
     text: str,
     tokenizer: PreTrainedTokenizerBase,
-    max_tokens: int = FALLBACK_MAX_CHUNK_TOKENS,
+    max_tokens: int = DEFAULT_CHUNK_SIZE,
 ) -> list[str]:
     """
     Split text into chunks that fit within a token limit.

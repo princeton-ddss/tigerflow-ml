@@ -24,16 +24,14 @@ from transformers import AutoConfig, AutoTokenizer, PreTrainedTokenizerBase
 from tigerflow_ml.params import HFParams
 
 from .chunking import (
-    FALLBACK_MAX_CHUNK_TOKENS,
+    DEFAULT_CHUNK_SIZE,
     MAX_CHUNK_TOKENS,
     MIN_CHUNK_TOKENS,
     chunk_text_by_tokens,
-    compute_chunk_size,
-    compute_prompt_overhead,
     count_tokens,
 )
 from .detection import LANGUAGES, detect_language, get_language_name
-from .translator import HuggingFaceTranslator, build_translator, get_model_type
+from .translator import HuggingFaceTranslator, build_translator
 from .utils import (
     ConfigParsingError,
     SkippedFileError,
@@ -68,7 +66,7 @@ class _TranslateBase:
                 min=MIN_CHUNK_TOKENS,
                 max=MAX_CHUNK_TOKENS,
             ),
-        ] = None
+        ] = DEFAULT_CHUNK_SIZE
 
         prompt_template: Annotated[
             str,
@@ -130,44 +128,21 @@ class _TranslateBase:
             revision=context.revision,
         )
 
-        # Gemma uses an internal structured message format; all other backends
-        # use the user-supplied prompt template, so compute its actual token cost.
-        model_type = get_model_type(context.model)
-        if model_type == "tgemma":
-            prompt_overhead = 248
-        else:
-            prompt_overhead = compute_prompt_overhead(
-                context.prompt_template, tokenizer
-            )
-            logger.info(f"Prompt overhead: {prompt_overhead} tokens")
-
-        chunk_size: int | None = context.chunk_size
-
-        if chunk_size is None:
-            try:
-                computed_chunk_size = compute_chunk_size(config, prompt_overhead)
-                logger.info(f"Calculated max chunk size: {computed_chunk_size} tokens")
-                chunk_size = computed_chunk_size
-            except ConfigParsingError as err:
-                logger.warning(err)
-                chunk_size = FALLBACK_MAX_CHUNK_TOKENS
-                logger.warning(f"Falling back to a chunk size of {chunk_size} tokens")
-        else:
-            logger.info(f"Chunk size: {chunk_size} tokens")
-
-        if chunk_size > MAX_CHUNK_TOKENS:
+        if context.chunk_size > MAX_CHUNK_TOKENS:
             logger.warning(
-                f"Warning: --chunk-size {chunk_size} exceeds maximum of"
+                f"Warning: --chunk-size {context.chunk_size} exceeds maximum of"
                 f" {MAX_CHUNK_TOKENS}, clamping"
             )
-            chunk_size = MAX_CHUNK_TOKENS
+            context.chunk_size = MAX_CHUNK_TOKENS
+        else:
+            logger.info(f"Chunk size: {context.chunk_size} tokens")
 
         logger.info(f"Model: {context.model}")
         logger.info("Initializing HuggingFace backend...")
         context.translator = build_translator(
             context.model,
             tokenizer=tokenizer,
-            max_chunk_tokens=chunk_size,
+            max_chunk_tokens=context.chunk_size,
             config=config,
             batch_size=context.batch_size,
             fetch=context.allow_fetch,
