@@ -10,10 +10,10 @@ Translate text documents using HuggingFace [TranslateGemma](https://huggingface.
 | `--revision`        | `main`                   | Model revision (branch, tag, or commit hash)                                             |
 | `--cache-dir`       |                          | HuggingFace cache directory for model files                                              |
 | `--device`          | `auto`                   | Device to use (`cuda`, `cpu`, or `auto`)                                                 |
-| `--source-lang`     |                          | Source language code (e.g. `en`, `de`, `zh`) -- will attempt auto detection by default (input text can't be short)  |
+| `--source-lang`     |                          | Source language code (e.g. `en`, `de`, `zh`) -- will attempt auto detection by default   |
 | `--target-lang`     | `en`                     | Target language code (e.g. `de`, `en`, `fr`)                                             |
-| `--chunk-size`      |                          | Maximum number of tokens to be translated at a time -- will attempt auto detection with a fallback to 900 |
-| `--prompt-template` | *(see below)*            | Prompt template for text-generation models (uses `{source_lang}`, `{target_lang}`, and `{text}`).    |
+| `--chunk-size`      | `900`                    | Maximum number of tokens to be translated at a time                                      |
+| `--prompt-template` | *(see below)*            | Prompt template for text-generation models (uses `{source_lang}`, `{target_lang}`, and `{text}`)    |
 | `--model-backend`   | `auto`                   | Model backend (`chat`, `tgemma`, or `auto`)                                              |
 | `--batch-size`      |                          | Maximum number of chunks to translate in parallel for long documents -- will attempt auto optimization by default |
 | `--vram-fraction`   | `0.9`                    | Fraction of free VRAM used when auto-computing batch size (lower values reduce OOM risk) |
@@ -22,7 +22,7 @@ Translate text documents using HuggingFace [TranslateGemma](https://huggingface.
 
 ## Chunking Strategy
 
-For long documents, input text is split into chunks based on a user provided, or internally computed `chunk size`, to fit within a model's token limit. An attempt will be made to split the text at the paragraph level; for long paragraphs this may not be possible, in which case the text will be split at the sentence level. This preserves sentence boundaries and provides surrounding context for better translation quality. If a single sentence exceeds the token limit, it is split at token boundaries as a last resort.
+For long documents, input text is split into chunks based on a `chunk size`, to fit within a model's token limit. An attempt will be made to split the text at the paragraph level; for long paragraphs this may not be possible, in which case the text will be split at the sentence level. This preserves sentence boundaries and provides surrounding context for better translation quality. If a single sentence exceeds the token limit, it is split at token boundaries as a last resort.
 
 ## Output Format
 

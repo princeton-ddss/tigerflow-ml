@@ -64,7 +64,7 @@ Some other arguments you can use are:
 
 - `--source-lang` : Source language code (e.g. 'en', 'de', 'zh'). If this is not specified, the input files' language is detected via `langdetect`
 - `--target-lang` : Target language code (e.g. 'de', 'en', 'fr'). This defaults to English (en).
-- `--chunk-size` : The maximum tokens per chunk. The documents are translated one chunk at a time, so if your model cannot handle large inputs, this should be small. If no value is provided, the context window of the model will be determined using the downloaded `config.json` and an appropriate chunk size will be computed. If this process fails, it will fall back to a chunk size of `900`, which is optimized for the `translategemma` models.
+- `--chunk-size` : The maximum tokens per chunk. The documents are translated one chunk at a time, so if your model cannot handle large inputs, this should be small. Defaults to `900`.
 - `--batch-size` : The number of chunks to translate in parallel. If not specified, there will be an attempt to identify an optimal number based on resources available and model size. If this process fails, a batch size of `1` will be used.
 - `--fetch` : If included, allows downloading from the HuggingFace Hub. Only include `--fetch` if your hardware will have internet access.
 - `--task-name` : The task name, which defaults to "Translate"
