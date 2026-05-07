@@ -5,21 +5,35 @@ Translators handle single-chunk translation only. Chunking, retry logic,
 and orchestration are handled by the orchestration module.
 """
 
+import logging
 import os
 import re
 from typing import Any, Protocol, cast
 
 import torch
+import transformers
 from tigerflow.logconfig import logger
 from transformers import PretrainedConfig, PreTrainedTokenizerBase, pipeline
+from vllm import LLM, SamplingParams
 
 from .chunking import DEFAULT_CHUNK_SIZE, chunk_text_by_tokens, count_tokens
 from .utils import TranslationError
 
+_TRANSFORMERS_WARNINGS_TO_IGNORE = (
+    "Kwargs passed to `processor.__call__`",
+    "`local_files_only` is not a valid argument for this processor",
+    "Both `max_new_tokens`",
+    "Passing `generation_config` together",
+    "Setting `pad_token_id` to `eos_token_id`",
+)
 
-def _is_image_text_model(config: PretrainedConfig) -> bool:
-    """Return True if the config describes a multimodal (vision+language) model."""
-    return hasattr(config, "vision_config") or hasattr(config, "image_token_id")
+
+class _ProcessorKwargsFilter(logging.Filter):
+    """Drop known-harmless per-chunk warnings from ImageTextToTextPipeline."""
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        msg = record.getMessage()
+        return not any(s in msg for s in _TRANSFORMERS_WARNINGS_TO_IGNORE)
 
 
 def _log_gpu_info(model) -> None:
@@ -100,6 +114,7 @@ class HuggingFaceTranslator:
         # so set the env var so all HF lookups use the right cache.
         if cache_dir:
             os.environ["HF_HUB_CACHE"] = cache_dir
+            logger.warning(f"Setting HF_HUB_CACHE={cache_dir}")
 
         self.pipe: Any = self._load_pipeline(
             model_name=model_name, fetch=fetch, cache_dir=cache_dir, revision=revision
@@ -258,26 +273,35 @@ class GemmaTranslator(HuggingFaceTranslator):
     ) -> Any:
 
         logger.info(f"Loading model: {model_name}...")
-        if self._use_device_map:
-            pipe = pipeline(
-                "image-text-to-text",
-                model=model_name,
-                device_map="auto",
-                dtype=torch.bfloat16,
-                local_files_only=not fetch,
-                revision=revision,
-                model_kwargs={"cache_dir": cache_dir},
-            )
-        else:
-            pipe = pipeline(
-                "image-text-to-text",
-                model=model_name,
-                device=self.device,
-                dtype=torch.bfloat16,
-                local_files_only=not fetch,
-                revision=revision,
-                model_kwargs={"cache_dir": cache_dir},
-            )
+        transformers.logging.disable_progress_bar()
+        try:
+            if self._use_device_map:
+                pipe = pipeline(
+                    "image-text-to-text",
+                    model=model_name,
+                    device_map="auto",
+                    dtype=torch.bfloat16,
+                    local_files_only=not fetch,
+                    revision=revision,
+                    model_kwargs={"cache_dir": cache_dir},
+                )
+            else:
+                pipe = pipeline(
+                    "image-text-to-text",
+                    model=model_name,
+                    device=self.device,
+                    dtype=torch.bfloat16,
+                    local_files_only=not fetch,
+                    revision=revision,
+                    model_kwargs={"cache_dir": cache_dir},
+                )
+        finally:
+            transformers.logging.enable_progress_bar()
+
+        # filter out warnings from _TRANSFORMERS_WARNINGS_TO_IGNORE
+        for handler in logging.getLogger("transformers").handlers:
+            handler.addFilter(_ProcessorKwargsFilter())
+
         return pipe
 
     def _build_messages(
@@ -350,12 +374,11 @@ class GemmaTranslator(HuggingFaceTranslator):
             ]
             outputs = self.pipe(
                 text=batch_messages,
-                do_sample=False,
                 batch_size=len(batch),
+                do_sample=False,
                 pad_token_id=1,
                 max_new_tokens=self.max_chunk_tokens,
             )
-
             for i, output in enumerate(outputs):
                 result = output[0]["generated_text"][-1]["content"]
                 if not result or not result.strip():
@@ -372,241 +395,85 @@ class GemmaTranslator(HuggingFaceTranslator):
         return results
 
 
-class ChatTranslator(HuggingFaceTranslator):
-    """Translation backend for chat-based LLMs
-    (text-generation and image-text-to-text)."""
-
+class vllmTranslator:
     def __init__(
         self,
         model_name: str,
         vram_fraction: float,
         tokenizer: PreTrainedTokenizerBase | None = None,
         max_chunk_tokens: int = DEFAULT_CHUNK_SIZE,
-        batch_size: int | None = None,
         fetch: bool = False,
         cache_dir: str | None = None,
         revision: str | None = None,
-        prompt_template: str = "",
-        is_vlm: bool = False,
         device: str = "auto",
+        prompt_template: str = "",
     ):
-        self._is_vlm = is_vlm  # set before super().__init__ calls _load_pipeline
-        super().__init__(
-            model_name=model_name,
-            tokenizer=tokenizer,
-            max_chunk_tokens=max_chunk_tokens,
-            batch_size=batch_size,
-            fetch=fetch,
-            cache_dir=cache_dir,
-            revision=revision,
-            device=device,
-            vram_fraction=vram_fraction,
+        from huggingface_hub import snapshot_download
+
+        if cache_dir is not None:
+            resolved_model = snapshot_download(
+                repo_id=model_name,
+                cache_dir=cache_dir,
+                local_files_only=not fetch,
+                revision=revision,
+            )
+        else:
+            resolved_model = model_name
+
+        tp = torch.cuda.device_count() or 1
+        gpu_util = vram_fraction if device != "cpu" else 0.0
+        max_model_len = max_chunk_tokens * 2.5 + 512  # 2.5 for extra wiggle room
+        llm_kwargs: dict[str, Any] = dict(
+            model=resolved_model,
+            gpu_memory_utilization=gpu_util,
+            tensor_parallel_size=tp,
+            max_model_len=max_model_len,
+            enforce_eager=True,
+        )
+        if device != "auto":
+            llm_kwargs["device"] = device
+        self.model = LLM(**llm_kwargs)
+
+        self.tokenizer = tokenizer
+        self.max_chunk_tokens = max_chunk_tokens
+        self.sampling_params = SamplingParams(
+            max_tokens=max_chunk_tokens, temperature=0, seed=42
         )
         self.prompt_template = prompt_template
 
-    def _load_pipeline(
-        self,
-        model_name: str,
-        fetch: bool,
-        cache_dir: str | None = None,
-        revision: str | None = None,
-    ):
-        logger.info(f"Loading model: {model_name}...")
-        if self._is_vlm:
-            if self._use_device_map:
-                pipe = pipeline(
-                    "image-text-to-text",
-                    model=model_name,
-                    device_map="auto",
-                    dtype=torch.bfloat16,
-                    local_files_only=not fetch,
-                    revision=revision,
-                    model_kwargs={"cache_dir": cache_dir},
-                )
-            else:
-                pipe = pipeline(
-                    "image-text-to-text",
-                    model=model_name,
-                    device=self.device,
-                    dtype=torch.bfloat16,
-                    local_files_only=not fetch,
-                    revision=revision,
-                    model_kwargs={"cache_dir": cache_dir},
-                )
-            cast(
-                PreTrainedTokenizerBase, pipe.tokenizer
-            ).padding_side = "left"  # cast for type checker
-            return pipe
-        from transformers import AutoModelForCausalLM, AutoTokenizer
+        logger.info("Model loaded using vLLM!")
 
-        # For non-VLM models loaded explicitly, device_map goes to from_pretrained;
-        # pipeline() must not receive device when the model already has a device_map.
-        pretrained_device_kwargs = (
-            {"device_map": "auto"} if self._use_device_map else {}
-        )
-        model = AutoModelForCausalLM.from_pretrained(
-            model_name,
-            dtype=torch.bfloat16,
-            local_files_only=not fetch,
-            cache_dir=cache_dir,
-            revision=revision,
-            **pretrained_device_kwargs,
-        )
-        tokenizer = AutoTokenizer.from_pretrained(
-            model_name,
-            local_files_only=not fetch,
-            cache_dir=cache_dir,
-            revision=revision,
-        )
-        setattr(tokenizer, "padding_side", "left")
-        self._has_chat_template = bool(getattr(tokenizer, "chat_template", None))
-        if self._use_device_map:
-            return pipeline(
-                "text-generation",
-                model=model,
-                tokenizer=tokenizer,
-                model_kwargs={"cache_dir": cache_dir},
-                revision=revision,
-            )
-        return pipeline(
-            "text-generation",
-            model=model,
-            tokenizer=tokenizer,
-            model_kwargs={"cache_dir": cache_dir},
-            revision=revision,
-            device=self.device,
-        )
-
-    def _build_prompt(self, text, source_lang, target_lang) -> str:
-        return self.prompt_template.format(
+    def _build_message(
+        self, text: str, source_lang: str, target_lang: str
+    ) -> list[dict[str, str]]:
+        prompt = self.prompt_template.format(
             source_lang=source_lang,
             target_lang=target_lang,
             text=text,
         )
+        return [
+            {
+                "role": "system",
+                "content": "You are an expert linguist",
+            },  # TODO: make system prompt an argument
+            {"role": "user", "content": prompt},
+        ]
 
-    def translate(self, text, source_lang, target_lang) -> str:
-        prompt = self._build_prompt(text, source_lang, target_lang)
-        if self._is_vlm:
-            messages = [{"role": "user", "content": [{"type": "text", "text": prompt}]}]
-            out = self.pipe(
-                text=messages, do_sample=False, max_new_tokens=self.max_chunk_tokens
-            )
-            result: str = out[0]["generated_text"][-1]["content"]
-        elif self._has_chat_template:
-            out = self.pipe(
-                [{"role": "user", "content": prompt}],
-                do_sample=False,
-                max_new_tokens=self.max_chunk_tokens,
-            )
-            result = out[0]["generated_text"][-1]["content"]
-        else:
-            out = self.pipe(
-                prompt,
-                do_sample=False,
-                max_new_tokens=self.max_chunk_tokens,
-                return_full_text=False,
-            )
-            result = out[0]["generated_text"]
-        if not result or not result.strip():
-            raise TranslationError("Translation returned empty result")
-        if self.is_truncated(result):
-            raise TranslationError(
-                f"Output truncated (hit {self.max_chunk_tokens} token limit)"
-            )
-        return result
+    def translate(self, text: str, source_lang: str, target_lang: str) -> str:
+        message = self._build_message(text, source_lang, target_lang)
+        output = self.model.chat(
+            cast(Any, message), sampling_params=self.sampling_params, use_tqdm=False
+        )
+        return output[0].outputs[0].text
 
     def translate_batch(
         self, texts: list[str], source_lang: str, target_lang: str
     ) -> list[str]:
-        """
-        Translate multiple chunks using batched pipeline inference.
-
-        Raises:
-            TranslationError: If any translation returns an empty result or is truncated
-        """
-        results = []
-
-        for batch_start in range(0, len(texts), self.batch_size):
-            batch = texts[batch_start : batch_start + self.batch_size]
-
-            if len(texts) > 1:
-                batch_end = batch_start + len(batch)
-                logger.info(
-                    "    Translating chunks "
-                    f"{batch_start + 1}-{batch_end}/{len(texts)}..."
-                )
-
-            prompts = [self._build_prompt(c, source_lang, target_lang) for c in batch]
-
-            try:
-                if self._is_vlm:
-                    inputs = [
-                        [{"role": "user", "content": [{"type": "text", "text": p}]}]
-                        for p in prompts
-                    ]
-                    outputs = self.pipe(
-                        text=inputs,
-                        do_sample=False,
-                        batch_size=len(batch),
-                        max_new_tokens=self.max_chunk_tokens,
-                    )
-                    batch_results = [
-                        o[0]["generated_text"][-1]["content"] for o in outputs
-                    ]
-                elif self._has_chat_template:
-                    inputs = [[{"role": "user", "content": p}] for p in prompts]
-                    outputs = self.pipe(
-                        inputs,
-                        do_sample=False,
-                        batch_size=len(batch),
-                        max_new_tokens=self.max_chunk_tokens,
-                    )
-                    batch_results = [
-                        o[0]["generated_text"][-1]["content"] for o in outputs
-                    ]
-                else:
-                    outputs = self.pipe(
-                        prompts,
-                        do_sample=False,
-                        batch_size=len(batch),
-                        max_new_tokens=self.max_chunk_tokens,
-                        return_full_text=False,
-                    )
-                    batch_results = [o[0]["generated_text"] for o in outputs]
-            except (torch.OutOfMemoryError, RuntimeError) as e:
-                logger.warning(
-                    f"      Batch failed ({type(e).__name__}: {e}), "
-                    "retrying as individual items..."
-                )
-                if torch.cuda.is_available():
-                    torch.cuda.empty_cache()
-                for idx, text in enumerate(batch):
-                    logger.info(f"        Translating chunk {batch_start + idx}")
-                    try:
-                        result = self.translate(text, source_lang, target_lang)
-                    except TranslationError as trans_err:
-                        if "truncated" not in str(trans_err).lower():
-                            raise
-                        result = self._retry_truncated(text, source_lang, target_lang)
-                    results.append(result)
-                continue
-
-            for i, result in enumerate(batch_results):
-                if not result or not result.strip():
-                    logger.info(
-                        f"      Chunk {batch_start + i + 1} returned empty in batch, "
-                        "retrying as single item..."
-                    )
-                    result = self.translate(
-                        texts[batch_start + i], source_lang, target_lang
-                    )
-                if self.is_truncated(result):
-                    result = self._retry_truncated(
-                        texts[batch_start + i], source_lang, target_lang
-                    )
-                results.append(result)
-
-        return results
+        messages = [self._build_message(t, source_lang, target_lang) for t in texts]
+        outputs = self.model.chat(
+            cast(Any, messages), sampling_params=self.sampling_params, use_tqdm=False
+        )
+        return [o.outputs[0].text for o in outputs]
 
 
 def get_model_type(
@@ -634,7 +501,7 @@ def build_translator(
     revision: str | None = None,
     cache_dir: str | None = None,
     device: str = "auto",
-) -> HuggingFaceTranslator:
+) -> Translator:
     """
     Instantiate the appropriate translation backend.
 
@@ -653,34 +520,28 @@ def build_translator(
         vram_fraction: The fraction of free VRAM to use
 
     Returns:
-        A concrete HuggingFaceTranslator subclass.
+        A concrete Translator subclass.
     """
     kwargs: dict[str, Any] = dict(
         model_name=model_name,
-        tokenizer=tokenizer,
         max_chunk_tokens=max_chunk_tokens,
-        batch_size=batch_size,
         fetch=fetch,
         cache_dir=cache_dir,
         revision=revision,
         device=device,
         vram_fraction=vram_fraction,
+        tokenizer=tokenizer,
     )
 
     if backend == "tgemma":
-        return GemmaTranslator(**kwargs)
+        return GemmaTranslator(**kwargs, batch_size=batch_size)
     elif backend == "chat":
-        is_vlm = _is_image_text_model(config)
-        return ChatTranslator(**kwargs, prompt_template=prompt_template, is_vlm=is_vlm)
+        return vllmTranslator(**kwargs, prompt_template=prompt_template)
 
     # Auto-detect from model name and config
     if get_model_type(model_name) == "tgemma":
-        logger.info("Using tgemma image-text-to-text backend")
-        return GemmaTranslator(**kwargs)
+        logger.info("  Using tgemma image-text-to-text backend")
+        return GemmaTranslator(**kwargs, batch_size=batch_size)
     else:
-        is_vlm = _is_image_text_model(config)
-        logger.info(
-            "Using chat backend "
-            f"({'image-text-to-text' if is_vlm else 'text-generation'})"
-        )
-        return ChatTranslator(**kwargs, prompt_template=prompt_template, is_vlm=is_vlm)
+        logger.info("  Using chat backend through vLLM")
+        return vllmTranslator(**kwargs, prompt_template=prompt_template)
