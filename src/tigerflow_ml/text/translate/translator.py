@@ -5,6 +5,7 @@ Translators handle single-chunk translation only. Chunking, retry logic,
 and orchestration are handled by the orchestration module.
 """
 
+import logging
 import os
 import re
 from typing import Any, Protocol, cast
@@ -17,6 +18,22 @@ from vllm import LLM, SamplingParams
 
 from .chunking import DEFAULT_CHUNK_SIZE, chunk_text_by_tokens, count_tokens
 from .utils import TranslationError
+
+_TRANSFORMERS_WARNINGS_TO_IGNORE = (
+    "Kwargs passed to `processor.__call__`",
+    "`local_files_only` is not a valid argument for this processor",
+    "Both `max_new_tokens`",
+    "Passing `generation_config` together",
+    "Setting `pad_token_id` to `eos_token_id`",
+)
+
+
+class _ProcessorKwargsFilter(logging.Filter):
+    """Drop known-harmless per-chunk warnings from ImageTextToTextPipeline."""
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        msg = record.getMessage()
+        return not any(s in msg for s in _TRANSFORMERS_WARNINGS_TO_IGNORE)
 
 
 def _log_gpu_info(model) -> None:
@@ -281,6 +298,10 @@ class GemmaTranslator(HuggingFaceTranslator):
         finally:
             transformers.logging.enable_progress_bar()
 
+        # filter out warnings from _TRANSFORMERS_WARNINGS_TO_IGNORE
+        for handler in logging.getLogger("transformers").handlers:
+            handler.addFilter(_ProcessorKwargsFilter())
+
         return pipe
 
     def _build_messages(
@@ -353,8 +374,8 @@ class GemmaTranslator(HuggingFaceTranslator):
             ]
             outputs = self.pipe(
                 text=batch_messages,
-                do_sample=False,
                 batch_size=len(batch),
+                do_sample=False,
                 pad_token_id=1,
                 max_new_tokens=self.max_chunk_tokens,
             )
