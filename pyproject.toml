@@ -35,6 +35,7 @@ dependencies = [
     "langdetect>=1.0.9",
     "protobuf",
     "accelerate>=1.13.0",
+    "vllm>=0.19.1",
 ]
 
 [project.urls]
