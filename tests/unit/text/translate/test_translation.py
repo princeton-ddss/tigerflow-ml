@@ -6,14 +6,15 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from tigerflow_ml.text.translate._base import (
+    _DEFAULT_PROMPT,
     _translate_chunk_with_retry,
     _translate_text,
 )
 from tigerflow_ml.text.translate.translator import (
-    ChatTranslator,
     GemmaTranslator,
     build_translator,
     get_model_type,
+    vllmTranslator,
 )
 from tigerflow_ml.text.translate.utils import TranslationError
 
@@ -171,45 +172,22 @@ def _make_tgemma_hf_translator(mock_tokenizer, max_chunk_tokens=5, batch_size=4)
     return translator
 
 
-def _make_chat_hf_translator(mock_tokenizer, max_chunk_tokens=5, batch_size=4):
-    """Instantiate HuggingFaceTranslator without loading a model."""
-    translator = object.__new__(ChatTranslator)
+def _make_vllm_translator(mock_tokenizer, max_chunk_tokens=5):
+    """Instantiate vllmTranslator without loading a model."""
+    translator = object.__new__(vllmTranslator)
     translator.tokenizer = mock_tokenizer
     translator.max_chunk_tokens = max_chunk_tokens
-    translator.batch_size = batch_size
-    translator.prompt_template = "Translate from {source_lang} to {target_lang}."
-    translator.pipe = MagicMock()
-    translator._is_vlm = False
-    translator._has_chat_template = False
+    translator.sampling_params = MagicMock()
+    translator.prompt_template = _DEFAULT_PROMPT
+    translator.model = MagicMock()
     return translator
 
 
-def _make_chat_hf_translator_vlm(mock_tokenizer, max_chunk_tokens=5, batch_size=4):
-    """Instantiate ChatTranslator in VLM mode without loading a model."""
-    translator = object.__new__(ChatTranslator)
-    translator.tokenizer = mock_tokenizer
-    translator.max_chunk_tokens = max_chunk_tokens
-    translator.batch_size = batch_size
-    translator.prompt_template = "Translate from {source_lang} to {target_lang}."
-    translator.pipe = MagicMock()
-    translator._is_vlm = True
-    translator._has_chat_template = False
-    return translator
-
-
-def _make_chat_hf_translator_with_template(
-    mock_tokenizer, max_chunk_tokens=5, batch_size=4
-):
-    """Instantiate ChatTranslator with a chat template without loading a model."""
-    translator = object.__new__(ChatTranslator)
-    translator.tokenizer = mock_tokenizer
-    translator.max_chunk_tokens = max_chunk_tokens
-    translator.batch_size = batch_size
-    translator.prompt_template = "Translate from {source_lang} to {target_lang}."
-    translator.pipe = MagicMock()
-    translator._is_vlm = False
-    translator._has_chat_template = True
-    return translator
+def _vllm_output(text):
+    """Mock vLLM RequestOutput for a single generation."""
+    out = MagicMock()
+    out.outputs[0].text = text
+    return out
 
 
 def _pipe_single_output(text):
@@ -237,16 +215,6 @@ def _pipe_batch_output(*texts):
         ]
         for t in texts
     ]
-
-
-def _pipe_plain_output(text):
-    """HF text-generation output (no chat template): plain generated_text string."""
-    return [{"generated_text": text}]
-
-
-def _pipe_plain_batch_output(*texts):
-    """HF text-generation batch output: list of N single-item lists."""
-    return [[{"generated_text": t}] for t in texts]
 
 
 class TestTranslateBatchRetryTgemmaBackend:
@@ -309,181 +277,55 @@ class TestTranslateBatchRetryTgemmaBackend:
             )
 
 
-class TestTranslateBatchRetryChatBackend:
-    """ChatTranslator (plain text-generation): batched translate_batch."""
+class TestVllmTranslator:
+    """vllmTranslator: uses vLLM's LLM.chat() API directly."""
 
-    def test_only_truncated_chunk_is_retried(self, mock_tokenizer):
-        """Truncated chunk triggers retry; other chunks pass through unmodified."""
-        translator = _make_chat_hf_translator(mock_tokenizer, max_chunk_tokens=5)
+    def test_translate_returns_generated_text(self, mock_tokenizer):
+        """translate() calls model.chat() once and returns the output text."""
+        translator = _make_vllm_translator(mock_tokenizer)
+        translator.model.chat.return_value = [_vllm_output("translated text")]
 
-        truncated_output = "a b c d e f"  # 6 tokens → is_truncated() == True
-        # One batch call for all 3 chunks; chunk 2 truncated → 2 sub-chunk retries
-        translator.pipe.side_effect = [
-            _pipe_plain_batch_output(
-                "translated one", truncated_output, "translated three"
-            ),  # batch
-            _pipe_plain_output("retried two a"),  # sub-chunk 1 of chunk 2
-            _pipe_plain_output("retried two b"),  # sub-chunk 2 of chunk 2
+        result = translator.translate("hello", "de", "en")
+
+        assert result == "translated text"
+        translator.model.chat.assert_called_once()
+
+    def test_translate_batch_calls_chat_once(self, mock_tokenizer):
+        """translate_batch() sends all messages in one model.chat() call."""
+        translator = _make_vllm_translator(mock_tokenizer)
+        translator.model.chat.return_value = [
+            _vllm_output("translated one"),
+            _vllm_output("translated two"),
         ]
 
-        # chunk 2 is "Word one two.\n\nWord three four." (6 tokens); 60% split → max=3
-        # → splits cleanly into two 3-token paragraphs for the retry
-        results = translator.translate_batch(
-            ["chunk one", "Word one two.\n\nWord three four.", "chunk three"],
-            "de",
-            "en",
-        )
+        results = translator.translate_batch(["text one", "text two"], "de", "en")
 
-        assert results[0] == "translated one"
-        assert results[1] == "retried two a\n\nretried two b"
-        assert results[2] == "translated three"
-        assert translator.pipe.call_count == 3  # 1 batch + 2 sub-chunk retries
+        assert results == ["translated one", "translated two"]
+        translator.model.chat.assert_called_once()
 
-    def test_no_retry_when_no_truncation(self, mock_tokenizer):
-        """All chunks fit → pipe called once for the whole batch, no retries."""
-        translator = _make_chat_hf_translator(mock_tokenizer, max_chunk_tokens=5)
-        translator.pipe.return_value = _pipe_plain_batch_output("one", "two")
+    def test_translate_passes_sampling_params(self, mock_tokenizer):
+        """translate() forwards sampling_params to model.chat()."""
+        translator = _make_vllm_translator(mock_tokenizer)
+        translator.model.chat.return_value = [_vllm_output("ok")]
 
-        results = translator.translate_batch(["chunk one", "chunk two"], "de", "en")
+        translator.translate("text", "de", "en")
 
-        assert results == ["one", "two"]
-        assert translator.pipe.call_count == 1
+        _, kwargs = translator.model.chat.call_args
+        assert kwargs.get("sampling_params") is translator.sampling_params
 
-    def test_retry_raises_after_max_depth(self, mock_tokenizer):
-        """Persistent truncation exhausts MAX_DEPTH retry levels and raises."""
-        translator = _make_chat_hf_translator(mock_tokenizer, max_chunk_tokens=5)
+    def test_translate_builds_prompt_from_template(self, mock_tokenizer):
+        """translate() interpolates source_lang, target_lang,
+        and text into the prompt."""
+        translator = _make_vllm_translator(mock_tokenizer)
+        translator.model.chat.return_value = [_vllm_output("ok")]
 
-        always_truncated = "a b c d e f"  # 6 tokens ≥ 5
-        translator.pipe.side_effect = [_pipe_plain_batch_output(always_truncated)] + [
-            _pipe_plain_output(always_truncated)
-        ] * 10
+        translator.translate("hello world", "de", "en")
 
-        with pytest.raises(TranslationError, match="retry"):
-            translator.translate_batch(
-                ["Word one two.\n\nWord three four."], "de", "en"
-            )
-
-    def test_empty_result_retries_as_single_item(self, mock_tokenizer):
-        """Empty result in batch silently retries the chunk via translate()."""
-        translator = _make_chat_hf_translator(mock_tokenizer, max_chunk_tokens=5)
-
-        translator.pipe.side_effect = [
-            _pipe_plain_batch_output("", "good result"),  # chunk 1 empty in batch
-            _pipe_plain_output("retry result"),  # single-item retry for chunk 1
-        ]
-
-        results = translator.translate_batch(["chunk one", "chunk two"], "de", "en")
-
-        assert results == ["retry result", "good result"]
-        assert translator.pipe.call_count == 2
-
-
-class TestTranslateBatchRetryChatVlm:
-    """ChatTranslator (VLM / image-text-to-text): batched translate_batch."""
-
-    def test_no_retry_when_no_truncation(self, mock_tokenizer):
-        """All chunks fit → pipe called once with text= kwarg, no retries."""
-        translator = _make_chat_hf_translator_vlm(mock_tokenizer, max_chunk_tokens=5)
-        translator.pipe.return_value = _pipe_batch_output("one", "two")
-
-        results = translator.translate_batch(["chunk one", "chunk two"], "de", "en")
-
-        assert results == ["one", "two"]
-        assert translator.pipe.call_count == 1
-        # VLM pipeline receives inputs as text= keyword argument
-        assert "text" in translator.pipe.call_args.kwargs
-
-    def test_only_truncated_chunk_is_retried(self, mock_tokenizer):
-        """Truncated chunk retries via translate(); other chunks unmodified."""
-        translator = _make_chat_hf_translator_vlm(mock_tokenizer, max_chunk_tokens=5)
-
-        truncated_output = "a b c d e f"  # 6 tokens → is_truncated() == True
-        translator.pipe.side_effect = [
-            _pipe_batch_output("translated one", truncated_output, "translated three"),
-            _pipe_single_output("retried two a"),  # sub-chunk 1 of chunk 2
-            _pipe_single_output("retried two b"),  # sub-chunk 2 of chunk 2
-        ]
-
-        results = translator.translate_batch(
-            ["chunk one", "Word one two.\n\nWord three four.", "chunk three"],
-            "de",
-            "en",
-        )
-
-        assert results[0] == "translated one"
-        assert results[1] == "retried two a\n\nretried two b"
-        assert results[2] == "translated three"
-        assert translator.pipe.call_count == 3  # 1 batch + 2 sub-chunk retries
-
-    def test_empty_result_retries_as_single_item(self, mock_tokenizer):
-        """Empty result in batch silently retries the chunk via translate()."""
-        translator = _make_chat_hf_translator_vlm(mock_tokenizer, max_chunk_tokens=5)
-
-        translator.pipe.side_effect = [
-            _pipe_batch_output("", "good result"),  # chunk 1 empty in batch
-            _pipe_single_output("retry result"),  # single-item retry for chunk 1
-        ]
-
-        results = translator.translate_batch(["chunk one", "chunk two"], "de", "en")
-
-        assert results == ["retry result", "good result"]
-        assert translator.pipe.call_count == 2
-
-
-class TestTranslateBatchRetryChatTemplate:
-    """ChatTranslator (text-generation with chat template): batched translate_batch."""
-
-    def test_no_retry_when_no_truncation(self, mock_tokenizer):
-        """All chunks fit → pipe called once with message dicts, no retries."""
-        translator = _make_chat_hf_translator_with_template(
-            mock_tokenizer, max_chunk_tokens=5
-        )
-        translator.pipe.return_value = _pipe_batch_output("one", "two")
-
-        results = translator.translate_batch(["chunk one", "chunk two"], "de", "en")
-
-        assert results == ["one", "two"]
-        assert translator.pipe.call_count == 1
-
-    def test_only_truncated_chunk_is_retried(self, mock_tokenizer):
-        """Truncated chunk retries via translate(); other chunks unmodified."""
-        translator = _make_chat_hf_translator_with_template(
-            mock_tokenizer, max_chunk_tokens=5
-        )
-
-        truncated_output = "a b c d e f"  # 6 tokens → is_truncated() == True
-        translator.pipe.side_effect = [
-            _pipe_batch_output("translated one", truncated_output, "translated three"),
-            _pipe_single_output("retried two a"),  # sub-chunk 1 of chunk 2
-            _pipe_single_output("retried two b"),  # sub-chunk 2 of chunk 2
-        ]
-
-        results = translator.translate_batch(
-            ["chunk one", "Word one two.\n\nWord three four.", "chunk three"],
-            "de",
-            "en",
-        )
-
-        assert results[0] == "translated one"
-        assert results[1] == "retried two a\n\nretried two b"
-        assert results[2] == "translated three"
-        assert translator.pipe.call_count == 3  # 1 batch + 2 sub-chunk retries
-
-    def test_empty_result_retries_as_single_item(self, mock_tokenizer):
-        """Empty result in batch silently retries the chunk via translate()."""
-        translator = _make_chat_hf_translator_with_template(
-            mock_tokenizer, max_chunk_tokens=5
-        )
-
-        translator.pipe.side_effect = [
-            _pipe_batch_output("", "good result"),  # chunk 1 empty in batch
-            _pipe_single_output("retry result"),  # single-item retry for chunk 1
-        ]
-
-        results = translator.translate_batch(["chunk one", "chunk two"], "de", "en")
-
-        assert results == ["retry result", "good result"]
-        assert translator.pipe.call_count == 2
+        messages = translator.model.chat.call_args[0][0]
+        user_content = messages[-1]["content"]
+        assert "de" in user_content
+        assert "en" in user_content
+        assert "hello world" in user_content
 
 
 class TestGetModelType:
@@ -513,8 +355,8 @@ class TestBuildTranslatorFactory:
             )
         assert isinstance(translator, GemmaTranslator)
 
-    def test_chat_backend_text_only_model(self, mock_tokenizer):
-        with patch.object(ChatTranslator, "_load_pipeline", return_value=MagicMock()):
+    def test_chat_backend_returns_vllm_translator(self, mock_tokenizer):
+        with patch.object(vllmTranslator, "__init__", return_value=None):
             translator = build_translator(
                 "any/model",
                 tokenizer=mock_tokenizer,
@@ -525,24 +367,7 @@ class TestBuildTranslatorFactory:
                 backend="chat",
                 vram_fraction=0.9,
             )
-        assert isinstance(translator, ChatTranslator)
-        assert translator._is_vlm is False
-
-    def test_chat_backend_vlm_sets_is_vlm(self, mock_tokenizer):
-        config = SimpleNamespace(model_type="qwen2_5_vl", vision_config=object())
-        with patch.object(ChatTranslator, "_load_pipeline", return_value=MagicMock()):
-            translator = build_translator(
-                "any/model",
-                tokenizer=mock_tokenizer,
-                max_chunk_tokens=100,
-                batch_size=1,
-                fetch=False,
-                config=config,
-                backend="chat",
-                vram_fraction=0.9,
-            )
-        assert isinstance(translator, ChatTranslator)
-        assert translator._is_vlm is True
+        assert isinstance(translator, vllmTranslator)
 
     def test_auto_tgemma_name_returns_gemma_translator(self, mock_tokenizer):
         with patch.object(GemmaTranslator, "_load_pipeline", return_value=MagicMock()):
@@ -558,38 +383,16 @@ class TestBuildTranslatorFactory:
             )
         assert isinstance(translator, GemmaTranslator)
 
-    def test_auto_non_gemma_vlm_returns_chat_translator_with_is_vlm(
-        self, mock_tokenizer
-    ):
-        config = SimpleNamespace(model_type="qwen2_5_vl", vision_config=object())
-        with patch.object(ChatTranslator, "_load_pipeline", return_value=MagicMock()):
+    def test_auto_non_tgemma_returns_vllm_translator(self, mock_tokenizer):
+        with patch.object(vllmTranslator, "__init__", return_value=None):
             translator = build_translator(
                 "any/model",
                 tokenizer=mock_tokenizer,
                 max_chunk_tokens=100,
                 batch_size=1,
                 fetch=False,
-                config=config,
+                config=SimpleNamespace(),
                 backend="auto",
                 vram_fraction=0.9,
             )
-        assert isinstance(translator, ChatTranslator)
-        assert translator._is_vlm is True
-
-    def test_auto_text_only_returns_chat_translator_without_is_vlm(
-        self, mock_tokenizer
-    ):
-        config = SimpleNamespace(model_type="llama")
-        with patch.object(ChatTranslator, "_load_pipeline", return_value=MagicMock()):
-            translator = build_translator(
-                "any/model",
-                tokenizer=mock_tokenizer,
-                max_chunk_tokens=100,
-                batch_size=1,
-                fetch=False,
-                config=config,
-                backend="auto",
-                vram_fraction=0.9,
-            )
-        assert isinstance(translator, ChatTranslator)
-        assert translator._is_vlm is False
+        assert isinstance(translator, vllmTranslator)
