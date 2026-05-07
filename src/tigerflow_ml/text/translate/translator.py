@@ -101,6 +101,7 @@ class HuggingFaceTranslator:
         # so set the env var so all HF lookups use the right cache.
         if cache_dir:
             os.environ["HF_HUB_CACHE"] = cache_dir
+            logger.warning(f"Setting HF_HUB_CACHE={cache_dir}")
 
         self.pipe: Any = self._load_pipeline(
             model_name=model_name, fetch=fetch, cache_dir=cache_dir, revision=revision
@@ -279,6 +280,7 @@ class GemmaTranslator(HuggingFaceTranslator):
                 revision=revision,
                 model_kwargs={"cache_dir": cache_dir},
             )
+
         return pipe
 
     def _build_messages(
@@ -620,21 +622,34 @@ class vllmTranslator:
         fetch: bool = False,
         cache_dir: str | None = None,
         revision: str | None = None,
-        device: str | int = "auto",
+        device: str = "auto",
         prompt_template: str = "",
     ):
-        if not fetch:
-            os.environ["HF_HUB_OFFLINE"] = "1"
+        from huggingface_hub import snapshot_download
 
-        device_kwarg = {} if device == "auto" else {"device": device}
+        if cache_dir is not None:
+            resolved_model = snapshot_download(
+                repo_id=model_name,
+                cache_dir=cache_dir,
+                local_files_only=not fetch,
+                revision=revision,
+            )
+        else:
+            resolved_model = model_name
 
-        self.model = LLM(
-            model=model_name,
-            download_dir=cache_dir,
-            gpu_memory_utilization=vram_fraction if device != "cpu" else 0.0,
-            revision=revision,
-            **device_kwarg,
+        tp = torch.cuda.device_count() or 1
+        gpu_util = vram_fraction if device != "cpu" else 0.0
+        max_model_len = max_chunk_tokens * 2.5 + 512  # 2.5 for extra wiggle room
+        llm_kwargs: dict[str, Any] = dict(
+            model=resolved_model,
+            gpu_memory_utilization=gpu_util,
+            tensor_parallel_size=tp,
+            max_model_len=max_model_len,
+            enforce_eager=True,
         )
+        if device != "auto":
+            llm_kwargs["device"] = device
+        self.model = LLM(**llm_kwargs)
 
         self.tokenizer = tokenizer
         self.max_chunk_tokens = max_chunk_tokens
@@ -645,15 +660,13 @@ class vllmTranslator:
 
     def _build_message(
         self, text: str, source_lang: str, target_lang: str
-    ) -> list[dict]:
-
+    ) -> list[dict[str, str]]:
         prompt = self.prompt_template.format(
             source_lang=source_lang,
             target_lang=target_lang,
             text=text,
         )
-
-        message = [
+        return [
             {
                 "role": "system",
                 "content": "You are an expert linguist",
@@ -661,11 +674,11 @@ class vllmTranslator:
             {"role": "user", "content": prompt},
         ]
 
-        return message
-
-    def translate(self, text: str, source_lang: str, target_lang: str):
+    def translate(self, text: str, source_lang: str, target_lang: str) -> str:
         message = self._build_message(text, source_lang, target_lang)
-        output = self.model.chat(message, sampling_params=self.sampling_params)
+        output = self.model.chat(
+            cast(Any, message), sampling_params=self.sampling_params, use_tqdm=False
+        )
         return output[0].outputs[0].text
 
     def translate_batch(
@@ -673,8 +686,8 @@ class vllmTranslator:
     ) -> list[str]:
         messages = [self._build_message(t, source_lang, target_lang) for t in texts]
         outputs = self.model.chat(
-            messages, sampling_params=self.sampling_params
-        )  # vLLM accepts a list
+            cast(Any, messages), sampling_params=self.sampling_params, use_tqdm=False
+        )
         return [o.outputs[0].text for o in outputs]
 
 
@@ -742,8 +755,8 @@ def build_translator(
 
     # Auto-detect from model name and config
     if get_model_type(model_name) == "tgemma":
-        logger.info("Using tgemma image-text-to-text backend")
+        logger.info("  Using tgemma image-text-to-text backend")
         return GemmaTranslator(**kwargs, batch_size=batch_size)
     else:
-        logger.info("Using chat backend through vLLM")
+        logger.info("  Using chat backend through vLLM")
         return vllmTranslator(**kwargs, prompt_template=prompt_template)
