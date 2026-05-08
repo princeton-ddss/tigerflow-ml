@@ -400,6 +400,7 @@ class vllmTranslator:
         self,
         model_name: str,
         vram_fraction: float,
+        config: PretrainedConfig,
         tokenizer: PreTrainedTokenizerBase | None = None,
         max_chunk_tokens: int = DEFAULT_CHUNK_SIZE,
         fetch: bool = False,
@@ -422,7 +423,22 @@ class vllmTranslator:
 
         tp = torch.cuda.device_count() or 1
         gpu_util = vram_fraction if device != "cpu" else 0.0
+
+        _MAX_LEN_ATTRS = (
+            "max_position_embeddings",
+            "n_positions",
+            "n_ctx",
+            "max_seq_len",
+            "seq_length",
+        )
+        model_len_cap = next(
+            (getattr(config, a) for a in _MAX_LEN_ATTRS if hasattr(config, a)),
+            None,
+        )
         max_model_len = max_chunk_tokens * 2.5 + 512  # 2.5 for extra wiggle room
+        if model_len_cap is not None:
+            max_model_len = min(max_model_len, model_len_cap)
+        logger.info(f"   max_model_len={max_model_len}")
         llm_kwargs: dict[str, Any] = dict(
             model=resolved_model,
             gpu_memory_utilization=gpu_util,
@@ -536,7 +552,7 @@ def build_translator(
     if backend == "tgemma":
         return GemmaTranslator(**kwargs, batch_size=batch_size)
     elif backend == "chat":
-        return vllmTranslator(**kwargs, prompt_template=prompt_template)
+        return vllmTranslator(**kwargs, prompt_template=prompt_template, config=config)
 
     # Auto-detect from model name and config
     if get_model_type(model_name) == "tgemma":
@@ -544,4 +560,4 @@ def build_translator(
         return GemmaTranslator(**kwargs, batch_size=batch_size)
     else:
         logger.info("  Using chat backend through vLLM")
-        return vllmTranslator(**kwargs, prompt_template=prompt_template)
+        return vllmTranslator(**kwargs, prompt_template=prompt_template, config=config)
