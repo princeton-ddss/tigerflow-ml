@@ -13,7 +13,8 @@ Translate text documents using HuggingFace [TranslateGemma](https://huggingface.
 | `--source-lang`     |                          | Source language code (e.g. `en`, `de`, `zh`) -- will attempt auto detection by default   |
 | `--target-lang`     | `en`                     | Target language code (e.g. `de`, `en`, `fr`)                                             |
 | `--chunk-size`      | `900`                    | Maximum number of tokens to be translated at a time                                      |
-| `--prompt-template` | *(see below)*            | Prompt template for text-generation models (uses `{source_lang}`, `{target_lang}`, and `{text}`)    |
+| `--prompt-template` | *(see below)*            | Prompt template for chat-based models (uses `{source_lang}`, `{target_lang}`, and `{text}`)    |
+| `--system-message`  | `You are an expert linguist` | System message for chat-based translation models                                    |
 | `--model-backend`   | `auto`                   | Model backend (`chat`, `tgemma`, or `auto`)                                              |
 | `--batch-size`      |                          | Maximum number of chunks to translate in parallel for long documents -- will attempt auto optimization by default |
 | `--vram-fraction`   | `0.9`                    | Fraction of free VRAM used when auto-computing batch size (lower values reduce OOM risk) |
@@ -30,13 +31,13 @@ Plain text, encoded as UTF-8.
 
 ## Models
 
-Any HuggingFace [`TranslateGemma`](https://huggingface.co/collections/google/translategemma) model is supported. Large language _chat_ models from the [`text-generation`](https://huggingface.co/models?pipeline_tag=text-generation) or [`image-text-to-text`](https://huggingface.co/models?pipeline_tag=image-text-to-text) pipelines can also be used with a `prompt template`. The default prompt template is:
+Any HuggingFace [`TranslateGemma`](https://huggingface.co/collections/google/translategemma) model is supported using transformers. Large language _chat_ models run using vLLM with a `prompt template` and `system message`. The default prompt template is:
 
 ```text
-Translate the following text from {source_lang} to {target_lang}. Output only the translated text, nothing else. Text: {text}"
+Translate the following text from {source_lang} to {target_lang}. Output only the translated text, nothing else. Text: {text}
 ```
 
-Most models will be time consuming to run on a CPU. To scale translation, we recommend running this task on a sufficiently large GPU. This might mean running on a HPC compute node without network access. If this is the case for you, you'll have to download the model files before running this task. To download a gated model, first run `hf auth login` or `export HF_TOKEN="hf_token"`. Then, download the model to a cache directory of your choice (here `./.hf`):
+Most models will be time consuming to run on a CPU. To scale translation, we recommend running this task on a sufficiently large GPU. This might mean running on an HPC compute node without network access. If this is the case for you, you'll have to download the model files before running this task. To download a gated model, first run `hf auth login` or `export HF_TOKEN="hf_token"`. Then, download the model to a cache directory of your choice (here `./.hf`):
 
 ```bash
 HF_HOME=./.hf hf download google/translategemma-27b-it
@@ -85,7 +86,7 @@ Run with the command: `tigerflow run config.yaml ./input/ ./output/`.*
 *This task can also be run from the command line with the command: `python -m tigerflow_ml.text.translate.local --input-dir ./input/ --input-ext .txt --output-dir ./output/ --output-ext .txt --model google/translategemma-4b-it --cache-dir /path/to/.hf/hub/ --target-lang de`
 
 
-### Local translation fetching an LLM from Huggingface Hub
+### Local translation fetching an LLM from HuggingFace Hub
 
 Uses `google/gemma-3-4b-it` (an image-text-to-text chat model) to translate a short Chinese text to English locally with network access.
 

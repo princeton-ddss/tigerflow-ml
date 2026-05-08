@@ -71,14 +71,14 @@ class _TranslateBase:
         prompt_template: Annotated[
             str,
             typer.Option(
-                help="Prompt template for text-generation models. "
+                help="Prompt template for chat-based translation models "
                 "Use {source_lang}, {target_lang}, and {text} as placeholders."
             ),
         ] = _DEFAULT_PROMPT
 
         system_message: Annotated[
             str,
-            typer.Option(help="System message for chat-based translation models."),
+            typer.Option(help="System message for chat-based translation models"),
         ] = "You are an expert linguist"
 
         model_backend: Annotated[
