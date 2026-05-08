@@ -76,6 +76,11 @@ class _TranslateBase:
             ),
         ] = _DEFAULT_PROMPT
 
+        system_message: Annotated[
+            str,
+            typer.Option(help="System message for chat-based translation models."),
+        ] = "You are an expert linguist"
+
         model_backend: Annotated[
             Literal["auto", "chat", "tgemma"],
             typer.Option(
@@ -148,6 +153,7 @@ class _TranslateBase:
             batch_size=context.batch_size,
             fetch=context.allow_fetch,
             prompt_template=context.prompt_template,
+            system_message=context.system_message,
             backend=context.model_backend,
             revision=context.revision,
             cache_dir=context.cache_dir,

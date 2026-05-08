@@ -408,6 +408,7 @@ class vllmTranslator:
         revision: str | None = None,
         device: str = "auto",
         prompt_template: str = "",
+        system_message: str = "You are an expert linguist",
     ):
         from huggingface_hub import snapshot_download
 
@@ -456,6 +457,7 @@ class vllmTranslator:
             max_tokens=max_chunk_tokens, temperature=0, seed=42
         )
         self.prompt_template = prompt_template
+        self.system_message = system_message
 
         logger.info("Model loaded using vLLM!")
 
@@ -468,10 +470,7 @@ class vllmTranslator:
             text=text,
         )
         return [
-            {
-                "role": "system",
-                "content": "You are an expert linguist",
-            },  # TODO: make system prompt an argument
+            {"role": "system", "content": self.system_message},
             {"role": "user", "content": prompt},
         ]
 
@@ -514,6 +513,7 @@ def build_translator(
     config: PretrainedConfig,
     backend: str = "auto",
     prompt_template: str = "",
+    system_message: str = "You are an expert linguist",
     revision: str | None = None,
     cache_dir: str | None = None,
     device: str = "auto",
@@ -552,7 +552,12 @@ def build_translator(
     if backend == "tgemma":
         return GemmaTranslator(**kwargs, batch_size=batch_size)
     elif backend == "chat":
-        return vllmTranslator(**kwargs, prompt_template=prompt_template, config=config)
+        return vllmTranslator(
+            **kwargs,
+            prompt_template=prompt_template,
+            system_message=system_message,
+            config=config,
+        )
 
     # Auto-detect from model name and config
     if get_model_type(model_name) == "tgemma":
@@ -560,4 +565,9 @@ def build_translator(
         return GemmaTranslator(**kwargs, batch_size=batch_size)
     else:
         logger.info("  Using chat backend through vLLM")
-        return vllmTranslator(**kwargs, prompt_template=prompt_template, config=config)
+        return vllmTranslator(
+            **kwargs,
+            prompt_template=prompt_template,
+            system_message=system_message,
+            config=config,
+        )
