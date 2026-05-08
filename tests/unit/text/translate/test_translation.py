@@ -172,13 +172,16 @@ def _make_tgemma_hf_translator(mock_tokenizer, max_chunk_tokens=5, batch_size=4)
     return translator
 
 
-def _make_vllm_translator(mock_tokenizer, max_chunk_tokens=5):
+def _make_vllm_translator(
+    mock_tokenizer, max_chunk_tokens=5, system_message="You are an expert linguist"
+):
     """Instantiate vllmTranslator without loading a model."""
     translator = object.__new__(vllmTranslator)
     translator.tokenizer = mock_tokenizer
     translator.max_chunk_tokens = max_chunk_tokens
     translator.sampling_params = MagicMock()
     translator.prompt_template = _DEFAULT_PROMPT
+    translator.system_message = system_message
     translator.model = MagicMock()
     return translator
 
@@ -326,6 +329,28 @@ class TestVllmTranslator:
         assert "de" in user_content
         assert "en" in user_content
         assert "hello world" in user_content
+
+    def test_translate_uses_system_message(self, mock_tokenizer):
+        """translate() sets the system role content to system_message."""
+        translator = _make_vllm_translator(mock_tokenizer)
+        translator.model.chat.return_value = [_vllm_output("ok")]
+
+        translator.translate("text", "de", "en")
+
+        messages = translator.model.chat.call_args[0][0]
+        assert messages[0]["role"] == "system"
+        assert messages[0]["content"] == "You are an expert linguist"
+
+    def test_translate_uses_custom_system_message(self, mock_tokenizer):
+        """translate() reflects a custom system_message in the chat payload."""
+        custom_msg = "You are a technical translator specializing in legal documents."
+        translator = _make_vllm_translator(mock_tokenizer, system_message=custom_msg)
+        translator.model.chat.return_value = [_vllm_output("ok")]
+
+        translator.translate("text", "de", "en")
+
+        messages = translator.model.chat.call_args[0][0]
+        assert messages[0]["content"] == custom_msg
 
 
 class TestGetModelType:

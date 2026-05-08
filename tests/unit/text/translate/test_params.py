@@ -8,6 +8,7 @@ def test_translate_defaults():
     assert p.target_lang == "en"
     assert p.batch_size is None
     assert p.allow_fetch is False
+    assert p.system_message == "You are an expert linguist"
     assert p.model_backend == "auto"
     assert p.prompt_template == _DEFAULT_PROMPT
     assert p.revision == "main"
