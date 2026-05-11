@@ -75,25 +75,22 @@ class _TextCompletionBase:
         logger.info(f"    max_model_len={context.max_model_len}")
         logger.info(f"    max_tokens={context.max_tokens}")
 
-        if context.cache_dir is not None:
-            try:
-                resolved_model = snapshot_download(
-                    repo_id=context.model,
-                    cache_dir=context.cache_dir,
-                    local_files_only=not context.allow_fetch,
-                    revision=context.revision,
+        try:
+            resolved_model = snapshot_download(
+                repo_id=context.model,
+                cache_dir=context.cache_dir,
+                local_files_only=not context.allow_fetch,
+                revision=context.revision,
+            )
+        except OSError as e:
+            if not context.allow_fetch:
+                logger.error(f"Model '{context.model}' not found in cache.")
+                logger.error(
+                    "  Run with --allow-fetch to download, or pre-download with:"
                 )
-            except OSError as e:
-                if not context.allow_fetch:
-                    logger.error(f"Model '{context.model}' not found in cache.")
-                    logger.error(
-                        "  Run with --allow-fetch to download, or pre-download with:"
-                    )
-                    logger.error(f"    hf download {context.model}")
-                    raise typer.Exit(1)
-                raise RuntimeError(f"Failed to download '{context.model}': {e}") from e
-        else:
-            resolved_model = context.model
+                logger.error(f"    hf download {context.model}")
+                raise typer.Exit(1)
+            raise RuntimeError(f"Failed to download '{context.model}': {e}") from e
 
         tp = torch.cuda.device_count() or 1
 
