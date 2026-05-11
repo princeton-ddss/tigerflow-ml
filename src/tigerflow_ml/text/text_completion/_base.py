@@ -10,7 +10,6 @@ import typer
 from huggingface_hub import snapshot_download
 from tigerflow.logconfig import logger
 from tigerflow.utils import SetupContext
-from vllm import LLM, SamplingParams
 
 from tigerflow_ml.params import HFParams
 
@@ -58,18 +57,41 @@ class _TextCompletionBase:
 
     @staticmethod
     def setup(context: SetupContext):
+        from vllm import LLM, SamplingParams
+
+        if "{text}" not in context.prompt_template:
+            raise ValueError(
+                f"Invalid prompt template: {context.prompt_template}. "
+                "Include '{text}' as a placeholder for file contents"
+            )
+        if context.max_model_len and context.max_tokens >= context.max_model_len:
+            raise ValueError(
+                f"max_tokens ({context.max_tokens}) must be smaller than "
+                f"max_model_len ({context.max_model_len}) — increase "
+                "--max-model-len or decrease --max-tokens"
+            )
 
         logger.info(f"  Setting up {context.model}...")
         logger.info(f"    max_model_len={context.max_model_len}")
         logger.info(f"    max_tokens={context.max_tokens}")
 
         if context.cache_dir is not None:
-            resolved_model = snapshot_download(
-                repo_id=context.model,
-                cache_dir=context.cache_dir,
-                local_files_only=not context.allow_fetch,
-                revision=context.revision,
-            )
+            try:
+                resolved_model = snapshot_download(
+                    repo_id=context.model,
+                    cache_dir=context.cache_dir,
+                    local_files_only=not context.allow_fetch,
+                    revision=context.revision,
+                )
+            except OSError as e:
+                if not context.allow_fetch:
+                    logger.error(f"Model '{context.model}' not found in cache.")
+                    logger.error(
+                        "  Run with --allow-fetch to download, or pre-download with:"
+                    )
+                    logger.error(f"    hf download {context.model}")
+                    raise typer.Exit(1)
+                raise RuntimeError(f"Failed to download '{context.model}': {e}") from e
         else:
             resolved_model = context.model
 
@@ -128,6 +150,10 @@ class _TextCompletionBase:
                 "  Output truncated at {} tokens — increase --max-tokens "
                 "for a complete result",
                 context.max_tokens,
+            )
+        elif result.finish_reason != "stop":
+            raise SkippedFileError(
+                f"Unexpected finish reason: {result.finish_reason!r}"
             )
 
         with open(output_file, "w", encoding="utf-8") as f:
