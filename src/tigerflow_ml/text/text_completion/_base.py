@@ -107,19 +107,48 @@ class _TextCompletionBase:
             text=content,
             system_message=context.system_message,
         )
-        output = context.LLM.chat(
-            cast(Any, message), sampling_params=context.sampling_params, use_tqdm=False
-        )
+        try:
+            output = context.LLM.chat(
+                cast(Any, message),
+                sampling_params=context.sampling_params,
+                use_tqdm=False,
+            )
+        except ValueError as e:
+            msg = str(e)
+            if "max_model_len" in msg or "too long" in msg.lower():
+                raise SkippedFileError(
+                    f"Input exceeds max_model_len={context.max_model_len} — "
+                    "increase --max-model-len or reduce the file size"
+                ) from e
+            raise
+
+        result = output[0].outputs[0]
+        if result.finish_reason == "length":
+            logger.warning(
+                "  Output truncated at {} tokens — increase --max-tokens "
+                "for a complete result",
+                context.max_tokens,
+            )
 
         with open(output_file, "w", encoding="utf-8") as f:
-            f.write(output[0].outputs[0].text)
+            f.write(result.text)
 
 
 def _build_message(
     prompt_template: str, text: str, system_message: str | None
 ) -> list[dict[str, str]]:
 
-    prompt = prompt_template.format(text=text)
+    try:
+        prompt = prompt_template.format(text=text)
+    except KeyError as e:
+        raise ValueError(
+            f"Prompt template contains unknown placeholder {e}. "
+            "Only {text} is supported. Escape literal braces as {{ and }}."
+        ) from e
+    except ValueError as e:
+        raise ValueError(
+            f"Invalid prompt template: {e}. Escape literal braces as {{ and }}."
+        ) from e
 
     if system_message:
         return [
