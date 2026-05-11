@@ -42,12 +42,10 @@ class _TextCompletionBase:
             typer.Option(help="System message for chat models"),
         ] = None
 
-        # encoding: Annotated[
-        #     str,
-        #     typer.Option(
-        #         help="Input file encoding (non-UTF-8 may cause lossy tokenization)"
-        #     ),
-        # ] = "utf-8-sig"
+        max_tokens: Annotated[
+            int,
+            typer.Option(help="Maximum number of tokens to generate per file"),
+        ] = 512
 
     @staticmethod
     def setup(context: SetupContext):
@@ -62,7 +60,7 @@ class _TextCompletionBase:
         # except Exception as e:
         #     raise ConfigParsingError(f"Failed to load model config: {e}")
 
-        logger.info(f"    Setting up {context.model}...")
+        logger.info(f"  Setting up {context.model}...")
 
         if context.cache_dir is not None:
             resolved_model = snapshot_download(
@@ -89,14 +87,12 @@ class _TextCompletionBase:
                 tensor_parallel_size=tp,
                 enforce_eager=True,
             )
-        context.sampling_params = SamplingParams(temperature=0, seed=42)
-
-        logger.info("Setup complete")
+        context.sampling_params = SamplingParams(
+            temperature=0, seed=42, max_tokens=context.max_tokens
+        )
 
     @staticmethod
     def run(context: SetupContext, input_file: Path, output_file: Path):
-
-        logger.info(f"Processing: {input_file.name}")
 
         content = read_file_with_fallback(input_file)
 
