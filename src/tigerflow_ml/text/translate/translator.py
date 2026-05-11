@@ -13,7 +13,7 @@ from typing import Any, Protocol, cast
 import torch
 import transformers
 from tigerflow.logconfig import logger
-from transformers import PretrainedConfig, PreTrainedTokenizerBase, pipeline
+from transformers import PretrainedConfig, PreTrainedTokenizerBase, pipeline, set_seed
 from vllm import LLM, SamplingParams
 
 from .chunking import DEFAULT_CHUNK_SIZE, chunk_text_by_tokens, count_tokens
@@ -332,9 +332,8 @@ class GemmaTranslator(HuggingFaceTranslator):
         messages = self._build_messages(text, source_lang, target_lang)
         output = self.pipe(
             text=messages,
-            do_sample=False,
-            pad_token_id=1,
             max_new_tokens=self.max_chunk_tokens,
+            generate_kwargs={"do_sample": False},
         )
         result: str = output[0]["generated_text"][-1]["content"]
 
@@ -375,9 +374,8 @@ class GemmaTranslator(HuggingFaceTranslator):
             outputs = self.pipe(
                 text=batch_messages,
                 batch_size=len(batch),
-                do_sample=False,
-                pad_token_id=1,
                 max_new_tokens=self.max_chunk_tokens,
+                generate_kwargs={"do_sample": False},
             )
             for i, output in enumerate(outputs):
                 result = output[0]["generated_text"][-1]["content"]
@@ -548,6 +546,7 @@ def build_translator(
         vram_fraction=vram_fraction,
         tokenizer=tokenizer,
     )
+    set_seed(42)
 
     if backend == "tgemma":
         return GemmaTranslator(**kwargs, batch_size=batch_size)
