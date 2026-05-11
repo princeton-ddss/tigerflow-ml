@@ -3,7 +3,7 @@ Apply a chat prompt to input texts using Hugging Face models.
 """
 
 from pathlib import Path
-from typing import Annotated, Any, cast
+from typing import Annotated, Any
 
 import torch
 import typer
@@ -15,8 +15,11 @@ from tigerflow_ml.params import HFParams
 
 from .utils import SkippedFileError, read_file_with_fallback
 
+_TEXT_EXTENSIONS = [".txt", ".text", ".md", ".log"]
+_IMG_EXTENSIONS = [".jpg", ".jpeg", ".png", ".tiff", ".tif", ".webp", ".bmp"]
 
-class _TextCompletionBase:
+
+class _ChatCompletionBase:
     """Analyze text using Hugging Face models."""
 
     class Params(HFParams):
@@ -24,7 +27,7 @@ class _TextCompletionBase:
             str,
             typer.Option(
                 help="Prompt template for text-generation models. "
-                "Use {text} as a placeholder for the text file contents."
+                "Use {text} as a placeholder for text file contents."
             ),
         ]
 
@@ -59,11 +62,6 @@ class _TextCompletionBase:
     def setup(context: SetupContext):
         from vllm import LLM, SamplingParams
 
-        if "{text}" not in context.prompt_template:
-            raise ValueError(
-                f"Invalid prompt template: {context.prompt_template}. "
-                "Include '{text}' as a placeholder for file contents"
-            )
         if context.max_model_len and context.max_tokens >= context.max_model_len:
             raise ValueError(
                 f"max_tokens ({context.max_tokens}) must be smaller than "
@@ -116,48 +114,76 @@ class _TextCompletionBase:
     @staticmethod
     def run(context: SetupContext, input_file: Path, output_file: Path):
 
+        if input_file.suffix.lower() in _TEXT_EXTENSIONS:
+            result = _ChatCompletionBase._process_text_file(context, input_file)
+        elif input_file.suffix.lower() in _IMG_EXTENSIONS:
+            result = _ChatCompletionBase._process_img_file(context, input_file)
+        else:
+            raise SkippedFileError(
+                f"File extension {input_file.suffix} not currently supported - "
+                "raise an issue on Github"
+            )
+
+        with open(output_file, "w", encoding="utf-8") as f:
+            f.write(result)
+
+    @staticmethod
+    def _process_text_file(context: SetupContext, input_file: Path) -> str:
         content = read_file_with_fallback(input_file)
 
         if not content.strip():
             raise SkippedFileError("Empty file")
 
-        message = _build_message(
+        message = _build_txt_message(
             prompt_template=context.prompt_template,
             text=content,
             system_message=context.system_message,
         )
-        try:
-            output = context.LLM.chat(
-                cast(Any, message),
-                sampling_params=context.sampling_params,
-                use_tqdm=False,
-            )
-        except ValueError as e:
-            msg = str(e)
-            if "max_model_len" in msg or "too long" in msg.lower():
-                raise SkippedFileError(
-                    f"Input exceeds max_model_len={context.max_model_len} — "
-                    "increase --max-model-len or reduce the file size"
-                ) from e
-            raise
+        return _run_chat(context, message)
 
-        result = output[0].outputs[0]
-        if result.finish_reason == "length":
-            logger.warning(
-                "  Output truncated at {} tokens — increase --max-tokens "
-                "for a complete result",
-                context.max_tokens,
-            )
-        elif result.finish_reason != "stop":
+    @staticmethod
+    def _process_img_file(context: SetupContext, input_file: Path) -> str:
+        import PIL.Image
+
+        image = PIL.Image.open(input_file).convert("RGB")
+        message = _build_img_message(
+            prompt=context.prompt_template,
+            image=image,
+            system_message=context.system_message,
+        )
+        return _run_chat(context, message)
+
+
+def _run_chat(context: SetupContext, message: Any) -> str:
+    try:
+        output = context.LLM.chat(
+            message,
+            sampling_params=context.sampling_params,
+            use_tqdm=False,
+        )
+    except ValueError as e:
+        msg = str(e)
+        if "max_model_len" in msg or "too long" in msg.lower():
             raise SkippedFileError(
-                f"Unexpected finish reason: {result.finish_reason!r}"
-            )
+                f"Input exceeds max_model_len={context.max_model_len} — "
+                "increase --max-model-len or reduce the file size"
+            ) from e
+        raise
 
-        with open(output_file, "w", encoding="utf-8") as f:
-            f.write(result.text)
+    result = output[0].outputs[0]
+    if result.finish_reason == "length":
+        logger.warning(
+            "  Output truncated at {} tokens — increase --max-tokens "
+            "for a complete result",
+            context.max_tokens,
+        )
+    elif result.finish_reason != "stop":
+        raise SkippedFileError(f"Unexpected finish reason: {result.finish_reason!r}")
+
+    return result.text
 
 
-def _build_message(
+def _build_txt_message(
     prompt_template: str, text: str, system_message: str | None
 ) -> list[dict[str, str]]:
 
@@ -179,3 +205,40 @@ def _build_message(
             {"role": "user", "content": prompt},
         ]
     return [{"role": "user", "content": prompt}]
+
+
+def _build_img_message(
+    prompt: str, image, system_message: str | None
+) -> list[dict[str, Any]]:
+    if system_message:
+        return [
+            {"role": "system", "content": system_message},
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "image_pil",
+                        "image_pil": image,
+                    },
+                    {
+                        "type": "image_pil",
+                        "image_pil": prompt,
+                    },
+                ],
+            },
+        ]
+    return [
+        {
+            "role": "user",
+            "content": [
+                {
+                    "type": "image_pil",
+                    "image_pil": image,
+                },
+                {
+                    "type": "image_pil",
+                    "image_pil": prompt,
+                },
+            ],
+        }
+    ]
