@@ -47,20 +47,21 @@ class _TextCompletionBase:
             typer.Option(help="Maximum number of tokens to generate per file"),
         ] = 512
 
+        max_model_len: Annotated[
+            int | None,
+            typer.Option(
+                help="Maximum sequence length (input + output tokens) passed to vLLM. "
+                "Set this for large-context models (e.g. 8192) to avoid OOM. "
+                "Defaults to the model's full context window."
+            ),
+        ] = None
+
     @staticmethod
     def setup(context: SetupContext):
 
-        # try:
-        #     config = AutoConfig.from_pretrained(
-        #         context.model,
-        #         local_files_only=not context.allow_fetch,
-        #         cache_dir=context.cache_dir,
-        #         revision=context.revision,
-        #     )
-        # except Exception as e:
-        #     raise ConfigParsingError(f"Failed to load model config: {e}")
-
         logger.info(f"  Setting up {context.model}...")
+        logger.info(f"    max_model_len={context.max_model_len}")
+        logger.info(f"    max_tokens={context.max_tokens}")
 
         if context.cache_dir is not None:
             resolved_model = snapshot_download(
@@ -79,6 +80,7 @@ class _TextCompletionBase:
                 model=resolved_model,
                 tensor_parallel_size=tp,
                 enforce_eager=True,
+                max_model_len=context.max_model_len,
                 device=context.device,
             )
         else:
@@ -86,6 +88,7 @@ class _TextCompletionBase:
                 model=resolved_model,
                 tensor_parallel_size=tp,
                 enforce_eager=True,
+                max_model_len=context.max_model_len,
             )
         context.sampling_params = SamplingParams(
             temperature=0, seed=42, max_tokens=context.max_tokens
