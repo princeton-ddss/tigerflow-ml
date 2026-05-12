@@ -3,13 +3,6 @@ from pathlib import Path
 from tigerflow.logconfig import logger
 
 
-class ConfigParsingError(Exception):
-    """Raised when errors occur while trying
-    to access, read, or parse model configs"""
-
-    pass
-
-
 class SkippedFileError(Exception):
     """Raised when a file should be skipped
     (e.g., empty)."""
