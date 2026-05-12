@@ -23,11 +23,12 @@ class _ChatCompletionBase:
     """Analyze text using Hugging Face models."""
 
     class Params(HFParams):
-        prompt_template: Annotated[
+        prompt: Annotated[
             str,
             typer.Option(
                 help="Prompt template for text-generation models. "
-                "Use {text} as a placeholder for text file contents."
+                "Use {text} as a placeholder for text file contents. "
+                "If '{text}' is not included, file content will follow the prompt"
             ),
         ]
 
@@ -58,6 +59,14 @@ class _ChatCompletionBase:
             ),
         ] = None
 
+        max_image_size: Annotated[
+            int,
+            typer.Option(
+                help="Maximum image dimension in pixels (width or height). "
+                "Larger images are downscaled while preserving aspect ratio."
+            ),
+        ] = 1024
+
     @staticmethod
     def setup(context: SetupContext):
         from vllm import LLM, SamplingParams
@@ -70,7 +79,8 @@ class _ChatCompletionBase:
             )
 
         logger.info(f"  Setting up {context.model}...")
-        logger.info(f"    max_model_len={context.max_model_len}")
+        if context.max_model_len:
+            logger.info(f"    max_model_len={context.max_model_len}")
         logger.info(f"    max_tokens={context.max_tokens}")
 
         try:
@@ -96,7 +106,7 @@ class _ChatCompletionBase:
             context.LLM = LLM(
                 model=resolved_model,
                 tensor_parallel_size=tp,
-                enforce_eager=True,
+                enforce_eager=True,  # TODO: expose?
                 max_model_len=context.max_model_len,
                 device=context.device,
             )
@@ -135,7 +145,7 @@ class _ChatCompletionBase:
             raise SkippedFileError("Empty file")
 
         message = _build_txt_message(
-            prompt_template=context.prompt_template,
+            prompt=context.prompt,
             text=content,
             system_message=context.system_message,
         )
@@ -146,8 +156,19 @@ class _ChatCompletionBase:
         import PIL.Image
 
         image = PIL.Image.open(input_file).convert("RGB")
+        original_size = image.size
+        image.thumbnail(
+            (context.max_image_size, context.max_image_size),
+            PIL.Image.Resampling.LANCZOS,
+        )
+        if image.size != original_size:
+            logger.info(
+                "  Resized image from {}x{} to {}x{}",
+                *original_size,
+                *image.size,
+            )
         message = _build_img_message(
-            prompt=context.prompt_template,
+            prompt=context.prompt,
             image=image,
             system_message=context.system_message,
         )
@@ -162,15 +183,20 @@ def _run_chat(context: SetupContext, message: Any) -> str:
             use_tqdm=False,
         )
     except ValueError as e:
-        msg = str(e)
-        if "max_model_len" in msg or "too long" in msg.lower():
+        msg = str(e).lower()
+        if "max_model_len" in msg or "too long" in msg:
             raise SkippedFileError(
                 f"Input exceeds max_model_len={context.max_model_len} — "
                 "increase --max-model-len or reduce the file size"
             ) from e
         raise
 
-    result = output[0].outputs[0]
+    try:
+        result = output[0].outputs[0]
+    except IndexError:
+        raise RuntimeError(
+            f"{context.model} returned an empty output for the message: {message}"
+        )
     if result.finish_reason == "length":
         logger.warning(
             "  Output truncated at {} tokens — increase --max-tokens "
@@ -184,20 +210,23 @@ def _run_chat(context: SetupContext, message: Any) -> str:
 
 
 def _build_txt_message(
-    prompt_template: str, text: str, system_message: str | None
+    prompt: str, text: str, system_message: str | None
 ) -> list[dict[str, str]]:
 
-    try:
-        prompt = prompt_template.format(text=text)
-    except KeyError as e:
-        raise ValueError(
-            f"Prompt template contains unknown placeholder {e}. "
-            "Only {text} is supported. Escape literal braces as {{ and }}."
-        ) from e
-    except ValueError as e:
-        raise ValueError(
-            f"Invalid prompt template: {e}. Escape literal braces as {{ and }}."
-        ) from e
+    if "{text}" in prompt:
+        try:
+            prompt = prompt.format(text=text)
+        except KeyError as e:
+            raise ValueError(
+                f"Prompt template contains unknown placeholder {e}. "
+                "Only {text} is supported. Escape literal braces as {{ and }}."
+            ) from e
+        except ValueError as e:
+            raise ValueError(
+                f"Invalid prompt template: {e}. Escape literal braces as {{ and }}."
+            ) from e
+    else:
+        prompt = prompt + "\n" + text
 
     if system_message:
         return [
