@@ -32,15 +32,6 @@ wheels = [
 ]
 
 [[package]]
-name = "aiofiles"
-version = "25.1.0"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/41/c3/534eac40372d8ee36ef40df62ec129bee4fdb5ad9706e58a29be53b2c970/aiofiles-25.1.0.tar.gz", hash = "sha256:a8d728f0a29de45dc521f18f07297428d56992a742f0cd2701ba86e44d23d5b2", size = 46354, upload-time = "2025-10-09T20:51:04.358Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/bc/8a/340a1555ae33d7354dbca4faa54948d76d89a27ceef032c8c3bc661d003e/aiofiles-25.1.0-py3-none-any.whl", hash = "sha256:abe311e527c862958650f9438e859c1fa7568a141b22abcd015e120e86a85695", size = 14668, upload-time = "2025-10-09T20:51:03.174Z" },
-]
-
-[[package]]
 name = "aiohappyeyeballs"
 version = "2.6.1"
 source = { registry = "https://pypi.org/simple" }
@@ -4797,10 +4788,9 @@ wheels = [
 
 [[package]]
 name = "tigerflow"
-version = "0.3.0"
+version = "0.3.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "aiofiles" },
     { name = "dask-jobqueue" },
     { name = "loguru" },
     { name = "networkx", version = "3.4.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
@@ -4810,9 +4800,9 @@ dependencies = [
     { name = "pyyaml" },
     { name = "typer" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/86/29/7ead0ad9dfbd7fc8c6bcdc89979c08872ff531ce9ea7895c2fb66906db71/tigerflow-0.3.0.tar.gz", hash = "sha256:c0b3512d03dcc20449f9b8909c7c167c7416496a2786b8080fa08355ff064878", size = 7111149, upload-time = "2026-04-09T01:32:44.712Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/d7/3f/2d91728c6550b9265abf0d48a0ee485276f30b6a8bdc81b4b6ec88f7412b/tigerflow-0.3.1.tar.gz", hash = "sha256:b5ce5c6b140caca2a64ae47b8c0577cb078314754bc288b83b751f8ab9de0039", size = 7112174, upload-time = "2026-05-13T19:23:26.284Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/75/9e/053937311e58c0a854c3295a7462a991762f0494fc237d68b317b8a50211/tigerflow-0.3.0-py3-none-any.whl", hash = "sha256:4ab228a33822d83b2b92fc2ae49a87eac49718c61edb94372413d24339e8eb19", size = 40970, upload-time = "2026-04-09T01:32:43.524Z" },
+    { url = "https://files.pythonhosted.org/packages/02/a3/c52a34d717863274cc72538d9aee83549a8aebe682690427fbc5a2412cb9/tigerflow-0.3.1-py3-none-any.whl", hash = "sha256:58a446eb447fa8f72fbee103ec6ae35b860291d4f1f7de5f451496ca8d47b426", size = 41397, upload-time = "2026-05-13T19:23:24.622Z" },
 ]
 
 [[package]]
@@ -4867,7 +4857,7 @@ requires-dist = [
     { name = "protobuf" },
     { name = "pymupdf", specifier = ">=1.27.1" },
     { name = "sentencepiece" },
-    { name = "tigerflow", specifier = ">=0.3.0" },
+    { name = "tigerflow", specifier = ">=0.3.1" },
     { name = "timm" },
     { name = "torch", specifier = ">=2.0" },
     { name = "transformers", specifier = ">=4.51" },
