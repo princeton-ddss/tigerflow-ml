@@ -12,7 +12,7 @@ Translate text documents using HuggingFace [TranslateGemma](https://huggingface.
 | `--device`          | `auto`                   | Device to use (`cuda`, `cpu`, or `auto`)                                                 |
 | `--source-lang`     |                          | Source language code (e.g. `en`, `de`, `zh`) -- will attempt auto detection by default   |
 | `--target-lang`     | `en`                     | Target language code (e.g. `de`, `en`, `fr`)                                             |
-| `--chunk-size`      | `900`                    | Maximum number of tokens to be translated at a time                                      |
+| `--chunk-size`      | `900`                    | Maximum token sequence length in a batch                                                 |
 | `--prompt-template` | *(see below)*            | Prompt template for chat-based models (uses `{source_lang}`, `{target_lang}`, and `{text}`)    |
 | `--system-message`  | `You are an expert linguist` | System message for chat-based translation models                                    |
 | `--model-backend`   | `auto`                   | Model backend (`chat`, `tgemma`, or `auto`)                                              |

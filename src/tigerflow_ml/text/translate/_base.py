@@ -62,7 +62,7 @@ class _TranslateBase:
         chunk_size: Annotated[
             int | None,
             typer.Option(
-                help="The maximum number of tokens translated at a time",
+                help="Maximum token sequence length in a batch",
                 min=MIN_CHUNK_TOKENS,
                 max=MAX_CHUNK_TOKENS,
             ),
