@@ -15,6 +15,7 @@ from tigerflow_ml.params import HFParams
 
 from .utils import SkippedFileError, read_file_with_fallback
 
+# TODO: test all
 _TEXT_EXTENSIONS = [".txt", ".text", ".md", ".log"]
 _IMG_EXTENSIONS = [".jpg", ".jpeg", ".png", ".tiff", ".tif", ".webp", ".bmp"]
 
@@ -51,13 +52,13 @@ class _ChatCompletionBase:
         ] = 512
 
         max_model_len: Annotated[
-            int | None,
+            int,
             typer.Option(
                 help="Maximum sequence length (input + output tokens) passed to vLLM. "
                 "Set this for large-context models (e.g. 8192) to avoid OOM. "
                 "Defaults to the model's full context window."
             ),
-        ] = None
+        ] = 32_000
 
         max_image_size: Annotated[
             int,
@@ -69,18 +70,52 @@ class _ChatCompletionBase:
 
     @staticmethod
     def setup(context: SetupContext):
+        from transformers import AutoConfig
         from vllm import LLM, SamplingParams
 
-        if context.max_model_len and context.max_tokens >= context.max_model_len:
+        if context.max_tokens >= context.max_model_len:
             raise ValueError(
                 f"max_tokens ({context.max_tokens}) must be smaller than "
                 f"max_model_len ({context.max_model_len}) — increase "
                 "--max-model-len or decrease --max-tokens"
             )
 
+        try:
+            config = AutoConfig.from_pretrained(
+                context.model,
+                local_files_only=not context.allow_fetch,
+                cache_dir=context.cache_dir,
+                revision=context.revision,
+            )
+        except Exception as e:
+            raise RuntimeError(f"Failed to load model config: {e}")
+
+        _MAX_LEN_ATTRS = (
+            "max_position_embeddings",
+            "n_positions",
+            "n_ctx",
+            "max_seq_len",
+            "seq_length",
+        )
+        # Some models store the sequence length in a nested text_config
+        _config_sources = [config] + (
+            [config.text_config] if hasattr(config, "text_config") else []
+        )
+        config_max_model_len = next(
+            (
+                getattr(src, a)
+                for src in _config_sources
+                for a in _MAX_LEN_ATTRS
+                if hasattr(src, a)
+            ),
+            None,
+        )
+        # logger.info(f"    config_max_model_len={config_max_model_len}")
+        if config_max_model_len is not None:
+            context.max_model_len = min(context.max_model_len, config_max_model_len)
+
         logger.info(f"  Setting up {context.model}...")
-        if context.max_model_len:
-            logger.info(f"    max_model_len={context.max_model_len}")
+        logger.info(f"    max_model_len={context.max_model_len}")
         logger.info(f"    max_tokens={context.max_tokens}")
 
         try:
@@ -118,7 +153,9 @@ class _ChatCompletionBase:
                 max_model_len=context.max_model_len,
             )
         context.sampling_params = SamplingParams(
-            temperature=0, seed=42, max_tokens=context.max_tokens
+            temperature=0,
+            seed=42,
+            max_tokens=context.max_tokens,  # TODO: expose
         )
 
     @staticmethod
@@ -199,9 +236,8 @@ def _run_chat(context: SetupContext, message: Any) -> str:
         )
     if result.finish_reason == "length":
         logger.warning(
-            "  Output truncated at {} tokens — increase --max-tokens "
-            "for a complete result",
-            context.max_tokens,
+            f"  Output truncated at {context.max_tokens} tokens — increase "
+            "--max-tokens and/or --max_model_len for a complete result"
         )
     elif result.finish_reason != "stop":
         raise SkippedFileError(f"Unexpected finish reason: {result.finish_reason!r}")

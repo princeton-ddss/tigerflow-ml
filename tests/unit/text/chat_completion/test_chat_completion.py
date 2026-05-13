@@ -7,7 +7,6 @@ from unittest.mock import MagicMock, patch
 
 import PIL.Image
 import pytest
-import typer
 
 from tigerflow_ml.text.chat_completion._base import (
     _build_img_message,
@@ -24,7 +23,7 @@ def _make_context(**kwargs):
         system_message=None,
         max_image_size=1024,
         max_tokens=512,
-        max_model_len=None,
+        max_model_len=32000,
         allow_fetch=False,
         cache_dir="",
         revision="main",
@@ -100,13 +99,9 @@ class TestSetup:
             _ChatCompletionBase.setup(context)
 
     def test_model_not_found_without_allow_fetch_exits(self):
-        context = _make_context(allow_fetch=False, max_tokens=128, max_model_len=None)
-        with patch(
-            "tigerflow_ml.text.chat_completion._base.snapshot_download",
-            side_effect=OSError("not found"),
-        ):
-            with pytest.raises(typer.Exit):
-                _ChatCompletionBase.setup(context)
+        context = _make_context(allow_fetch=False)
+        with pytest.raises(RuntimeError, match="Failed to load model config:"):
+            _ChatCompletionBase.setup(context)
 
 
 class TestRun:

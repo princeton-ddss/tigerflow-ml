@@ -6,7 +6,7 @@ def test_translate_defaults():
     assert p.allow_fetch is False
     assert p.system_message is None
     assert p.max_tokens == 512
-    assert p.max_model_len is None
+    assert p.max_model_len == 32_000
     assert p.max_image_size == 1024
     assert p.revision == "main"
     assert p.device == "auto"
