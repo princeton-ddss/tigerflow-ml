@@ -35,7 +35,7 @@ class VLLMParams:
     model: Annotated[
         str,
         typer.Option(help="HuggingFace model repo ID"),
-    ] = ""
+    ]
 
     revision: Annotated[
         str,
@@ -81,7 +81,7 @@ class VLLMParams:
     llm_kwargs: Annotated[
         str,
         typer.Option(
-            help="Additional JSON kwargs for vLLM's LLM() constructor. "
+            help="Additional kwargs for vLLM's LLM() constructor. "
             "Supplied values override task defaults."
         ),
     ] = "{}"
@@ -89,7 +89,7 @@ class VLLMParams:
     sampling_kwargs: Annotated[
         str,
         typer.Option(
-            help="Additional JSON kwargs for vLLM's SamplingParams(). "
+            help="Additional kwargs for vLLM's SamplingParams() constructor. "
             "Supplied values override task defaults."
         ),
     ] = "{}"
@@ -97,7 +97,7 @@ class VLLMParams:
     chat_kwargs: Annotated[
         str,
         typer.Option(
-            help="Additional JSON kwargs for vLLM's LLM.chat(). "
+            help="Additional kwargs for vLLM's LLM.chat(). "
             "Supplied values override task defaults."
         ),
     ] = "{}"

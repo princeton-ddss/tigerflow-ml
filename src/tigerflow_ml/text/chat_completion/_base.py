@@ -26,7 +26,7 @@ class _ChatCompletionBase:
         prompt: Annotated[
             str,
             typer.Option(
-                help="Prompt template for text-generation models. "
+                help="Prompt for text-generation models. "
                 "Use {text} as a placeholder for text file contents. "
                 "If '{text}' is not included, file content will follow the prompt"
             ),
@@ -36,8 +36,7 @@ class _ChatCompletionBase:
             int,
             typer.Option(
                 help="Maximum sequence length (input + output tokens) passed to vLLM. "
-                "Set this for large-context models (e.g. 8192) to avoid OOM. "
-                "Defaults to the model's full context window."
+                "Set this for large-context models to avoid OOM. "
             ),
         ] = 32_000
 
