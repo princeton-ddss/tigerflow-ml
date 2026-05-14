@@ -68,6 +68,20 @@ class _ChatCompletionBase:
             ),
         ] = 1024
 
+        temperature: Annotated[
+            float,
+            typer.Option(
+                help="The model temperature. Lower numbers make models more "
+                "deterministic",
+                min=0.0,
+                max=2.0,
+            ),
+        ] = 0.0
+
+        seed: Annotated[
+            int, typer.Option(help="The seed to set for more reproducible behavior")
+        ] = 42
+
     @staticmethod
     def setup(context: SetupContext):
         from transformers import AutoConfig
@@ -153,9 +167,9 @@ class _ChatCompletionBase:
                 max_model_len=context.max_model_len,
             )
         context.sampling_params = SamplingParams(
-            temperature=0,
-            seed=42,
-            max_tokens=context.max_tokens,  # TODO: expose
+            temperature=context.temperature,
+            seed=context.seed,
+            max_tokens=context.max_tokens,
         )
 
     @staticmethod
