@@ -15,9 +15,8 @@ from tigerflow_ml.params import HFParams
 
 from .utils import SkippedFileError, read_file_with_fallback
 
-# TODO: test all
-_TEXT_EXTENSIONS = [".txt", ".text", ".md", ".log"]
-_IMG_EXTENSIONS = [".jpg", ".jpeg", ".png", ".tiff", ".tif", ".webp", ".bmp"]
+_TEXT_EXTENSIONS = [".txt", ".text", ".md", ".log", ".rtf"]
+_IMG_EXTENSIONS = [".jpg", ".jpeg", ".png", ".tiff", ".tif", ".bmp"]
 
 
 class _ChatCompletionBase:
@@ -155,7 +154,6 @@ class _ChatCompletionBase:
             context.LLM = LLM(
                 model=resolved_model,
                 tensor_parallel_size=tp,
-                enforce_eager=True,  # TODO: expose?
                 max_model_len=context.max_model_len,
                 device=context.device,
             )
@@ -163,7 +161,6 @@ class _ChatCompletionBase:
             context.LLM = LLM(
                 model=resolved_model,
                 tensor_parallel_size=tp,
-                enforce_eager=True,
                 max_model_len=context.max_model_len,
             )
         context.sampling_params = SamplingParams(
