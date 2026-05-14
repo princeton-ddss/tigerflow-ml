@@ -11,9 +11,9 @@ from huggingface_hub import snapshot_download
 from tigerflow.logconfig import logger
 from tigerflow.utils import SetupContext
 
-from tigerflow_ml.params import HFParams
+from tigerflow_ml.params import VLLMParams
 
-from .utils import SkippedFileError, read_file_with_fallback
+from .utils import SkippedFileError, parse_kwargs, read_file_with_fallback
 
 _TEXT_EXTENSIONS = [".txt", ".text", ".md", ".log", ".rtf"]
 _IMG_EXTENSIONS = [".jpg", ".jpeg", ".png", ".tiff", ".tif", ".bmp"]
@@ -22,7 +22,7 @@ _IMG_EXTENSIONS = [".jpg", ".jpeg", ".png", ".tiff", ".tif", ".bmp"]
 class _ChatCompletionBase:
     """Analyze text using Hugging Face models."""
 
-    class Params(HFParams):
+    class Params(VLLMParams):
         prompt: Annotated[
             str,
             typer.Option(
@@ -31,24 +31,6 @@ class _ChatCompletionBase:
                 "If '{text}' is not included, file content will follow the prompt"
             ),
         ]
-
-        allow_fetch: Annotated[
-            bool,
-            typer.Option(
-                help="Allow downloading from HuggingFace Hub. "
-                "Do not allow if running on a compute node without network access"
-            ),
-        ] = False
-
-        system_message: Annotated[
-            str | None,
-            typer.Option(help="System message for chat models"),
-        ] = None
-
-        max_tokens: Annotated[
-            int,
-            typer.Option(help="Maximum number of tokens to generate per file"),
-        ] = 512
 
         max_model_len: Annotated[
             int,
@@ -66,20 +48,6 @@ class _ChatCompletionBase:
                 "Larger images are downscaled while preserving aspect ratio."
             ),
         ] = 1024
-
-        temperature: Annotated[
-            float,
-            typer.Option(
-                help="The model temperature. Lower numbers make models more "
-                "deterministic",
-                min=0.0,
-                max=2.0,
-            ),
-        ] = 0.0
-
-        seed: Annotated[
-            int, typer.Option(help="The seed to set for more reproducible behavior")
-        ] = 42
 
     @staticmethod
     def setup(context: SetupContext):
@@ -128,8 +96,6 @@ class _ChatCompletionBase:
             context.max_model_len = min(context.max_model_len, config_max_model_len)
 
         logger.info(f"  Setting up {context.model}...")
-        logger.info(f"    max_model_len={context.max_model_len}")
-        logger.info(f"    max_tokens={context.max_tokens}")
 
         try:
             resolved_model = snapshot_download(
@@ -150,24 +116,34 @@ class _ChatCompletionBase:
 
         tp = torch.cuda.device_count() or 1
 
-        if context.device != "auto":
-            context.LLM = LLM(
-                model=resolved_model,
-                tensor_parallel_size=tp,
-                max_model_len=context.max_model_len,
-                device=context.device,
-            )
-        else:
-            context.LLM = LLM(
-                model=resolved_model,
-                tensor_parallel_size=tp,
-                max_model_len=context.max_model_len,
-            )
-        context.sampling_params = SamplingParams(
-            temperature=context.temperature,
-            seed=context.seed,
-            max_tokens=context.max_tokens,
-        )
+        user_llm_kwargs = parse_kwargs(context.llm_kwargs)
+        llm_kwargs: dict[str, Any] = {
+            "tensor_parallel_size": tp,
+            "max_model_len": context.max_model_len,
+        }
+        llm_kwargs.update(user_llm_kwargs)
+        logger.info(f"    llm_kwargs={llm_kwargs}")
+
+        context.LLM = LLM(model=resolved_model, **llm_kwargs)
+
+        user_sampling_kwargs = parse_kwargs(context.sampling_kwargs)
+        sampling_kwargs: dict[str, Any] = {
+            "temperature": context.temperature,
+            "seed": context.seed,
+            "max_tokens": context.max_tokens,
+        }
+        sampling_kwargs.update(user_sampling_kwargs)
+        logger.info(f"    sampling_kwargs={sampling_kwargs}")
+
+        context.sampling_params = SamplingParams(**sampling_kwargs)
+
+        user_chat_kwargs = parse_kwargs(context.chat_kwargs)
+        context.chat_kwargs = {
+            "sampling_params": context.sampling_params,
+            "use_tqdm": False,
+        }
+        context.chat_kwargs.update(user_chat_kwargs)
+        logger.info(f"    chat_kwargs={context.chat_kwargs}")
 
     @staticmethod
     def run(context: SetupContext, input_file: Path, output_file: Path):
@@ -225,11 +201,7 @@ class _ChatCompletionBase:
 
 def _run_chat(context: SetupContext, message: Any) -> str:
     try:
-        output = context.LLM.chat(
-            message,
-            sampling_params=context.sampling_params,
-            use_tqdm=False,
-        )
+        output = context.LLM.chat(message, **context.chat_kwargs)
     except ValueError as e:
         msg = str(e).lower()
         if "max_model_len" in msg or "too long" in msg:
