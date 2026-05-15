@@ -13,8 +13,8 @@ Analyze text or image files using vLLM compatible HuggingFace chat models.
 | `--revision`          | `main`                    | Model revision (branch, tag, or commit hash)                   |
 | `--cache-dir`         |                           | HuggingFace cache directory for model files                    |
 | `--allow-fetch`       | `--no-allow-fetch`        | Allow downloads from HuggingFace Hub (network access required) |
-| `--max-model-len`    | `32000`                    | Maximum sequence length (input + output tokens) passed to vLLM. Set this for large-context models to avoid OOM. |
-| `--max-image-size`    | `1024`                    | Maximum image dimension in pixels (width or height). Larger images are downscaled while preserving aspect ratio. |
+| `--max-model-len`     |                           | Maximum sequence length (input + output tokens) passed to vLLM. Set this for large-context models to avoid OOM. |
+| `--max-image-pixels`  |                           | Maximum image dimension in pixels (width or height). Larger images are downscaled while preserving aspect ratio. |
 | `--temperature`       | `0`                       | The model temperature. Lower numbers make models more deterministic |
 | `--seed`              | `42`                      | The seed to set for more reproducible behavior                 |
 | `--llm-kwargs`        | `{}`                      | Additional kwargs for vLLM's LLM() constructor. Supplied values override task defaults. |
@@ -132,7 +132,7 @@ Any HuggingFace model that is compatible with vLLM's `LLM.chat()`.
             model: Qwen/Qwen2.5-VL-7B-Instruct
             cache-dir: ~/github/tigerflow-ml/.hf/hub/
             prompt: 'Caption this image'
-            max-image-size: 500
+            max-image-pixels: 500
             chat-kwargs: {"use_tqdm":True}
     ```
 

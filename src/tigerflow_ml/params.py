@@ -65,6 +65,14 @@ class VLLMParams:
         typer.Option(help="Maximum number of tokens to generate per file"),
     ] = 512
 
+    max_model_len: Annotated[
+        int | None,
+        typer.Option(
+            help="Maximum sequence length (input + output tokens) passed to vLLM. "
+            "Set this for large-context models to avoid OOM. "
+        ),
+    ] = None
+
     temperature: Annotated[
         float,
         typer.Option(

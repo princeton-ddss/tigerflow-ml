@@ -32,67 +32,24 @@ class _ChatCompletionBase:
             ),
         ]
 
-        max_model_len: Annotated[
-            int,
-            typer.Option(
-                help="Maximum sequence length (input + output tokens) passed to vLLM. "
-                "Set this for large-context models to avoid OOM. "
-            ),
-        ] = 32_000
-
-        max_image_size: Annotated[
-            int,
+        max_image_pixels: Annotated[
+            int | None,
             typer.Option(
                 help="Maximum image dimension in pixels (width or height). "
                 "Larger images are downscaled while preserving aspect ratio."
             ),
-        ] = 1024
+        ] = None
 
     @staticmethod
     def setup(context: SetupContext):
-        from transformers import AutoConfig
         from vllm import LLM, SamplingParams
 
-        if context.max_tokens >= context.max_model_len:
+        if context.max_model_len and context.max_tokens >= context.max_model_len:
             raise ValueError(
                 f"max_tokens ({context.max_tokens}) must be smaller than "
                 f"max_model_len ({context.max_model_len}) — increase "
                 "--max-model-len or decrease --max-tokens"
             )
-
-        try:
-            config = AutoConfig.from_pretrained(
-                context.model,
-                local_files_only=not context.allow_fetch,
-                cache_dir=context.cache_dir,
-                revision=context.revision,
-            )
-        except Exception as e:
-            raise RuntimeError(f"Failed to load model config: {e}")
-
-        _MAX_LEN_ATTRS = (
-            "max_position_embeddings",
-            "n_positions",
-            "n_ctx",
-            "max_seq_len",
-            "seq_length",
-        )
-        # Some models store the sequence length in a nested text_config
-        _config_sources = [config] + (
-            [config.text_config] if hasattr(config, "text_config") else []
-        )
-        config_max_model_len = next(
-            (
-                getattr(src, a)
-                for src in _config_sources
-                for a in _MAX_LEN_ATTRS
-                if hasattr(src, a)
-            ),
-            None,
-        )
-        # logger.info(f"    config_max_model_len={config_max_model_len}")
-        if config_max_model_len is not None:
-            context.max_model_len = min(context.max_model_len, config_max_model_len)
 
         logger.info(f"  Setting up {context.model}...")
 
@@ -179,17 +136,19 @@ class _ChatCompletionBase:
         import PIL.Image
 
         image = PIL.Image.open(input_file).convert("RGB")
-        original_size = image.size
-        image.thumbnail(
-            (context.max_image_size, context.max_image_size),
-            PIL.Image.Resampling.LANCZOS,
-        )
-        if image.size != original_size:
-            logger.info(
-                "  Resized image from {}x{} to {}x{}",
-                *original_size,
-                *image.size,
+
+        if context.max_image_pixels is not None:
+            original_size = image.size
+            image.thumbnail(
+                (context.max_image_pixels, context.max_image_pixels),
+                PIL.Image.Resampling.LANCZOS,
             )
+            if image.size != original_size:
+                logger.info(
+                    "  Resized image from {}x{} to {}x{}",
+                    *original_size,
+                    *image.size,
+                )
         message = _build_img_message(
             prompt=context.prompt,
             image=image,
@@ -205,7 +164,7 @@ def _run_chat(context: SetupContext, message: Any) -> str:
         msg = str(e).lower()
         if "max_model_len" in msg or "too long" in msg:
             raise SkippedFileError(
-                f"Input exceeds max_model_len={context.max_model_len} — "
+                f"Input exceeds max-model-len={context.max_model_len} — "
                 "increase --max-model-len or reduce the file size"
             ) from e
         raise

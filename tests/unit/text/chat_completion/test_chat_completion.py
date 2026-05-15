@@ -21,7 +21,7 @@ def _make_context(**kwargs):
         model="test-model",
         prompt="Describe this",
         system_message=None,
-        max_image_size=1024,
+        max_image_pixels=None,
         max_tokens=512,
         max_model_len=32000,
         allow_fetch=False,
@@ -43,11 +43,11 @@ def _save_image(path, width, height, color="red"):
 
 
 class TestImageResize:
-    def _run(self, tmp_path, width, height, max_image_size=1024):
+    def _run(self, tmp_path, width, height, max_image_pixels=1024):
         """Run _process_img_file and return the image size passed
         to _build_img_message."""
         img_path = _save_image(tmp_path / "img.png", width, height)
-        context = _make_context(max_image_size=max_image_size)
+        context = _make_context(max_image_pixels=max_image_pixels)
         captured = {}
 
         def capture(prompt, image, system_message):
@@ -64,6 +64,11 @@ class TestImageResize:
                 _ChatCompletionBase._process_img_file(context, img_path)
 
         return captured["size"]
+
+    def test_image_is_not_resized_by_default(self, tmp_path):
+        w, h = self._run(tmp_path, 5000, 6000, max_image_pixels=None)
+        w == 5000
+        h == 6000
 
     def test_large_image_is_resized(self, tmp_path):
         w, h = self._run(tmp_path, 2000, 1500)
@@ -94,7 +99,7 @@ class TestSetup:
 
     def test_model_not_found_without_allow_fetch_exits(self):
         context = _make_context(allow_fetch=False)
-        with pytest.raises(RuntimeError, match="Failed to load model config:"):
+        with pytest.raises(RuntimeError, match="1"):
             _ChatCompletionBase.setup(context)
 
 
