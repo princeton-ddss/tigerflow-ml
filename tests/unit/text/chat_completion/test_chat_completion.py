@@ -3,7 +3,7 @@
 import base64
 import io
 from types import SimpleNamespace
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import PIL.Image
 import pytest
@@ -31,12 +31,6 @@ def _make_context(**kwargs):
     )
     defaults.update(kwargs)
     return SimpleNamespace(**defaults)
-
-
-def _make_llm_output(text="result", finish_reason="stop"):
-    output = MagicMock()
-    output.outputs = [MagicMock(text=text, finish_reason=finish_reason)]
-    return [output]
 
 
 def _make_pil_image(width, height, color="red"):
