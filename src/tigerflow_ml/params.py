@@ -30,7 +30,7 @@ class HFParams:
 
 
 class VLLMParams:
-    """Commonb parameters for all vLLM tasks"""
+    """Common parameters for all vLLM tasks"""
 
     model: Annotated[
         str,
