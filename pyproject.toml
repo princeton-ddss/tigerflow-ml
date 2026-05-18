@@ -67,6 +67,8 @@ transcribe = "tigerflow_ml.audio.transcribe.slurm:Transcribe"
 transcribe-local = "tigerflow_ml.audio.transcribe.local:Transcribe"
 detect = "tigerflow_ml.image.detect.slurm:Detect"
 detect-local = "tigerflow_ml.image.detect.local:Detect"
+chat-completion = "tigerflow_ml.text.chat_completion.slurm:ChatCompletion"
+chat-completion-local = "tigerflow_ml.text.chat_completion.local:ChatCompletion"
 
 [build-system]
 requires = ["hatchling"]
