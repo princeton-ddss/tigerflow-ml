@@ -26,6 +26,12 @@ _TASKS = [
         "tigerflow_ml.image.detect.local",
         "tigerflow_ml.image.detect.slurm",
     ),
+    (
+        "chat-completion",
+        ".txt",
+        "tigerflow_ml.text.chat_completion.local",
+        "tigerflow_ml.text.chat_completion.slurm",
+    ),
 ]
 
 
