@@ -523,45 +523,6 @@
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Models">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#many-to-many-seq2seq" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Many-to-many (Seq2Seq)
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#single-language-pair-opus-mt" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Single language pair (OPUS-MT)
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#text-generation-causal-lm" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Text-generation (causal LM)
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
 </li>
       
         <li class="md-nav__item">
@@ -577,10 +538,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#translate-english-to-german" class="md-nav__link">
+  <a href="#local-translation-with-pre-downloaded-translategemma-model" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Translate English to German
+        Local translation with pre-downloaded TranslateGemma model
       
     </span>
   </a>
@@ -588,21 +549,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#translate-english-to-chinese" class="md-nav__link">
+  <a href="#local-translation-fetching-an-llm-from-huggingface-hub" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Translate English to Chinese
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#use-opus-mt-for-a-specific-language-pair" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Use OPUS-MT for a specific language pair
+        Local translation fetching an LLM from HuggingFace Hub
       
     </span>
   </a>
@@ -765,45 +715,6 @@
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Models">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#many-to-many-seq2seq" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Many-to-many (Seq2Seq)
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#single-language-pair-opus-mt" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Single language pair (OPUS-MT)
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#text-generation-causal-lm" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Text-generation (causal LM)
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
 </li>
       
         <li class="md-nav__item">
@@ -819,10 +730,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#translate-english-to-german" class="md-nav__link">
+  <a href="#local-translation-with-pre-downloaded-translategemma-model" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Translate English to German
+        Local translation with pre-downloaded TranslateGemma model
       
     </span>
   </a>
@@ -830,21 +741,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#translate-english-to-chinese" class="md-nav__link">
+  <a href="#local-translation-fetching-an-llm-from-huggingface-hub" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Translate English to Chinese
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#use-opus-mt-for-a-specific-language-pair" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Use OPUS-MT for a specific language pair
+        Local translation fetching an LLM from HuggingFace Hub
       
     </span>
   </a>
@@ -888,8 +788,7 @@
 
 
 <h1 id="translation">Translation<a class="headerlink" href="#translation" title="Permanent link">&para;</a></h1>
-<p>Translate text documents using HuggingFace Seq2Seq translation models or
-text-generation (causal LM) models with a translation prompt.</p>
+<p>Translate text documents using HuggingFace <a href="https://huggingface.co/collections/google/translategemma">TranslateGemma</a> models or chat models.</p>
 <h2 id="parameters">Parameters<a class="headerlink" href="#parameters" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
@@ -902,7 +801,7 @@ text-generation (causal LM) models with a translation prompt.</p>
 <tbody>
 <tr>
 <td><code>--model</code></td>
-<td><code>google/madlad400-3b-mt</code></td>
+<td></td>
 <td>HuggingFace model repo ID</td>
 </tr>
 <tr>
@@ -922,126 +821,66 @@ text-generation (causal LM) models with a translation prompt.</p>
 </tr>
 <tr>
 <td><code>--source-lang</code></td>
-<td><code>en</code></td>
-<td>Source language code (e.g. <code>en</code>, <code>de</code>, <code>zh</code>)</td>
+<td></td>
+<td>Source language code (e.g. <code>en</code>, <code>de</code>, <code>zh</code>) -- will attempt auto detection by default</td>
 </tr>
 <tr>
 <td><code>--target-lang</code></td>
-<td><code>de</code></td>
+<td><code>en</code></td>
 <td>Target language code (e.g. <code>de</code>, <code>en</code>, <code>fr</code>)</td>
 </tr>
 <tr>
-<td><code>--max-length</code></td>
-<td><code>512</code></td>
-<td>Maximum number of tokens to generate per chunk</td>
+<td><code>--chunk-size</code></td>
+<td><code>900</code></td>
+<td>Maximum token sequence length in a batch</td>
 </tr>
 <tr>
-<td><code>--prompt</code></td>
+<td><code>--prompt-template</code></td>
 <td><em>(see below)</em></td>
-<td>Prompt template for text-generation models (uses <code>{source_lang}</code>, <code>{target_lang}</code>, <code>{text}</code>)</td>
+<td>Prompt template for chat-based models (uses <code>{source_lang}</code>, <code>{target_lang}</code>, and <code>{text}</code>)</td>
 </tr>
 <tr>
-<td><code>--encoding</code></td>
-<td><code>utf-8-sig</code></td>
-<td>Input file encoding</td>
+<td><code>--system-message</code></td>
+<td><code>You are an expert linguist</code></td>
+<td>System message for chat-based translation models</td>
+</tr>
+<tr>
+<td><code>--model-backend</code></td>
+<td><code>auto</code></td>
+<td>Model backend (<code>chat</code>, <code>tgemma</code>, or <code>auto</code>)</td>
+</tr>
+<tr>
+<td><code>--batch-size</code></td>
+<td></td>
+<td>Maximum number of chunks to translate in parallel for long documents -- will attempt auto optimization by default</td>
+</tr>
+<tr>
+<td><code>--vram-fraction</code></td>
+<td><code>0.9</code></td>
+<td>Fraction of free VRAM used when auto-computing batch size (lower values reduce OOM risk)</td>
+</tr>
+<tr>
+<td><code>--allow-fetch</code></td>
+<td><code>--no-allow-fetch</code></td>
+<td>Allow downloads from HuggingFace Hub (network access required)</td>
 </tr>
 </tbody>
 </table>
-<div class="admonition note">
-<p class="admonition-title">Note</p>
-<p>For MADLAD-400 (default), <code>--source-lang</code> and <code>--target-lang</code> use
-<a href="https://en.wikipedia.org/wiki/List_of_ISO_639-1_codes">ISO 639-1</a> language codes
-(e.g. <code>en</code>, <code>de</code>, <code>fr</code>, <code>zh</code>, <code>ja</code>). For OPUS-MT models, the language pair is encoded
-in the model name and these params are ignored.</p>
-</div>
 <h2 id="chunking-strategy">Chunking Strategy<a class="headerlink" href="#chunking-strategy" title="Permanent link">&para;</a></h2>
-<p>Input text is split into sentences and packed into chunks that fit within the model's token
-limit. This preserves sentence boundaries and provides surrounding context for better
-translation quality.</p>
-<p>If a single sentence exceeds the token limit, it is split at token boundaries as a last resort.</p>
+<p>For long documents, input text is split into chunks based on a <code>chunk size</code>, to fit within a model's token limit. An attempt will be made to split the text at the paragraph level; for long paragraphs this may not be possible, in which case the text will be split at the sentence level. This preserves sentence boundaries and provides surrounding context for better translation quality. If a single sentence exceeds the token limit, it is split at token boundaries as a last resort.</p>
 <h2 id="output-format">Output Format<a class="headerlink" href="#output-format" title="Permanent link">&para;</a></h2>
 <p>Plain text, encoded as UTF-8.</p>
 <h2 id="models">Models<a class="headerlink" href="#models" title="Permanent link">&para;</a></h2>
-<p>Any HuggingFace <a href="https://huggingface.co/models?pipeline_tag=translation"><code>translation</code></a> (Seq2Seq) model is
-supported. Causal LMs from the <a href="https://huggingface.co/models?pipeline_tag=text-generation"><code>text-generation</code></a>
-pipeline can also be used with a <code>--prompt</code> template.</p>
-<h3 id="many-to-many-seq2seq">Many-to-many (Seq2Seq)<a class="headerlink" href="#many-to-many-seq2seq" title="Permanent link">&para;</a></h3>
-<table>
-<thead>
-<tr>
-<th>Model</th>
-<th>Params</th>
-<th>Languages</th>
-<th>License</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><a href="https://huggingface.co/google/madlad400-3b-mt"><code>google/madlad400-3b-mt</code></a> (default)</td>
-<td>3B</td>
-<td>400+</td>
-<td>Apache 2.0</td>
-</tr>
-<tr>
-<td><a href="https://huggingface.co/google/madlad400-7b-mt"><code>google/madlad400-7b-mt</code></a></td>
-<td>7B</td>
-<td>400+</td>
-<td>Apache 2.0</td>
-</tr>
-</tbody>
-</table>
-<h3 id="single-language-pair-opus-mt">Single language pair (OPUS-MT)<a class="headerlink" href="#single-language-pair-opus-mt" title="Permanent link">&para;</a></h3>
-<p>For lightweight, single-pair translation. The naming convention is
-<code>Helsinki-NLP/opus-mt-{src}-{tgt}</code>.</p>
-<table>
-<thead>
-<tr>
-<th>Model</th>
-<th>Direction</th>
-<th>License</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><a href="https://huggingface.co/Helsinki-NLP/opus-mt-en-de"><code>Helsinki-NLP/opus-mt-en-de</code></a></td>
-<td>English → German</td>
-<td>CC-BY-4.0</td>
-</tr>
-<tr>
-<td><a href="https://huggingface.co/Helsinki-NLP/opus-mt-de-en"><code>Helsinki-NLP/opus-mt-de-en</code></a></td>
-<td>German → English</td>
-<td>CC-BY-4.0</td>
-</tr>
-<tr>
-<td><a href="https://huggingface.co/Helsinki-NLP/opus-mt-en-fr"><code>Helsinki-NLP/opus-mt-en-fr</code></a></td>
-<td>English → French</td>
-<td>CC-BY-4.0</td>
-</tr>
-<tr>
-<td><a href="https://huggingface.co/Helsinki-NLP/opus-mt-en-es"><code>Helsinki-NLP/opus-mt-en-es</code></a></td>
-<td>English → Spanish</td>
-<td>CC-BY-4.0</td>
-</tr>
-<tr>
-<td><a href="https://huggingface.co/Helsinki-NLP/opus-mt-en-zh"><code>Helsinki-NLP/opus-mt-en-zh</code></a></td>
-<td>English → Chinese</td>
-<td>CC-BY-4.0</td>
-</tr>
-</tbody>
-</table>
-<p>Browse all available language pairs on the <a href="https://huggingface.co/Helsinki-NLP">Helsinki-NLP hub page</a>.</p>
-<h3 id="text-generation-causal-lm">Text-generation (causal LM)<a class="headerlink" href="#text-generation-causal-lm" title="Permanent link">&para;</a></h3>
-<p>Any causal language model can be used for translation via the <code>--prompt</code> parameter.
-The model type is auto-detected: if the model is not an encoder-decoder, it is loaded
-as a <code>text-generation</code> pipeline and the prompt template is used to format each chunk.</p>
-<p>The default prompt template is:</p>
-<div class="highlight"><pre><span></span><code>Translate the following text from {source_lang} to {target_lang}. Output only the translation, nothing else.
-
-{text}
+<p>Any HuggingFace <a href="https://huggingface.co/collections/google/translategemma"><code>TranslateGemma</code></a> model is supported using transformers. Large language <em>chat</em> models run using vLLM with a <code>prompt template</code> and <code>system message</code>. The default prompt template is:</p>
+<div class="highlight"><pre><span></span><code>Translate the following text from {source_lang} to {target_lang}. Output only the translated text, nothing else. Text: {text}
+</code></pre></div>
+<p>Most models will be time consuming to run on a CPU. To scale translation, we recommend running this task on a sufficiently large GPU. This might mean running on an HPC compute node without network access. If this is the case for you, you'll have to download the model files before running this task. To download a gated model, first run <code>hf auth login</code> or <code>export HF_TOKEN="hf_token"</code>. Then, download the model to a cache directory of your choice (here <code>./.hf</code>):</p>
+<div class="highlight"><pre><span></span><code><span class="nv">HF_HOME</span><span class="o">=</span>./.hf<span class="w"> </span>hf<span class="w"> </span>download<span class="w"> </span>google/translategemma-27b-it
 </code></pre></div>
 <h2 id="examples">Examples<a class="headerlink" href="#examples" title="Permanent link">&para;</a></h2>
-<h3 id="translate-english-to-german">Translate English to German<a class="headerlink" href="#translate-english-to-german" title="Permanent link">&para;</a></h3>
-<p>Uses the default MADLAD-400 model with 400+ language support.</p>
+<h3 id="local-translation-with-pre-downloaded-translategemma-model">Local translation with pre-downloaded TranslateGemma model<a class="headerlink" href="#local-translation-with-pre-downloaded-translategemma-model" title="Permanent link">&para;</a></h3>
+<p>Uses a TranslateGemma model to translate a short English text to German locally with a pre-downloaded model.
+Run with the command: <code>tigerflow run config.yaml ./input/ ./output/</code>.*</p>
 <div class="tabbed-set tabbed-alternate" data-tabs="1:3"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><input id="__tabbed_1_3" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">Config</label><label for="__tabbed_1_2">Input</label><label for="__tabbed_1_3">Output</label></div>
 <div class="tabbed-content">
 <div class="tabbed-block">
@@ -1051,6 +890,11 @@ as a <code>text-generation</code> pipeline and the prompt template is used to fo
 <span class="w">    </span><span class="nt">module</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">tigerflow_ml.text.translate.local</span>
 <span class="w">    </span><span class="nt">input_ext</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">.txt</span>
 <span class="w">    </span><span class="nt">output_ext</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">.txt</span>
+<span class="w">    </span><span class="nt">params</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">model</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">google/translategemma-4b-it</span>
+<span class="w">      </span><span class="nt">source-lang</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">en</span>
+<span class="w">      </span><span class="nt">target-lang</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">de</span>
+<span class="w">      </span><span class="nt">cache-dir</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/path/to/.hf/hub/</span>
 </code></pre></div>
 </div>
 <div class="tabbed-block">
@@ -1061,13 +905,15 @@ used as a typing exercise for over a century.
 </div>
 <div class="tabbed-block">
 <div class="highlight"><span class="filename">article.txt</span><pre><span></span><code>Der schnelle braune Fuchs springt über den faulen Hund.
-Dieser Satz enthält jeden Buchstaben des englischen Alphabets.
-Er wird seit über einem Jahrhundert als Tippübung verwendet.
+Dieser Satz enthält alle Buchstaben des englischen Alphabets.
+Er wird seit über einem Jahrhundert als Übung für das Tippen verwendet.
 </code></pre></div>
 </div>
 </div>
 </div>
-<h3 id="translate-english-to-chinese">Translate English to Chinese<a class="headerlink" href="#translate-english-to-chinese" title="Permanent link">&para;</a></h3>
+<p>*This task can also be run from the command line with the command: <code>python -m tigerflow_ml.text.translate.local --input-dir ./input/ --input-ext .txt --output-dir ./output/ --output-ext .txt --model google/translategemma-4b-it --cache-dir /path/to/.hf/hub/ --target-lang de</code></p>
+<h3 id="local-translation-fetching-an-llm-from-huggingface-hub">Local translation fetching an LLM from HuggingFace Hub<a class="headerlink" href="#local-translation-fetching-an-llm-from-huggingface-hub" title="Permanent link">&para;</a></h3>
+<p>Uses <code>google/gemma-3-4b-it</code> (an image-text-to-text chat model) to translate a short Chinese text to English locally with network access.</p>
 <div class="tabbed-set tabbed-alternate" data-tabs="2:3"><input checked="checked" id="__tabbed_2_1" name="__tabbed_2" type="radio" /><input id="__tabbed_2_2" name="__tabbed_2" type="radio" /><input id="__tabbed_2_3" name="__tabbed_2" type="radio" /><div class="tabbed-labels"><label for="__tabbed_2_1">Config</label><label for="__tabbed_2_2">Input</label><label for="__tabbed_2_3">Output</label></div>
 <div class="tabbed-content">
 <div class="tabbed-block">
@@ -1078,55 +924,25 @@ Er wird seit über einem Jahrhundert als Tippübung verwendet.
 <span class="w">    </span><span class="nt">input_ext</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">.txt</span>
 <span class="w">    </span><span class="nt">output_ext</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">.txt</span>
 <span class="w">    </span><span class="nt">params</span><span class="p">:</span>
-<span class="w">      </span><span class="nt">target_lang</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">zh</span>
-</code></pre></div>
-</div>
-<div class="tabbed-block">
-<div class="highlight"><span class="filename">abstract.txt</span><pre><span></span><code>Artificial intelligence is transforming academic research
-across all disciplines.
+<span class="w">      </span><span class="nt">source-lang</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">zh</span>
+<span class="w">      </span><span class="nt">model</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">google/gemma-3-4b-it</span>
+<span class="w">      </span><span class="nt">allow-fetch</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">True</span>
 </code></pre></div>
 </div>
 <div class="tabbed-block">
 <div class="highlight"><span class="filename">abstract.txt</span><pre><span></span><code>人工智能正在改变所有学科的学术研究。
 </code></pre></div>
 </div>
+<div class="tabbed-block"></div>
 </div>
 </div>
-<h3 id="use-opus-mt-for-a-specific-language-pair">Use OPUS-MT for a specific language pair<a class="headerlink" href="#use-opus-mt-for-a-specific-language-pair" title="Permanent link">&para;</a></h3>
-<p>For lightweight, single-pair translation without downloading a large multilingual model:</p>
-<div class="tabbed-set tabbed-alternate" data-tabs="3:3"><input checked="checked" id="__tabbed_3_1" name="__tabbed_3" type="radio" /><input id="__tabbed_3_2" name="__tabbed_3" type="radio" /><input id="__tabbed_3_3" name="__tabbed_3" type="radio" /><div class="tabbed-labels"><label for="__tabbed_3_1">Config</label><label for="__tabbed_3_2">Input</label><label for="__tabbed_3_3">Output</label></div>
+<div class="highlight"><span class="filename">abstract.txt</span><pre><span></span><code>Artificial intelligence is changing academic research in all disciplines.
+</code></pre></div>
+<h3 id="run-on-hpc-with-slurm">Run on HPC with Slurm<a class="headerlink" href="#run-on-hpc-with-slurm" title="Permanent link">&para;</a></h3>
+<p>For bulk translation of large document collections, use the Slurm variant to distribute work across compute nodes. This example uses a pre-downloaded <code>google/translategemma-27b-it</code> model stored in the cache directory <code>.hf</code>.</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="3:1"><input checked="checked" id="__tabbed_3_1" name="__tabbed_3" type="radio" /><div class="tabbed-labels"><label for="__tabbed_3_1">Config</label></div>
 <div class="tabbed-content">
 <div class="tabbed-block">
-<div class="highlight"><span class="filename">config.yaml</span><pre><span></span><code><span class="nt">tasks</span><span class="p">:</span>
-<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">translate</span>
-<span class="w">    </span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">local</span>
-<span class="w">    </span><span class="nt">module</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">tigerflow_ml.text.translate.local</span>
-<span class="w">    </span><span class="nt">input_ext</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">.txt</span>
-<span class="w">    </span><span class="nt">output_ext</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">.txt</span>
-<span class="w">    </span><span class="nt">params</span><span class="p">:</span>
-<span class="w">      </span><span class="nt">model</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Helsinki-NLP/opus-mt-es-en</span>
-</code></pre></div>
-</div>
-<div class="tabbed-block">
-<div class="highlight"><span class="filename">documento.txt</span><pre><span></span><code>La inteligencia artificial está transformando la investigación
-académica en todas las disciplinas.
-</code></pre></div>
-</div>
-<div class="tabbed-block">
-<div class="highlight"><span class="filename">documento.txt</span><pre><span></span><code>Artificial intelligence is transforming academic research
-across all disciplines.
-</code></pre></div>
-</div>
-</div>
-</div>
-<div class="admonition note">
-<p class="admonition-title">Note</p>
-<p>OPUS-MT models encode the language pair in the model name. The <code>--source-lang</code>
-and <code>--target-lang</code> params are ignored for these models.</p>
-</div>
-<h3 id="run-on-hpc-with-slurm">Run on HPC with Slurm<a class="headerlink" href="#run-on-hpc-with-slurm" title="Permanent link">&para;</a></h3>
-<p>For bulk translation of large document collections, use the Slurm variant to distribute
-work across compute nodes:</p>
 <div class="highlight"><span class="filename">config.yaml</span><pre><span></span><code><span class="nt">tasks</span><span class="p">:</span>
 <span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">translate</span>
 <span class="w">    </span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">slurm</span>
@@ -1139,9 +955,18 @@ work across compute nodes:</p>
 <span class="w">      </span><span class="nt">gpus</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1</span>
 <span class="w">      </span><span class="nt">memory</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">16G</span>
 <span class="w">      </span><span class="nt">time</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">02:00:00</span>
+<span class="w">      </span><span class="nt">sbatch_options</span><span class="p">:</span>
+<span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;--constraint=gpu80&quot;</span>
+<span class="w">    </span><span class="nt">setup_commands</span><span class="p">:</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">source .venv/bin/activate</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">export TRANSFORMERS_OFFLINE=1</span>
 <span class="w">    </span><span class="nt">params</span><span class="p">:</span>
-<span class="w">      </span><span class="nt">target_lang</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">zh</span>
+<span class="w">      </span><span class="nt">model</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">google/translategemma-27b-it</span>
+<span class="w">      </span><span class="nt">cache-dir</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/path/to/.hf/hub/</span>
 </code></pre></div>
+</div>
+</div>
+</div>
 
 
 
