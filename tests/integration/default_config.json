@@ -6,8 +6,7 @@
       "device": "auto"
     },
     "translate": {
-      "model": "google/madlad400-3b-mt",
-      "device": "auto"
+      "model": "google/madlad400-3b-mt"
     },
     "transcribe": {
       "model": "openai/whisper-large-v3",
