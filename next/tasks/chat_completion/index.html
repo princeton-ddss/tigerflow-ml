@@ -9,10 +9,8 @@
       
       
       
-        <link rel="prev" href="../ocr/">
+        <link rel="prev" href="../detect/">
       
-      
-        <link rel="next" href="../transcribe/">
       
       
         
@@ -23,7 +21,7 @@
     
     
       
-        <title>Translation - TigerFlow ML</title>
+        <title>Chat Completion - TigerFlow ML</title>
       
     
     
@@ -76,7 +74,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#translation" class="md-skip">
+        <a href="#chat-completion" class="md-skip">
           Skip to content
         </a>
       
@@ -113,7 +111,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Translation
+              Chat Completion
             
           </span>
         </div>
@@ -419,37 +417,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Translation
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../translate/" class="md-nav__link">
         
   
   
@@ -465,120 +436,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#parameters" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Parameters
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#chunking-strategy" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Chunking Strategy
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#output-format" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Output Format
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#models" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Models
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#examples" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Examples
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Examples">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#local-translation-with-pre-downloaded-translategemma-model" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Local translation with pre-downloaded TranslateGemma model
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#local-translation-fetching-an-llm-from-huggingface-hub" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Local translation fetching an LLM from HuggingFace Hub
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#run-on-hpc-with-slurm" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Run on HPC with Slurm
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -644,10 +501,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../chat_completion/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Chat Completion
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -663,6 +547,109 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Parameters
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#supported-input-formats" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Supported Input Formats
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#output-format" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Output Format
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#models" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Models
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Examples
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Examples">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#analyze-text" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Analyze text
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#caption-images" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Caption images
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -713,10 +700,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#chunking-strategy" class="md-nav__link">
+  <a href="#supported-input-formats" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Chunking Strategy
+        Supported Input Formats
       
     </span>
   </a>
@@ -758,10 +745,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#local-translation-with-pre-downloaded-translategemma-model" class="md-nav__link">
+  <a href="#analyze-text" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Local translation with pre-downloaded TranslateGemma model
+        Analyze text
       
     </span>
   </a>
@@ -769,21 +756,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#local-translation-fetching-an-llm-from-huggingface-hub" class="md-nav__link">
+  <a href="#caption-images" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Local translation fetching an LLM from HuggingFace Hub
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#run-on-hpc-with-slurm" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Run on HPC with Slurm
+        Caption images
       
     </span>
   </a>
@@ -815,8 +791,8 @@
   
 
 
-<h1 id="translation">Translation<a class="headerlink" href="#translation" title="Permanent link">&para;</a></h1>
-<p>Translate text documents using HuggingFace <a href="https://huggingface.co/collections/google/translategemma">TranslateGemma</a> models or chat models.</p>
+<h1 id="chat-completion">Chat Completion<a class="headerlink" href="#chat-completion" title="Permanent link">&para;</a></h1>
+<p>Analyze text or image files using vLLM compatible HuggingFace chat models.</p>
 <h2 id="parameters">Parameters<a class="headerlink" href="#parameters" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
@@ -833,6 +809,21 @@
 <td>HuggingFace model repo ID</td>
 </tr>
 <tr>
+<td><code>--prompt</code></td>
+<td></td>
+<td>Model prompt. If using text inputs, use <code>{text}</code> as a placeholder for file contents (if not included, contents will follow the prompt)</td>
+</tr>
+<tr>
+<td><code>--system-message</code></td>
+<td></td>
+<td>System message for chats</td>
+</tr>
+<tr>
+<td><code>--max-tokens</code></td>
+<td><code>512</code></td>
+<td>Maximum number of tokens to generate per file</td>
+</tr>
+<tr>
 <td><code>--revision</code></td>
 <td><code>main</code></td>
 <td>Model revision (branch, tag, or commit hash)</td>
@@ -843,154 +834,153 @@
 <td>HuggingFace cache directory for model files</td>
 </tr>
 <tr>
-<td><code>--device</code></td>
-<td><code>auto</code></td>
-<td>Device to use (<code>cuda</code>, <code>cpu</code>, or <code>auto</code>)</td>
-</tr>
-<tr>
-<td><code>--source-lang</code></td>
-<td></td>
-<td>Source language code (e.g. <code>en</code>, <code>de</code>, <code>zh</code>) -- will attempt auto detection by default</td>
-</tr>
-<tr>
-<td><code>--target-lang</code></td>
-<td><code>en</code></td>
-<td>Target language code (e.g. <code>de</code>, <code>en</code>, <code>fr</code>)</td>
-</tr>
-<tr>
-<td><code>--chunk-size</code></td>
-<td><code>900</code></td>
-<td>Maximum token sequence length in a batch</td>
-</tr>
-<tr>
-<td><code>--prompt-template</code></td>
-<td><em>(see below)</em></td>
-<td>Prompt template for chat-based models (uses <code>{source_lang}</code>, <code>{target_lang}</code>, and <code>{text}</code>)</td>
-</tr>
-<tr>
-<td><code>--system-message</code></td>
-<td><code>You are an expert linguist</code></td>
-<td>System message for chat-based translation models</td>
-</tr>
-<tr>
-<td><code>--model-backend</code></td>
-<td><code>auto</code></td>
-<td>Model backend (<code>chat</code>, <code>tgemma</code>, or <code>auto</code>)</td>
-</tr>
-<tr>
-<td><code>--batch-size</code></td>
-<td></td>
-<td>Maximum number of chunks to translate in parallel for long documents -- will attempt auto optimization by default</td>
-</tr>
-<tr>
-<td><code>--vram-fraction</code></td>
-<td><code>0.9</code></td>
-<td>Fraction of free VRAM used when auto-computing batch size (lower values reduce OOM risk)</td>
-</tr>
-<tr>
 <td><code>--allow-fetch</code></td>
 <td><code>--no-allow-fetch</code></td>
 <td>Allow downloads from HuggingFace Hub (network access required)</td>
 </tr>
+<tr>
+<td><code>--max-model-len</code></td>
+<td></td>
+<td>Maximum sequence length (input + output tokens) passed to vLLM. Set this for large-context models to avoid OOM.</td>
+</tr>
+<tr>
+<td><code>--max-image-pixels</code></td>
+<td></td>
+<td>Maximum image dimension in pixels (width or height). Larger images are downscaled while preserving aspect ratio.</td>
+</tr>
+<tr>
+<td><code>--temperature</code></td>
+<td><code>0</code></td>
+<td>The model temperature. Lower numbers make models more deterministic</td>
+</tr>
+<tr>
+<td><code>--seed</code></td>
+<td><code>42</code></td>
+<td>The seed to set for more reproducible behavior</td>
+</tr>
+<tr>
+<td><code>--llm-kwargs</code></td>
+<td><code>{}</code></td>
+<td>Additional kwargs for vLLM's LLM() constructor. Supplied values override task defaults.</td>
+</tr>
+<tr>
+<td><code>--sampling-kwargs</code></td>
+<td><code>{}</code></td>
+<td>Additional kwargs for vLLM's SamplingParams() constructor. Supplied values override task defaults.</td>
+</tr>
+<tr>
+<td><code>--chat-kwargs</code></td>
+<td><code>{}</code></td>
+<td>Additional kwargs for vLLM's LLM.chat(). Supplied values override task defaults.</td>
+</tr>
 </tbody>
 </table>
-<h2 id="chunking-strategy">Chunking Strategy<a class="headerlink" href="#chunking-strategy" title="Permanent link">&para;</a></h2>
-<p>For long documents, input text is split into chunks based on a <code>chunk size</code>, to fit within a model's token limit. An attempt will be made to split the text at the paragraph level; for long paragraphs this may not be possible, in which case the text will be split at the sentence level. This preserves sentence boundaries and provides surrounding context for better translation quality. If a single sentence exceeds the token limit, it is split at token boundaries as a last resort.</p>
+<h2 id="supported-input-formats">Supported Input Formats<a class="headerlink" href="#supported-input-formats" title="Permanent link">&para;</a></h2>
+<p>Text files (.txt, .text, .md, .log, .rtf) and images (.jpg, .jpeg, .png, .tiff, .tif, .bmp)</p>
 <h2 id="output-format">Output Format<a class="headerlink" href="#output-format" title="Permanent link">&para;</a></h2>
-<p>Plain text, encoded as UTF-8.</p>
+<p>Plain text (.txt).</p>
 <h2 id="models">Models<a class="headerlink" href="#models" title="Permanent link">&para;</a></h2>
-<p>Any HuggingFace <a href="https://huggingface.co/collections/google/translategemma"><code>TranslateGemma</code></a> model is supported using transformers. Large language <em>chat</em> models run using vLLM with a <code>prompt template</code> and <code>system message</code>. The default prompt template is:</p>
-<div class="highlight"><pre><span></span><code>Translate the following text from {source_lang} to {target_lang}. Output only the translated text, nothing else. Text: {text}
-</code></pre></div>
-<p>Most models will be time consuming to run on a CPU. To scale translation, we recommend running this task on a sufficiently large GPU. This might mean running on an HPC compute node without network access. If this is the case for you, you'll have to download the model files before running this task. To download a gated model, first run <code>hf auth login</code> or <code>export HF_TOKEN="hf_token"</code>. Then, download the model to a cache directory of your choice (here <code>./.hf</code>):</p>
-<div class="highlight"><pre><span></span><code><span class="nv">HF_HOME</span><span class="o">=</span>./.hf<span class="w"> </span>hf<span class="w"> </span>download<span class="w"> </span>google/translategemma-27b-it
-</code></pre></div>
+<p>Any HuggingFace model that is compatible with vLLM's <code>LLM.chat()</code>.</p>
 <h2 id="examples">Examples<a class="headerlink" href="#examples" title="Permanent link">&para;</a></h2>
-<h3 id="local-translation-with-pre-downloaded-translategemma-model">Local translation with pre-downloaded TranslateGemma model<a class="headerlink" href="#local-translation-with-pre-downloaded-translategemma-model" title="Permanent link">&para;</a></h3>
-<p>Uses a TranslateGemma model to translate a short English text to German locally with a pre-downloaded model.
-Run with the command: <code>tigerflow run config.yaml ./input/ ./output/</code>.*</p>
-<div class="tabbed-set tabbed-alternate" data-tabs="1:3"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><input id="__tabbed_1_3" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">Config</label><label for="__tabbed_1_2">Input</label><label for="__tabbed_1_3">Output</label></div>
+<h3 id="analyze-text">Analyze text<a class="headerlink" href="#analyze-text" title="Permanent link">&para;</a></h3>
+<div class="tabbed-set tabbed-alternate" data-tabs="1:3"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><input id="__tabbed_1_3" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">Config</label><label for="__tabbed_1_2">Input (.txt)</label><label for="__tabbed_1_3">Output (.txt)</label></div>
 <div class="tabbed-content">
 <div class="tabbed-block">
 <div class="highlight"><span class="filename">config.yaml</span><pre><span></span><code><span class="nt">tasks</span><span class="p">:</span>
-<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">translate</span>
-<span class="w">    </span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">local</span>
-<span class="w">    </span><span class="nt">module</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">tigerflow_ml.text.translate.local</span>
-<span class="w">    </span><span class="nt">input_ext</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">.txt</span>
-<span class="w">    </span><span class="nt">output_ext</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">.txt</span>
-<span class="w">    </span><span class="nt">params</span><span class="p">:</span>
-<span class="w">      </span><span class="nt">model</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">google/translategemma-4b-it</span>
-<span class="w">      </span><span class="nt">source-lang</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">en</span>
-<span class="w">      </span><span class="nt">target-lang</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">de</span>
-<span class="w">      </span><span class="nt">cache-dir</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/path/to/.hf/hub/</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">chat_completion</span>
+<span class="w">        </span><span class="l l-Scalar l-Scalar-Plain">kind</span><span class="p p-Indicator">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">slurm</span>
+<span class="w">        </span><span class="l l-Scalar l-Scalar-Plain">module</span><span class="p p-Indicator">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">tigerflow_ml.text.chat_completion.slurm</span>
+<span class="w">        </span><span class="l l-Scalar l-Scalar-Plain">input_ext</span><span class="p p-Indicator">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">.txt</span>
+<span class="w">        </span><span class="l l-Scalar l-Scalar-Plain">output_ext</span><span class="p p-Indicator">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">.txt</span>
+<span class="w">        </span><span class="l l-Scalar l-Scalar-Plain">max_workers</span><span class="p p-Indicator">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1</span>
+<span class="w">        </span><span class="l l-Scalar l-Scalar-Plain">worker_resources</span><span class="p p-Indicator">:</span>
+<span class="w">            </span><span class="nt">cpus</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1</span>
+<span class="w">            </span><span class="nt">gpus</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1</span>
+<span class="w">            </span><span class="nt">memory</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">10G</span>
+<span class="w">            </span><span class="nt">time</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">00:10:00</span>
+<span class="w">            </span><span class="nt">sbatch_options</span><span class="p">:</span>
+<span class="w">                </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;--constraint=gpu80&quot;</span>
+<span class="w">      </span><span class="w w-Error">  </span><span class="nt">setup_commands</span><span class="p">:</span>
+<span class="w">            </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">source ~/github/tigerflow-ml/.venv/bin/activate</span>
+<span class="w">            </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">export TRANSFORMERS_OFFLINE=1</span>
+<span class="w">        </span><span class="nt">params</span><span class="p">:</span>
+<span class="w">            </span><span class="nt">model</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Qwen/Qwen2.5-VL-7B-Instruct</span>
+<span class="w">            </span><span class="nt">cache-dir</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">~/github/tigerflow-ml/.hf/hub/</span>
+<span class="w">            </span><span class="nt">prompt</span><span class="p">:</span><span class="w"> </span><span class="s">&#39;Analyze</span><span class="nv"> </span><span class="s">this</span><span class="nv"> </span><span class="s">poem&#39;</span>
 </code></pre></div>
 </div>
 <div class="tabbed-block">
-<div class="highlight"><span class="filename">article.txt</span><pre><span></span><code>The quick brown fox jumps over the lazy dog. This sentence
-contains every letter of the English alphabet. It has been
-used as a typing exercise for over a century.
+<div class="highlight"><span class="filename">Raven.txt</span><pre><span></span><code>&quot;The Raven&quot; by Edgar Allan Poe
 </code></pre></div>
 </div>
 <div class="tabbed-block">
-<div class="highlight"><span class="filename">article.txt</span><pre><span></span><code>Der schnelle braune Fuchs springt über den faulen Hund.
-Dieser Satz enthält alle Buchstaben des englischen Alphabets.
-Er wird seit über einem Jahrhundert als Übung für das Tippen verwendet.
+<div class="highlight"><span class="filename">Raven.txt</span><pre><span></span><code>This poem, &quot;The Raven,&quot; by Edgar Allan Poe, is a masterful example of gothic literature, characterized by its dark, mysterious, and often melancholic themes. Here&#39;s a detailed analysis of the poem:
+
+### Structure and Form
+- **Narrative Structure**: The poem is written in a first-person narrative, with the speaker recounting a series of events that unfold over a single night. The narrative is structured in a series of stanzas, each containing a distinct scene or moment of the speaker&#39;s experience.
+- **Repetition and Symbolism**: The word &quot;Nevermore&quot; is repeated multiple times, serving as a key symbol that ties the poem together. It represents the speaker&#39;s despair, the bird&#39;s mysterious nature, and the overall theme of futility and loss.
+
+### Themes
+1. **Loss and Grief**:
+- The poem revolves around the speaker&#39;s grief over the loss of his beloved, Lenore. The speaker&#39;s longing for her is palpable, and the repetition of &quot;Nevermore&quot; underscores the permanence of her absence.
+- The speaker&#39;s attempts to find solace in books and memories of Lenore are futile, highlighting the depth of his sorrow.
+
+2. **Mystery and the Supernatural**:
+- The mysterious tapping at the door, the appearance of the raven, and the bird&#39;s cryptic response all contribute to a sense of the supernatural and the unknown.
+- The raven itself is a symbol of death and the macabre, adding to the overall gothic atmosphere.
+
+3. **Isolation and Despair**:
+- The speaker is isolated in his chamber, cut off from the outside world. The raven&#39;s presence and the speaker&#39;s inability to communicate with it amplify his sense of isolation and despair.
+- The poem explores the speaker&#39;s struggle to find meaning in his life, given the loss of his loved one.
+
+4. **The Power of Memory and Imagination**:
+- The speaker&#39;s mind wanders, reflecting on memories of Lenore and the raven. These mental wanderings are a form of escape, but they also highlight the speaker&#39;s inability to move past his grief.
+
+### Symbolism
+- **The Raven**: The raven is a powerful symbol of death, mystery, and the supernatural. Its presence in the poem is both literal and metaphorical, representing the speaker&#39;s inner turmoil and the external forces that shape his life.
+- **The Door and the Window**: The door and the window are significant as
 </code></pre></div>
 </div>
 </div>
 </div>
-<p>*This task can also be run from the command line with the command: <code>python -m tigerflow_ml.text.translate.local --input-dir ./input/ --input-ext .txt --output-dir ./output/ --output-ext .txt --model google/translategemma-4b-it --cache-dir /path/to/.hf/hub/ --target-lang de</code></p>
-<h3 id="local-translation-fetching-an-llm-from-huggingface-hub">Local translation fetching an LLM from HuggingFace Hub<a class="headerlink" href="#local-translation-fetching-an-llm-from-huggingface-hub" title="Permanent link">&para;</a></h3>
-<p>Uses <code>google/gemma-3-4b-it</code> (an image-text-to-text chat model) to translate a short Chinese text to English locally with network access.</p>
-<div class="tabbed-set tabbed-alternate" data-tabs="2:3"><input checked="checked" id="__tabbed_2_1" name="__tabbed_2" type="radio" /><input id="__tabbed_2_2" name="__tabbed_2" type="radio" /><input id="__tabbed_2_3" name="__tabbed_2" type="radio" /><div class="tabbed-labels"><label for="__tabbed_2_1">Config</label><label for="__tabbed_2_2">Input</label><label for="__tabbed_2_3">Output</label></div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Notice that the output is cut off. This happens when <code>--max-tokens</code> is reached. Check the logs for any warnings of truncation if using a small max token value.</p>
+</div>
+<h3 id="caption-images">Caption images<a class="headerlink" href="#caption-images" title="Permanent link">&para;</a></h3>
+<div class="tabbed-set tabbed-alternate" data-tabs="2:3"><input checked="checked" id="__tabbed_2_1" name="__tabbed_2" type="radio" /><input id="__tabbed_2_2" name="__tabbed_2" type="radio" /><input id="__tabbed_2_3" name="__tabbed_2" type="radio" /><div class="tabbed-labels"><label for="__tabbed_2_1">Config</label><label for="__tabbed_2_2">Input (.jpeg)</label><label for="__tabbed_2_3">Output (.txt)</label></div>
 <div class="tabbed-content">
 <div class="tabbed-block">
 <div class="highlight"><span class="filename">config.yaml</span><pre><span></span><code><span class="nt">tasks</span><span class="p">:</span>
-<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">translate</span>
-<span class="w">    </span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">local</span>
-<span class="w">    </span><span class="nt">module</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">tigerflow_ml.text.translate.local</span>
-<span class="w">    </span><span class="nt">input_ext</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">.txt</span>
-<span class="w">    </span><span class="nt">output_ext</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">.txt</span>
-<span class="w">    </span><span class="nt">params</span><span class="p">:</span>
-<span class="w">      </span><span class="nt">source-lang</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">zh</span>
-<span class="w">      </span><span class="nt">model</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">google/gemma-3-4b-it</span>
-<span class="w">      </span><span class="nt">allow-fetch</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">True</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">chat_completion</span>
+<span class="w">        </span><span class="l l-Scalar l-Scalar-Plain">kind</span><span class="p p-Indicator">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">slurm</span>
+<span class="w">        </span><span class="l l-Scalar l-Scalar-Plain">module</span><span class="p p-Indicator">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">tigerflow_ml.text.chat_completion.slurm</span>
+<span class="w">        </span><span class="l l-Scalar l-Scalar-Plain">input_ext</span><span class="p p-Indicator">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">.jpeg</span>
+<span class="w">        </span><span class="l l-Scalar l-Scalar-Plain">output_ext</span><span class="p p-Indicator">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">.txt</span>
+<span class="w">        </span><span class="l l-Scalar l-Scalar-Plain">max_workers</span><span class="p p-Indicator">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1</span>
+<span class="w">        </span><span class="l l-Scalar l-Scalar-Plain">worker_resources</span><span class="p p-Indicator">:</span>
+<span class="w">        </span><span class="nt">cpus</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1</span>
+<span class="w">        </span><span class="nt">gpus</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1</span>
+<span class="w">        </span><span class="nt">memory</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">10G</span>
+<span class="w">        </span><span class="nt">time</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">00:10:00</span>
+<span class="w">        </span><span class="nt">sbatch_options</span><span class="p">:</span>
+<span class="w">            </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;--constraint=gpu80&quot;</span>
+<span class="w">        </span><span class="nt">setup_commands</span><span class="p">:</span>
+<span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">source ~/github/tigerflow-ml/.venv/bin/activate</span>
+<span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">export TRANSFORMERS_OFFLINE=1</span>
+<span class="w">        </span><span class="nt">params</span><span class="p">:</span>
+<span class="w">        </span><span class="nt">model</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Qwen/Qwen2.5-VL-7B-Instruct</span>
+<span class="w">        </span><span class="nt">cache-dir</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">~/github/tigerflow-ml/.hf/hub/</span>
+<span class="w">        </span><span class="nt">prompt</span><span class="p">:</span><span class="w"> </span><span class="s">&#39;Caption</span><span class="nv"> </span><span class="s">this</span><span class="nv"> </span><span class="s">image&#39;</span>
+<span class="w">        </span><span class="nt">max-image-pixels</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">500</span>
+<span class="w">        </span><span class="nt">chat-kwargs</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="s">&quot;use_tqdm&quot;</span><span class="p p-Indicator">:</span><span class="nv">True</span><span class="p p-Indicator">}</span>
 </code></pre></div>
 </div>
 <div class="tabbed-block">
-<div class="highlight"><span class="filename">abstract.txt</span><pre><span></span><code>人工智能正在改变所有学科的学术研究。
-</code></pre></div>
+<p>A stock image of a hummingbird and flower.</p>
 </div>
-<div class="tabbed-block"></div>
-</div>
-</div>
-<div class="highlight"><span class="filename">abstract.txt</span><pre><span></span><code>Artificial intelligence is changing academic research in all disciplines.
-</code></pre></div>
-<h3 id="run-on-hpc-with-slurm">Run on HPC with Slurm<a class="headerlink" href="#run-on-hpc-with-slurm" title="Permanent link">&para;</a></h3>
-<p>For bulk translation of large document collections, use the Slurm variant to distribute work across compute nodes. This example uses a pre-downloaded <code>google/translategemma-27b-it</code> model stored in the cache directory <code>.hf</code>.</p>
-<div class="tabbed-set tabbed-alternate" data-tabs="3:1"><input checked="checked" id="__tabbed_3_1" name="__tabbed_3" type="radio" /><div class="tabbed-labels"><label for="__tabbed_3_1">Config</label></div>
-<div class="tabbed-content">
 <div class="tabbed-block">
-<div class="highlight"><span class="filename">config.yaml</span><pre><span></span><code><span class="nt">tasks</span><span class="p">:</span>
-<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">translate</span>
-<span class="w">    </span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">slurm</span>
-<span class="w">    </span><span class="nt">module</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">tigerflow_ml.text.translate.slurm</span>
-<span class="w">    </span><span class="nt">input_ext</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">.txt</span>
-<span class="w">    </span><span class="nt">output_ext</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">.txt</span>
-<span class="w">    </span><span class="nt">max_workers</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">4</span>
-<span class="w">    </span><span class="nt">worker_resources</span><span class="p">:</span>
-<span class="w">      </span><span class="nt">cpus</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2</span>
-<span class="w">      </span><span class="nt">gpus</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1</span>
-<span class="w">      </span><span class="nt">memory</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">16G</span>
-<span class="w">      </span><span class="nt">time</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">02:00:00</span>
-<span class="w">      </span><span class="nt">sbatch_options</span><span class="p">:</span>
-<span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;--constraint=gpu80&quot;</span>
-<span class="w">    </span><span class="nt">setup_commands</span><span class="p">:</span>
-<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">source .venv/bin/activate</span>
-<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">export TRANSFORMERS_OFFLINE=1</span>
-<span class="w">    </span><span class="nt">params</span><span class="p">:</span>
-<span class="w">      </span><span class="nt">model</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">google/translategemma-27b-it</span>
-<span class="w">      </span><span class="nt">cache-dir</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/path/to/.hf/hub/</span>
+<div class="highlight"><span class="filename">hummingbird.txt</span><pre><span></span><code>&quot;Nature&#39;s Symphony: A Hummingbird&#39;s Dance with a Lily&quot;
 </code></pre></div>
 </div>
 </div>
@@ -1030,7 +1020,7 @@ Er wird seit über einem Jahrhundert als Übung für das Tippen verwendet.
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href="../ocr/" class="md-footer__link md-footer__link--prev" aria-label="Previous: OCR">
+          <a href="../detect/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Object Detection">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
@@ -1040,27 +1030,11 @@ Er wird seit über einem Jahrhundert als Übung für das Tippen verwendet.
                 Previous
               </span>
               <div class="md-ellipsis">
-                OCR
+                Object Detection
               </div>
             </div>
           </a>
         
-        
-          
-          <a href="../transcribe/" class="md-footer__link md-footer__link--next" aria-label="Next: Transcription">
-            <div class="md-footer__title">
-              <span class="md-footer__direction">
-                Next
-              </span>
-              <div class="md-ellipsis">
-                Transcription
-              </div>
-            </div>
-            <div class="md-footer__button md-icon">
-              
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11z"/></svg>
-            </div>
-          </a>
         
       </nav>
     
