@@ -13,9 +13,15 @@ class TranslationError(Exception):
     pass
 
 
-class SkippedFileError(Exception):
-    """Raised when a file should be skipped
-    (e.g., empty, already in target language)."""
+class EmptyFileError(Exception):
+    """Raised when a input file is empty"""
+
+    pass
+
+
+class AlreadyInTargetLanguageError(Exception):
+    """Raised when input text is already in the
+    target language"""
 
     pass
 
