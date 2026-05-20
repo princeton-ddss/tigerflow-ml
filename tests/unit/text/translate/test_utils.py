@@ -7,7 +7,6 @@ from tigerflow_ml.text.translate.utils import (
     read_file_with_fallback,
 )
 
-
 class TestEncodingFallbackChain:
     def test_utf8_sig_is_first(self):
         assert ENCODING_FALLBACK_CHAIN[0] == "utf-8-sig"
