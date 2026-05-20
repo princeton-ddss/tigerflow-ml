@@ -9,7 +9,7 @@ def test_chat_completion_defaults():
     assert p.max_model_len is None
     assert p.max_image_pixels is None
     assert p.revision == "main"
-    assert p.cache_dir == ""
+    assert p.cache_dir is None
     assert p.temperature == 0.0
     assert p.seed == 42
     assert p.llm_kwargs == "{}"
