@@ -4,38 +4,41 @@ from tigerflow.tasks import LocalTask, SlurmTask
 
 
 def test_top_level_imports():
-    from tigerflow_ml import OCR, Detect, Transcribe, Translate
+    from tigerflow_ml import OCR, ChatCompletion, Detect, Transcribe, Translate
 
     assert OCR is not None
     assert Translate is not None
     assert Transcribe is not None
     assert Detect is not None
+    assert ChatCompletion is not None
 
 
 def test_local_variants_importable():
     from tigerflow_ml.audio.transcribe.local import Transcribe
     from tigerflow_ml.image.detect.local import Detect
+    from tigerflow_ml.text.chat_completion.local import ChatCompletion
     from tigerflow_ml.text.ocr.local import OCR
     from tigerflow_ml.text.translate.local import Translate
 
-    for cls in (OCR, Translate, Transcribe, Detect):
+    for cls in (OCR, Translate, Transcribe, Detect, ChatCompletion):
         assert issubclass(cls, LocalTask)
 
 
 def test_slurm_variants_importable():
     from tigerflow_ml.audio.transcribe.slurm import Transcribe
     from tigerflow_ml.image.detect.slurm import Detect
+    from tigerflow_ml.text.chat_completion.slurm import ChatCompletion
     from tigerflow_ml.text.ocr.slurm import OCR
     from tigerflow_ml.text.translate.slurm import Translate
 
-    for cls in (OCR, Translate, Transcribe, Detect):
+    for cls in (OCR, Translate, Transcribe, Detect, ChatCompletion):
         assert issubclass(cls, SlurmTask)
 
 
 def test_each_task_has_params():
-    from tigerflow_ml import OCR, Detect, Transcribe, Translate
+    from tigerflow_ml import OCR, ChatCompletion, Detect, Transcribe, Translate
 
-    for cls in (OCR, Translate, Transcribe, Detect):
+    for cls in (OCR, Translate, Transcribe, Detect, ChatCompletion):
         assert hasattr(cls, "Params")
         assert hasattr(cls, "setup")
         assert hasattr(cls, "run")
