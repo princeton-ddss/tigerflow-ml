@@ -43,9 +43,9 @@ class VLLMParams:
     ] = "main"
 
     cache_dir: Annotated[
-        str,
+        str | None,
         typer.Option(help="HuggingFace cache directory for model files"),
-    ] = ""
+    ] = None
 
     allow_fetch: Annotated[
         bool,
