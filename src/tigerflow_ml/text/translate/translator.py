@@ -127,17 +127,16 @@ class vllmTranslator:
         self, text: str, source_lang: str | None, target_lang: str
     ) -> list[dict[str, str]]:
 
-        if source_lang:
-            prompt = self.prompt_template.format(
-                source_lang=source_lang,
-                target_lang=target_lang,
-                text=text,
+        if source_lang is None and "{source_lang}" in self.prompt_template:
+            raise ValueError(
+                "source_lang is None but prompt template requires {source_lang}. "
+                "Switch to a template without {source_lang} before translating."
             )
-        else:
-            prompt = self.prompt_template.format(
-                target_lang=target_lang,
-                text=text,
-            )
+        prompt = self.prompt_template.format(
+            source_lang=source_lang,
+            target_lang=target_lang,
+            text=text,
+        )
 
         if self.system_message:
             return [

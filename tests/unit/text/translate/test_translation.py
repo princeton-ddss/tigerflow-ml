@@ -257,6 +257,29 @@ class TestVllmTranslator:
         messages = translator.model.chat.call_args[0][0]
         assert messages[0]["content"] == custom_msg
 
+    def test_build_message_raises_when_source_lang_none_and_template_requires_it(
+        self, mock_tokenizer
+    ):
+        """ValueError if source_lang is None but the template contains {source_lang}."""
+        translator = _make_vllm_translator(mock_tokenizer)
+        assert "{source_lang}" in translator.prompt_template
+
+        with pytest.raises(ValueError, match="source_lang is None"):
+            translator._build_message("hello", None, "en")
+
+    def test_build_message_ok_when_source_lang_none_and_template_does_not_require_it(
+        self, mock_tokenizer
+    ):
+        """No error when source_lang is None and the template omits {source_lang}."""
+        translator = _make_vllm_translator(mock_tokenizer)
+        translator.prompt_template = _FALLBACK_PROMPT
+
+        messages = translator._build_message("hello", None, "en")
+
+        user_content = messages[-1]["content"]
+        assert "hello" in user_content
+        assert "en" in user_content
+
 
 class TestGetModelType:
     def test_tgemma_variants(self):
