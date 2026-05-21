@@ -23,13 +23,14 @@ class Translator(Protocol):
 
     tokenizer: PreTrainedTokenizerBase
     max_chunk_tokens: int
+    prompt_template: str
 
-    def translate(self, text: str, source_lang: str, target_lang: str) -> str:
+    def translate(self, text: str, source_lang: str | None, target_lang: str) -> str:
         """Translate a single chunk of text."""
         ...
 
     def translate_batch(
-        self, texts: list[str], source_lang: str, target_lang: str
+        self, texts: list[str], source_lang: str | None, target_lang: str
     ) -> list[str]:
         """Translate multiple chunks."""
         ...
@@ -123,13 +124,20 @@ class vllmTranslator:
         logger.info("Model loaded using vLLM!")
 
     def _build_message(
-        self, text: str, source_lang: str, target_lang: str
+        self, text: str, source_lang: str | None, target_lang: str
     ) -> list[dict[str, str]]:
-        prompt = self.prompt_template.format(
-            source_lang=source_lang,
-            target_lang=target_lang,
-            text=text,
-        )
+
+        if source_lang:
+            prompt = self.prompt_template.format(
+                source_lang=source_lang,
+                target_lang=target_lang,
+                text=text,
+            )
+        else:
+            prompt = self.prompt_template.format(
+                target_lang=target_lang,
+                text=text,
+            )
 
         if self.system_message:
             return [
@@ -138,7 +146,7 @@ class vllmTranslator:
             ]
         return [{"role": "user", "content": prompt}]
 
-    def translate(self, text: str, source_lang: str, target_lang: str) -> str:
+    def translate(self, text: str, source_lang: str | None, target_lang: str) -> str:
         message = self._build_message(text, source_lang, target_lang)
         output = self.model.chat(
             cast(Any, message),
@@ -148,7 +156,7 @@ class vllmTranslator:
         return output[0].outputs[0].text
 
     def translate_batch(
-        self, texts: list[str], source_lang: str, target_lang: str
+        self, texts: list[str], source_lang: str | None, target_lang: str
     ) -> list[str]:
         messages = [self._build_message(t, source_lang, target_lang) for t in texts]
         outputs = self.model.chat(

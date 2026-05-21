@@ -7,7 +7,9 @@ import pytest
 
 from tigerflow_ml.text.translate._base import (
     _DEFAULT_PROMPT,
+    _FALLBACK_PROMPT,
     _translate_chunk_with_retry,
+    _translate_file,
     _translate_text,
 )
 from tigerflow_ml.text.translate.translator import (
@@ -354,3 +356,64 @@ class TestTgemmaTranslator:
 
         messages = translator.model.chat.call_args[0][0]
         assert all(m["role"] != "system" for m in messages)
+
+
+class TestTranslateFileFallback:
+    """_translate_file: language-detection fallback behaviour."""
+
+    @pytest.fixture
+    def translator(self, mock_tokenizer):
+        t = MagicMock()
+        t.tokenizer = mock_tokenizer
+        t.max_chunk_tokens = 100
+        t.prompt_template = _DEFAULT_PROMPT
+        t.translate.return_value = "translated content"
+        return t
+
+    def test_fallback_prompt_used_during_translation(self, translator, tmp_path):
+        input_file = tmp_path / "input.txt"
+        input_file.write_text("xyz")
+        captured = []
+
+        def capture(*args, **kwargs):
+            captured.append(translator.prompt_template)
+            return "translated content"
+
+        translator.translate.side_effect = capture
+
+        with patch(
+            "tigerflow_ml.text.translate._base.detect_language", return_value=None
+        ):
+            _translate_file(translator, input_file, tmp_path / "output.txt")
+
+        assert captured[0] == _FALLBACK_PROMPT
+
+        assert translator.prompt_template == _DEFAULT_PROMPT  # prompt restored
+
+    def test_custom_prompt_raises_on_detection_failure(self, translator, tmp_path):
+        translator.prompt_template = "translate this: {text}"
+        input_file = tmp_path / "input.txt"
+        input_file.write_text("xyz")
+
+        with (
+            patch(
+                "tigerflow_ml.text.translate._base.detect_language", return_value=None
+            ),
+            pytest.raises(TranslationError, match="Could not detect language"),
+        ):
+            _translate_file(translator, input_file, tmp_path / "output.txt")
+
+    def test_prompt_restored_even_if_translation_fails(self, translator, tmp_path):
+        input_file = tmp_path / "input.txt"
+        input_file.write_text("xyz")
+        translator.translate.side_effect = TranslationError("model error")
+
+        with (
+            patch(
+                "tigerflow_ml.text.translate._base.detect_language", return_value=None
+            ),
+            pytest.raises(TranslationError),
+        ):
+            _translate_file(translator, input_file, tmp_path / "output.txt")
+
+        assert translator.prompt_template == _DEFAULT_PROMPT

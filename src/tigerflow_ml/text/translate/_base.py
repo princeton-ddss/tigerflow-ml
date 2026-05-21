@@ -50,6 +50,11 @@ _DEFAULT_PROMPT = (
     "Output only the translated text, nothing else. Text: {text}"
 )
 
+_FALLBACK_PROMPT = (
+    "Translate the following text to {target_lang}. "
+    "Output only the translated text, nothing else. Text: {text}"
+)
+
 
 class _TranslateBase:
     """Translate documents using Hugging Face models."""
@@ -274,15 +279,25 @@ def _translate_file(
 
     # Detect language
     detected_lang = source_lang
+    original_prompt = translator.prompt_template
     if detected_lang is None:
         detected_lang = detect_language(content)
         if detected_lang is None:
-            raise TranslationError(
-                "Could not detect language (text may be too short or mixed)"
+            if translator.prompt_template == _DEFAULT_PROMPT:
+                logger.warning(
+                    "Could not detect language (text may be too short or mixed)."
+                    f" Attempting to use fallback prompt: {_FALLBACK_PROMPT}"
+                )
+                translator.prompt_template = _FALLBACK_PROMPT
+            else:
+                raise TranslationError(
+                    "Could not detect language (text may be too short or mixed)"
+                )
+        else:
+            on_progress(
+                f"  Detected language: {get_language_name(detected_lang)} "
+                f"({detected_lang})"
             )
-        on_progress(
-            f"  Detected language: {get_language_name(detected_lang)} ({detected_lang})"
-        )
     else:
         on_progress(
             f"  Source language: {get_language_name(detected_lang)} ({detected_lang})"
@@ -293,7 +308,7 @@ def _translate_file(
             f"Already in {get_language_name(target_lang)}"
         )
 
-    if detected_lang not in LANGUAGES:
+    if detected_lang and detected_lang not in LANGUAGES:
         on_progress(
             f"  Note: '{detected_lang}' not in common language list,"
             " attempting anyway..."
@@ -303,7 +318,12 @@ def _translate_file(
     on_progress(
         f"  Translating to: {get_language_name(target_lang)} ({target_lang})..."
     )
-    translated = _translate_text(content, translator, detected_lang, target_lang)
+
+    try:
+        translated = _translate_text(content, translator, detected_lang, target_lang)
+    finally:
+        if translator.prompt_template != original_prompt:  # used _FALLBACK_PROMPT
+            translator.prompt_template = original_prompt
 
     # Sanity check
     if len(translated) > 100 and detected_lang != "en":
@@ -325,7 +345,7 @@ def _translate_file(
 def _translate_text(
     text: str,
     translator: Translator,
-    source_lang: str,
+    source_lang: str | None,
     target_lang: str = "en",
     max_retries: int = 3,
 ) -> str:
@@ -369,7 +389,7 @@ def _translate_text(
 def _translate_chunk_with_retry(
     text: str,
     translator: Translator,
-    source_lang: str,
+    source_lang: str | None,
     target_lang: str,
     tokenizer: PreTrainedTokenizerBase,
     max_tokens: int,
