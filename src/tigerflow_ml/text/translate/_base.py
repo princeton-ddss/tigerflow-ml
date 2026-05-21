@@ -24,6 +24,9 @@ from tigerflow.utils import SetupContext
 
 from tigerflow_ml.params import VLLMParams
 
+if TYPE_CHECKING:
+    from transformers import PreTrainedTokenizerBase
+
 from .chunking import (
     DEFAULT_CHUNK_SIZE,
     MAX_CHUNK_TOKENS,

@@ -277,6 +277,7 @@ def build_translator(
         user_sampling_kwargs=user_sampling_kwargs,
         user_chat_kwargs=user_chat_kwargs,
     )
+
     set_seed(42)
 
     if backend == "tgemma":
