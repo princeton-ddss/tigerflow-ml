@@ -12,14 +12,18 @@ python -m tigerflow_ml.text.translate.slurm --input-dir ../tgemma/tests/input/
 --setup-command "source .venv/bin/activate" --model google/translategemma-27b-it
 """
 
+from __future__ import annotations
+
 from collections.abc import Callable
 from pathlib import Path
-from typing import Annotated, Literal, cast
+from typing import TYPE_CHECKING, Annotated, Literal
 
 import typer
 from tigerflow.logconfig import logger
 from tigerflow.utils import SetupContext
-from transformers import AutoConfig, AutoTokenizer, PreTrainedTokenizerBase
+
+if TYPE_CHECKING:
+    from transformers import PreTrainedTokenizerBase
 
 from tigerflow_ml.params import HFParams
 
@@ -116,6 +120,7 @@ class _TranslateBase:
 
     @staticmethod
     def setup(context: SetupContext):
+        from transformers import AutoConfig
 
         try:
             config = AutoConfig.from_pretrained(
@@ -203,20 +208,13 @@ def _load_tokenizer(
     model_name: str, cache_dir: str | None = None, revision: str | None = None
 ) -> PreTrainedTokenizerBase:
     """
-    Load a HuggingFace tokenizer from local cache.
+    Load a HuggingFace tokenizer from local cache"""
+    from typing import cast
 
-    Args:
-        model_name: HuggingFace model name.
-        cache_dir: Optional cache directory override.
+    from transformers import AutoTokenizer
 
-    Returns:
-        Loaded tokenizer.
-
-    Raises:
-        OSError: If tokenizer not found in cache.
-    """
     return cast(
-        PreTrainedTokenizerBase,
+        "PreTrainedTokenizerBase",
         AutoTokenizer.from_pretrained(
             model_name, local_files_only=True, cache_dir=cache_dir, revision=revision
         ),
