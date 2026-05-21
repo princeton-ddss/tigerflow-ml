@@ -12,16 +12,20 @@ python -m tigerflow_ml.text.translate.slurm --input-dir ../tgemma/tests/input/
 --setup-command "source .venv/bin/activate" --model google/translategemma-27b-it
 """
 
+from __future__ import annotations
+
 from collections.abc import Callable
 from pathlib import Path
-from typing import Annotated, Literal, cast
+from typing import TYPE_CHECKING, Annotated, Literal, cast
 
 import typer
 from tigerflow.logconfig import logger
 from tigerflow.utils import SetupContext
-from transformers import AutoConfig, AutoTokenizer, PreTrainedTokenizerBase
 
 from tigerflow_ml.params import VLLMParams
+
+if TYPE_CHECKING:
+    from transformers import PreTrainedTokenizerBase
 
 from .chunking import (
     DEFAULT_CHUNK_SIZE,
@@ -102,6 +106,7 @@ class _TranslateBase:
 
     @staticmethod
     def setup(context: SetupContext):
+        from transformers import AutoConfig
 
         try:
             config = AutoConfig.from_pretrained(
@@ -204,6 +209,8 @@ def _load_tokenizer(
     Raises:
         OSError: If tokenizer not found in cache.
     """
+    from transformers import AutoTokenizer, PreTrainedTokenizerBase
+
     return cast(
         PreTrainedTokenizerBase,
         AutoTokenizer.from_pretrained(

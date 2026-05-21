@@ -5,13 +5,15 @@ Translators handle single-chunk translation only. Chunking, retry logic,
 and orchestration are handled by the orchestration module.
 """
 
-import re
-from typing import Any, Protocol, cast
+from __future__ import annotations
 
-import torch
+import re
+from typing import TYPE_CHECKING, Any, Protocol, cast
+
 from tigerflow.logconfig import logger
-from transformers import PretrainedConfig, PreTrainedTokenizerBase, set_seed
-from vllm import LLM, SamplingParams
+
+if TYPE_CHECKING:
+    from transformers import PretrainedConfig, PreTrainedTokenizerBase
 
 from .chunking import DEFAULT_CHUNK_SIZE
 
@@ -52,7 +54,9 @@ class vllmTranslator:
         user_sampling_kwargs: dict = {},
         user_chat_kwargs: dict = {},
     ):
+        import torch
         from huggingface_hub import snapshot_download
+        from vllm import LLM, SamplingParams
 
         if cache_dir is not None:
             resolved_model = snapshot_download(
@@ -271,6 +275,8 @@ def build_translator(
         user_sampling_kwargs=user_sampling_kwargs,
         user_chat_kwargs=user_chat_kwargs,
     )
+    from transformers import set_seed
+
     set_seed(42)
 
     if backend == "tgemma":
