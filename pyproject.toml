@@ -35,7 +35,7 @@ dependencies = [
     "langdetect>=1.0.9",
     "protobuf",
     "accelerate>=1.13.0",
-    "vllm>=0.19.1",
+    "vllm>=0.21.0",
 ]
 
 [project.urls]
@@ -95,3 +95,6 @@ testpaths = ["tests"]
 markers = [
     "dependency: marks a test as dependent on another (pytest-dependency)",
 ]
+
+[tool.uv]
+no-build-package = ["vllm"]
