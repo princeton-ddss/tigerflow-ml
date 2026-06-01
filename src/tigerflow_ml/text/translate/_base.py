@@ -129,6 +129,12 @@ class _TranslateBase:
                 '--prompt-template needs to contain "{text}".'
                 " This is a placeholder for input file contents."
             )
+        if context.source_lang == context.target_lang:
+            raise ValueError(
+                f"--source_lang ({context.source_lang}) is the same as "
+                f"--target_lang ({context.target_lang}). No translation "
+                "required."
+            )
 
         from .translator import build_translator
 
@@ -297,41 +303,56 @@ def _translate_file(
     # Detect language
     detected_lang = source_lang
     original_prompt = translator.prompt_template
-    if detected_lang is None:
-        detected_lang = detect_language(content)
+    if "{source_lang}" in translator.prompt_template:
         if detected_lang is None:
-            if use_fallback_prompt:
-                logger.warning(
-                    "  Could not detect language (text may be too short or mixed)."
-                    f" Attempting to use fallback prompt: {_FALLBACK_PROMPT}"
-                )
-                translator.prompt_template = _FALLBACK_PROMPT
+            detected_lang = detect_language(content)
+            if detected_lang is None:
+                if use_fallback_prompt:
+                    logger.warning(
+                        "  Could not detect language (text may be too short or mixed)."
+                        f" Attempting to use fallback prompt: {_FALLBACK_PROMPT}"
+                    )
+                    translator.prompt_template = _FALLBACK_PROMPT
+                else:
+                    raise TranslationError(
+                        "Could not detect language (text may be too short or mixed). "
+                        "Explicitly set --source-lang to skip language detection or run"
+                        " with --use-fallback-prompt"
+                    )
             else:
-                raise TranslationError(
-                    "Could not detect language (text may be too short or mixed). "
-                    "Explicitly set --source-lang to skip language detection or run "
-                    "with --use-fallback-prompt"
+                on_progress(
+                    f"  Detected language: {get_language_name(detected_lang)} "
+                    f"({detected_lang})"
                 )
         else:
             on_progress(
-                f"  Detected language: {get_language_name(detected_lang)} "
+                f"  Source language: {get_language_name(detected_lang)} "
                 f"({detected_lang})"
             )
-    else:
-        on_progress(
-            f"  Source language: {get_language_name(detected_lang)} ({detected_lang})"
-        )
 
-    if detected_lang == target_lang:
-        raise AlreadyInTargetLanguageError(
-            f"Already in {get_language_name(target_lang)}"
-        )
+        if detected_lang == target_lang:
+            raise AlreadyInTargetLanguageError(
+                f"Already in {get_language_name(target_lang)}"
+            )
 
-    if detected_lang and detected_lang not in LANGUAGES:
-        on_progress(
-            f"  Note: '{detected_lang}' not in common language list,"
-            " attempting anyway..."
-        )
+        if detected_lang and detected_lang not in LANGUAGES:
+            on_progress(
+                f"  Note: '{detected_lang}' not in common language list,"
+                " attempting anyway..."
+            )
+    else:  # prompt does not contain source_lang; skip lang detection
+        if source_lang:
+            logger.warning(
+                "  --prompt-template does not contain {source_lang} "
+                "but --source-lang was set. Attempting anyway using provided "
+                "prompt..."
+            )
+        else:
+            logger.warning(
+                "  --prompt-template does not contain {source_lang}. "
+                "Skipping automatic language detection and attempting translation "
+                "using provided prompt..."
+            )
 
     # Translate
     on_progress(
