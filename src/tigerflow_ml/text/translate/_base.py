@@ -122,6 +122,12 @@ class _TranslateBase:
     def setup(context: SetupContext):
         from transformers import AutoConfig
 
+        if "{text}" not in context.prompt_template:
+            raise ValueError(
+                '--prompt-template needs to contain "{text}".'
+                " This is a placeholder for input file contents."
+            )
+
         try:
             config = AutoConfig.from_pretrained(
                 context.model,
