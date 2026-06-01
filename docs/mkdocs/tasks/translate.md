@@ -142,7 +142,7 @@ For bulk translation of large document collections, use the Slurm variant to dis
             - "--constraint=gpu80"
         setup_commands:
           - source .venv/bin/activate
-          - export TRANSFORMERS_OFFLINE=1
+          - export VLLM_USE_FLASHINFER_SAMPLER=0
         params:
           model: google/translategemma-27b-it
           cache-dir: /path/to/.hf/hub/

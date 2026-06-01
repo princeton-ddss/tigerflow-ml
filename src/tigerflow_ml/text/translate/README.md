@@ -43,7 +43,7 @@ python -m tigerflow_ml.text.translate.slurm --help
 To run this task directly, run:
 
 ```
-python -m tigerflow_ml.text.translate.slurm --input-dir path/to/inputs/ --input-ext .txt --output-dir path/to/outputs/ --output-ext .txt --max-workers 1 --cpus 1 --memory 10G --time 24:00:00 --gpus 1 --sbatch-option "--constraint=gpu80" --setup-command "export HF_HOME=./.hf" --setup-command "source .venv/bin/activate" --setup-command "export TRANSFORMERS_OFFLINE=1" --model google/translategemma-27b-it
+python -m tigerflow_ml.text.translate.slurm --input-dir path/to/inputs/ --input-ext .txt --output-dir path/to/outputs/ --output-ext .txt --max-workers 1 --cpus 1 --memory 10G --time 24:00:00 --gpus 1 --sbatch-option "--constraint=gpu80" --setup-command "export HF_HOME=./.hf" --setup-command "source .venv/bin/activate" --setup-command "export VLLM_USE_FLASHINFER_SAMPLER=0" --model google/translategemma-27b-it
 ```
 
 Here's a breakdown of what each of these arguments does:
@@ -100,7 +100,7 @@ tasks:
         - "--constraint=gpu80"
     setup_commands:
       - source .venv/bin/activate
-      - export TRANSFORMERS_OFFLINE=1
+      - export VLLM_USE_FLASHINFER_SAMPLER=0
       - export HF_HOME=./.hf
     params:
       model: google/translategemma-27b-it

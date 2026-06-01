@@ -10,7 +10,7 @@ For video input, frames are sampled at a configurable rate and processed in batc
 
 import json
 from pathlib import Path
-from typing import TYPE_CHECKING, Annotated
+from typing import TYPE_CHECKING, Annotated, TypedDict
 
 if TYPE_CHECKING:
     from PIL import Image as PILImage
@@ -24,6 +24,12 @@ from tigerflow_ml.params import HFParams
 _ZERO_SHOT_MODEL_TYPES = {"grounding-dino", "owlv2", "owlvit"}
 
 _VIDEO_EXTENSIONS = {".mp4", ".avi", ".mov", ".mkv", ".webm", ".flv", ".wmv"}
+
+
+class _FramedOutput(TypedDict):
+    frame: int
+    timestamp: float
+    detections: list[dict]
 
 
 class _DetectBase:
@@ -161,14 +167,14 @@ def _run_image(context: SetupContext, input_file: Path) -> list[dict]:
     return detections
 
 
-def _run_video(context: SetupContext, input_file: Path) -> list[dict]:
+def _run_video(context: SetupContext, input_file: Path) -> list[_FramedOutput]:
     """Run detection on video frames sampled at the configured FPS."""
     frames = _extract_frames(input_file, context.sample_fps)
     logger.info(
         "Extracted {} frame(s) at {} fps", len(frames), context.sample_fps or "all"
     )
 
-    output = []
+    output: list[_FramedOutput] = []
     for i in range(0, len(frames), context.batch_size):
         batch = frames[i : i + context.batch_size]
         for frame_num, timestamp, image in batch:
