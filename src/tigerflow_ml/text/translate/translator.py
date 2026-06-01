@@ -134,7 +134,7 @@ class vllmTranslator:
         if source_lang is None and "{source_lang}" in self.prompt_template:
             raise ValueError(
                 "source_lang is None but prompt template requires {source_lang}. "
-                "Switch to a template without {source_lang} before translating."
+                "Use a prompt without {source_lang} or set --source-lang."
             )
         prompt = self.prompt_template.format(
             source_lang=source_lang,
