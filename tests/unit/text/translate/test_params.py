@@ -19,3 +19,4 @@ def test_translate_defaults():
     assert p.llm_kwargs == "{}"
     assert p.sampling_kwargs == "{}"
     assert p.chat_kwargs == "{}"
+    assert p.use_fallback_prompt is False
