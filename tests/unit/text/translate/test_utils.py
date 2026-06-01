@@ -4,7 +4,8 @@ import pytest
 
 from tigerflow_ml.text.translate.utils import (
     ENCODING_FALLBACK_CHAIN,
-    SkippedFileError,
+    AlreadyInTargetLanguageError,
+    EmptyFileError,
     TranslationError,
     read_file_with_fallback,
 )
@@ -15,9 +16,13 @@ class TestExceptions:
         with pytest.raises(TranslationError):
             raise TranslationError("test error")
 
-    def test_skipped_file_error_is_exception(self):
-        with pytest.raises(SkippedFileError):
-            raise SkippedFileError("test skip")
+    def test_empty_file_error_is_exception(self):
+        with pytest.raises(EmptyFileError):
+            raise EmptyFileError("test file empty")
+
+    def test_already_in_taget_lang_error_is_exception(self):
+        with pytest.raises(AlreadyInTargetLanguageError):
+            raise AlreadyInTargetLanguageError("test already translated")
 
     def test_exception_messages(self):
         try:
