@@ -57,7 +57,7 @@ Any HuggingFace model that is compatible with vLLM's `LLM.chat()`.
                     - "--constraint=gpu80"
             setup_commands:
                 - source ~/github/tigerflow-ml/.venv/bin/activate
-                - export TRANSFORMERS_OFFLINE=1
+                - export VLLM_USE_FLASHINFER_SAMPLER=0
             params:
                 model: Qwen/Qwen2.5-VL-7B-Instruct
                 cache-dir: ~/github/tigerflow-ml/.hf/hub/
@@ -127,7 +127,7 @@ Any HuggingFace model that is compatible with vLLM's `LLM.chat()`.
                 - "--constraint=gpu80"
             setup_commands:
             - source ~/github/tigerflow-ml/.venv/bin/activate
-            - export TRANSFORMERS_OFFLINE=1
+            - export VLLM_USE_FLASHINFER_SAMPLER=0
             params:
             model: Qwen/Qwen2.5-VL-7B-Instruct
             cache-dir: ~/github/tigerflow-ml/.hf/hub/
