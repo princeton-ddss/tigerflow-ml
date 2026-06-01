@@ -110,6 +110,15 @@ class _TranslateBase:
             typer.Option(hidden=True),
         ] = int(DEFAULT_CHUNK_SIZE * 2.5)  # unused
 
+        use_fallback_prompt: Annotated[
+            bool,
+            typer.Option(
+                help="Use a fallback prompt for files where language detection fails. "
+                '("Translate the following text to {target_lang}. '
+                'Output only the translated text, nothing else. Text: {text}")'
+            ),
+        ] = False
+
     @staticmethod
     def setup(context: SetupContext):
         from transformers import AutoConfig
@@ -176,6 +185,7 @@ class _TranslateBase:
             context.source_lang,
             context.target_lang,
             logger.info,
+            use_fallback_prompt=context.use_fallback_prompt,
         )
 
         logger.info("Translation complete!")
@@ -250,6 +260,7 @@ def _translate_file(
     source_lang: str | None = None,
     target_lang: str = "en",
     on_progress: Callable[..., None] = print,
+    use_fallback_prompt: bool = False,
 ) -> str:
     """
     Translate a single file.
@@ -282,15 +293,17 @@ def _translate_file(
     if detected_lang is None:
         detected_lang = detect_language(content)
         if detected_lang is None:
-            if translator.prompt_template == _DEFAULT_PROMPT:
+            if use_fallback_prompt:
                 logger.warning(
-                    "Could not detect language (text may be too short or mixed)."
+                    "  Could not detect language (text may be too short or mixed)."
                     f" Attempting to use fallback prompt: {_FALLBACK_PROMPT}"
                 )
                 translator.prompt_template = _FALLBACK_PROMPT
             else:
                 raise TranslationError(
-                    "Could not detect language (text may be too short or mixed)"
+                    "Could not detect language (text may be too short or mixed). "
+                    "Explicitly set --source-lang to skip language detection or run "
+                    "with --use-fallback-prompt"
                 )
         else:
             on_progress(
