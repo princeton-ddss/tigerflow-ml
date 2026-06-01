@@ -902,7 +902,7 @@
 <span class="w">                </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;--constraint=gpu80&quot;</span>
 <span class="w">      </span><span class="w w-Error">  </span><span class="nt">setup_commands</span><span class="p">:</span>
 <span class="w">            </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">source ~/github/tigerflow-ml/.venv/bin/activate</span>
-<span class="w">            </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">export TRANSFORMERS_OFFLINE=1</span>
+<span class="w">            </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">export VLLM_USE_FLASHINFER_SAMPLER=0</span>
 <span class="w">        </span><span class="nt">params</span><span class="p">:</span>
 <span class="w">            </span><span class="nt">model</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Qwen/Qwen2.5-VL-7B-Instruct</span>
 <span class="w">            </span><span class="nt">cache-dir</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">~/github/tigerflow-ml/.hf/hub/</span>
@@ -967,7 +967,7 @@
 <span class="w">            </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;--constraint=gpu80&quot;</span>
 <span class="w">        </span><span class="nt">setup_commands</span><span class="p">:</span>
 <span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">source ~/github/tigerflow-ml/.venv/bin/activate</span>
-<span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">export TRANSFORMERS_OFFLINE=1</span>
+<span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">export VLLM_USE_FLASHINFER_SAMPLER=0</span>
 <span class="w">        </span><span class="nt">params</span><span class="p">:</span>
 <span class="w">        </span><span class="nt">model</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Qwen/Qwen2.5-VL-7B-Instruct</span>
 <span class="w">        </span><span class="nt">cache-dir</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">~/github/tigerflow-ml/.hf/hub/</span>
