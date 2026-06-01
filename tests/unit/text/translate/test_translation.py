@@ -333,6 +333,19 @@ class TestVllmTranslator:
         assert "hello" in user_content
         assert "en" in user_content
 
+    def test_build_message_ok_when_source_lang_provided_but_template_does_not_use_it(
+        self, mock_tokenizer
+    ):
+        translator = _make_vllm_translator(mock_tokenizer)
+        translator.prompt_template = _FALLBACK_PROMPT
+
+        messages = translator._build_message("hello", "de", "en")
+
+        user_content = messages[-1]["content"]
+        assert "hello" in user_content
+        assert "en" in user_content
+        assert "de" not in user_content
+
 
 class TestGetModelType:
     def test_tgemma_variants(self):
@@ -510,4 +523,13 @@ class TestSetupValidation:
 
         context = SimpleNamespace(prompt_template="Translate to {target_lang}.")
         with pytest.raises(ValueError, match=r"\{text\}"):
+            _TranslateBase.setup(context)
+
+    def test_setup_raises_if_source_lang_equals_target_lang(self):
+        from types import SimpleNamespace
+
+        context = SimpleNamespace(
+            source_lang="en", target_lang="en", prompt_template=_DEFAULT_PROMPT
+        )
+        with pytest.raises(ValueError, match="No translation required"):
             _TranslateBase.setup(context)
