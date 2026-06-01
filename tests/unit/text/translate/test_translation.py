@@ -460,14 +460,18 @@ class TestTranslateFileFallback:
         with patch(
             "tigerflow_ml.text.translate._base.detect_language", return_value=None
         ):
-            _translate_file(translator, input_file, tmp_path / "output.txt")
+            _translate_file(
+                translator,
+                input_file,
+                tmp_path / "output.txt",
+                use_fallback_prompt=True,
+            )
 
         assert captured[0] == _FALLBACK_PROMPT
-
         assert translator.prompt_template == _DEFAULT_PROMPT  # prompt restored
 
-    def test_custom_prompt_raises_on_detection_failure(self, translator, tmp_path):
-        translator.prompt_template = "translate this: {text}"
+    def test_raises_on_detection_failure_by_default(self, translator, tmp_path):
+        """Default (use_fallback_prompt=False): detection failure raises with hint."""
         input_file = tmp_path / "input.txt"
         input_file.write_text("xyz")
 
@@ -475,7 +479,7 @@ class TestTranslateFileFallback:
             patch(
                 "tigerflow_ml.text.translate._base.detect_language", return_value=None
             ),
-            pytest.raises(TranslationError, match="Could not detect language"),
+            pytest.raises(TranslationError, match="--use-fallback-prompt"),
         ):
             _translate_file(translator, input_file, tmp_path / "output.txt")
 
@@ -490,6 +494,20 @@ class TestTranslateFileFallback:
             ),
             pytest.raises(TranslationError),
         ):
-            _translate_file(translator, input_file, tmp_path / "output.txt")
+            _translate_file(
+                translator,
+                input_file,
+                tmp_path / "output.txt",
+                use_fallback_prompt=True,
+            )
 
         assert translator.prompt_template == _DEFAULT_PROMPT
+
+
+class TestSetupValidation:
+    def test_setup_raises_if_prompt_template_lacks_text_placeholder(self):
+        from types import SimpleNamespace
+
+        context = SimpleNamespace(prompt_template="Translate to {target_lang}.")
+        with pytest.raises(ValueError, match=r"\{text\}"):
+            _TranslateBase.setup(context)
