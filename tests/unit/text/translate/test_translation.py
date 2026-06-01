@@ -11,7 +11,7 @@ from tigerflow_ml.text.translate._base import (
     _translate_text,
 )
 from tigerflow_ml.text.translate.translator import (
-    GemmaTranslator,
+    TgemmaTranslator,
     build_translator,
     get_model_type,
     vllmTranslator,
@@ -40,7 +40,6 @@ def mock_translator(mock_tokenizer):
     translator = MagicMock()
     translator.tokenizer = mock_tokenizer
     translator.max_chunk_tokens = 10
-    translator.batch_size = 4
     return translator
 
 
@@ -162,16 +161,6 @@ class TestTranslateText:
         mock_translator.translate.assert_not_called()
 
 
-def _make_tgemma_hf_translator(mock_tokenizer, max_chunk_tokens=5, batch_size=4):
-    """Instantiate HuggingFaceTranslator without loading a model."""
-    translator = object.__new__(GemmaTranslator)
-    translator.tokenizer = mock_tokenizer
-    translator.max_chunk_tokens = max_chunk_tokens
-    translator.batch_size = batch_size
-    translator.pipe = MagicMock()
-    return translator
-
-
 def _make_vllm_translator(
     mock_tokenizer, max_chunk_tokens=5, system_message="You are an expert linguist"
 ):
@@ -180,6 +169,7 @@ def _make_vllm_translator(
     translator.tokenizer = mock_tokenizer
     translator.max_chunk_tokens = max_chunk_tokens
     translator.sampling_params = MagicMock()
+    translator.extra_chat_kwargs = {"use_tqdm": False}
     translator.prompt_template = _DEFAULT_PROMPT
     translator.system_message = system_message
     translator.model = MagicMock()
@@ -191,93 +181,6 @@ def _vllm_output(text):
     out = MagicMock()
     out.outputs[0].text = text
     return out
-
-
-def _pipe_single_output(text):
-    """HF pipeline return value for a single-message call: one-item list of dicts."""
-    return [
-        {
-            "generated_text": [
-                {"role": "user", "content": ""},
-                {"role": "assistant", "content": text},
-            ]
-        }
-    ]
-
-
-def _pipe_batch_output(*texts):
-    """HF pipeline return value for a batch call: list of N wrapped outputs."""
-    return [
-        [
-            {
-                "generated_text": [
-                    {"role": "user", "content": ""},
-                    {"role": "assistant", "content": t},
-                ]
-            }
-        ]
-        for t in texts
-    ]
-
-
-class TestTranslateBatchRetryTgemmaBackend:
-    def test_only_truncated_chunk_is_retried(self, mock_tokenizer):
-        """Truncated chunk triggers retry; other chunks pass through unmodified."""
-        translator = _make_tgemma_hf_translator(mock_tokenizer, max_chunk_tokens=5)
-
-        # Batch call returns chunk 2 as truncated (6 words ≥ max_chunk_tokens=5)
-        truncated_output = "a b c d e f"  # 6 tokens → is_truncated() == True
-        translator.pipe.side_effect = [
-            _pipe_batch_output(
-                "translated one", truncated_output, "translated three"
-            ),  # batch
-            _pipe_single_output("retried two a"),  # sub-chunk 1 of chunk 2
-            _pipe_single_output("retried two b"),  # sub-chunk 2 of chunk 2
-        ]
-
-        # chunk 2 is "Word one two.\n\nWord three four." (6 tokens); 60% split → max=3
-        # → splits cleanly into two 3-token paragraphs for the retry
-        results = translator.translate_batch(
-            ["chunk one", "Word one two.\n\nWord three four.", "chunk three"],
-            "de",
-            "en",
-        )
-
-        assert results[0] == "translated one"
-        assert results[1] == "retried two a\n\nretried two b"
-        assert results[2] == "translated three"
-        assert translator.pipe.call_count == 3  # 1 batch + 2 sub-chunk retries
-
-    def test_no_retry_when_no_truncation(self, mock_tokenizer):
-        """All chunks fit → pipe called once, no retry calls."""
-        translator = _make_tgemma_hf_translator(mock_tokenizer, max_chunk_tokens=5)
-        translator.pipe.return_value = _pipe_batch_output("one", "two")
-
-        results = translator.translate_batch(["chunk one", "chunk two"], "de", "en")
-
-        assert results == ["one", "two"]
-        assert translator.pipe.call_count == 1
-
-    def test_retry_raises_after_max_depth(self, mock_tokenizer):
-        """Persistent truncation in retry sub-chunks raises after MAX_DEPTH attempts."""
-        translator = _make_tgemma_hf_translator(mock_tokenizer, max_chunk_tokens=5)
-
-        # Every pipe call returns a truncated result
-        always_truncated = "a b c d e f"  # 6 tokens ≥ 5
-        translator.pipe.side_effect = [
-            _pipe_batch_output(always_truncated),  # initial batch call
-            _pipe_single_output(always_truncated),  # retry depth 1, sub-chunk 1
-            _pipe_single_output(always_truncated),  # retry depth 1, sub-chunk 2
-            _pipe_single_output(always_truncated),  # retry depth 2, sub-chunk 1
-            _pipe_single_output(always_truncated),  # retry depth 2, sub-chunk 2
-            _pipe_single_output(always_truncated),  # retry depth 2, sub-chunk 1
-            _pipe_single_output(always_truncated),  # retry depth 2, sub-chunk 2
-        ]
-
-        with pytest.raises(TranslationError, match="retry"):
-            translator.translate_batch(
-                ["Word one two.\n\nWord three four."], "de", "en"
-            )
 
 
 class TestVllmTranslator:
@@ -367,18 +270,16 @@ class TestGetModelType:
 
 class TestBuildTranslatorFactory:
     def test_tgemma_backend_returns_gemma_translator(self, mock_tokenizer):
-        with patch.object(GemmaTranslator, "_load_pipeline", return_value=MagicMock()):
+        with patch.object(vllmTranslator, "__init__", return_value=None):
             translator = build_translator(
                 "any/model",
                 tokenizer=mock_tokenizer,
                 max_chunk_tokens=100,
-                batch_size=1,
                 fetch=False,
                 config=SimpleNamespace(),
                 backend="tgemma",
-                vram_fraction=0.9,
             )
-        assert isinstance(translator, GemmaTranslator)
+        assert isinstance(translator, TgemmaTranslator)
 
     def test_chat_backend_returns_vllm_translator(self, mock_tokenizer):
         with patch.object(vllmTranslator, "__init__", return_value=None):
@@ -386,27 +287,23 @@ class TestBuildTranslatorFactory:
                 "any/model",
                 tokenizer=mock_tokenizer,
                 max_chunk_tokens=100,
-                batch_size=1,
                 fetch=False,
                 config=SimpleNamespace(),
                 backend="chat",
-                vram_fraction=0.9,
             )
         assert isinstance(translator, vllmTranslator)
 
     def test_auto_tgemma_name_returns_gemma_translator(self, mock_tokenizer):
-        with patch.object(GemmaTranslator, "_load_pipeline", return_value=MagicMock()):
+        with patch.object(vllmTranslator, "__init__", return_value=None):
             translator = build_translator(
                 "google/translategemma-27b-it",
                 tokenizer=mock_tokenizer,
                 max_chunk_tokens=100,
-                batch_size=1,
                 fetch=False,
                 config=SimpleNamespace(),
                 backend="auto",
-                vram_fraction=0.9,
             )
-        assert isinstance(translator, GemmaTranslator)
+        assert isinstance(translator, TgemmaTranslator)
 
     def test_auto_non_tgemma_returns_vllm_translator(self, mock_tokenizer):
         with patch.object(vllmTranslator, "__init__", return_value=None):
@@ -414,10 +311,46 @@ class TestBuildTranslatorFactory:
                 "any/model",
                 tokenizer=mock_tokenizer,
                 max_chunk_tokens=100,
-                batch_size=1,
                 fetch=False,
                 config=SimpleNamespace(),
                 backend="auto",
-                vram_fraction=0.9,
             )
         assert isinstance(translator, vllmTranslator)
+
+
+class TestTgemmaTranslator:
+    """TgemmaTranslator: uses tgemma special-token prompt format."""
+
+    def _make(self, mock_tokenizer):
+        translator = object.__new__(TgemmaTranslator)
+        translator.tokenizer = mock_tokenizer
+        translator.max_chunk_tokens = 5
+        translator.sampling_params = MagicMock()
+        translator.extra_chat_kwargs = {"use_tqdm": False}
+        translator.prompt_template = (
+            "<<<source>>>{source_lang}<<<target>>>{target_lang}<<<text>>>{text}"
+        )
+        translator.system_message = None
+        translator.model = MagicMock()
+        return translator
+
+    def test_prompt_uses_tgemma_format(self, mock_tokenizer):
+        """translate() formats the prompt with tgemma special tokens."""
+        translator = self._make(mock_tokenizer)
+        translator.model.chat.return_value = [_vllm_output("translated")]
+
+        translator.translate("hello", "de", "en")
+
+        messages = translator.model.chat.call_args[0][0]
+        content = messages[-1]["content"]
+        assert content == "<<<source>>>de<<<target>>>en<<<text>>>hello"
+
+    def test_no_system_message_by_default(self, mock_tokenizer):
+        """TgemmaTranslator sends only a user message (no system role)."""
+        translator = self._make(mock_tokenizer)
+        translator.model.chat.return_value = [_vllm_output("ok")]
+
+        translator.translate("hello", "de", "en")
+
+        messages = translator.model.chat.call_args[0][0]
+        assert all(m["role"] != "system" for m in messages)

@@ -12,16 +12,20 @@ python -m tigerflow_ml.text.translate.slurm --input-dir ../tgemma/tests/input/
 --setup-command "source .venv/bin/activate" --model google/translategemma-27b-it
 """
 
+from __future__ import annotations
+
 from collections.abc import Callable
 from pathlib import Path
-from typing import Annotated, Literal, cast
+from typing import TYPE_CHECKING, Annotated, Literal, cast
 
 import typer
 from tigerflow.logconfig import logger
 from tigerflow.utils import SetupContext
-from transformers import AutoConfig, AutoTokenizer, PreTrainedTokenizerBase
 
-from tigerflow_ml.params import HFParams
+from tigerflow_ml.params import VLLMParams
+
+if TYPE_CHECKING:
+    from transformers import PreTrainedTokenizerBase
 
 from .chunking import (
     DEFAULT_CHUNK_SIZE,
@@ -31,12 +35,13 @@ from .chunking import (
     count_tokens,
 )
 from .detection import LANGUAGES, detect_language, get_language_name
-from .translator import HuggingFaceTranslator, build_translator
+from .translator import Translator, build_translator
 from .utils import (
     AlreadyInTargetLanguageError,
     ConfigParsingError,
     EmptyFileError,
     TranslationError,
+    parse_kwargs,
     read_file_with_fallback,
 )
 
@@ -49,7 +54,7 @@ _DEFAULT_PROMPT = (
 class _TranslateBase:
     """Translate documents using Hugging Face models."""
 
-    class Params(HFParams):
+    class Params(VLLMParams):
         source_lang: Annotated[
             str | None,
             typer.Option(help="Source language code (e.g. 'en', 'de', 'zh')"),
@@ -74,49 +79,34 @@ class _TranslateBase:
             typer.Option(
                 help="Prompt template for chat-based translation models "
                 "Use {source_lang}, {target_lang}, and {text} as placeholders."
+                "This is unused if using a tgemma model."
             ),
         ] = _DEFAULT_PROMPT
 
-        system_message: Annotated[
-            str,
-            typer.Option(help="System message for chat-based translation models"),
-        ] = "You are an expert linguist"
-
         model_backend: Annotated[
             Literal["auto", "chat", "tgemma"],
-            typer.Option(
-                help="Translation model backend. 'auto' detects from model config."
-            ),
+            typer.Option(help="Translation model backend. 'auto' uses model name."),
         ] = "auto"
 
-        # TODO: update message -- chat models use vllm to handle batching
-        batch_size: Annotated[
+        # override for custom help message
+        max_model_len: Annotated[
             int | None,
             typer.Option(
-                help="Chunks to translate in parallel (default: auto)",
-                min=1,
+                help="Maximum sequence length (input + output tokens) passed to vLLM. "
+                "Defaults to (chunk_size * 2.5 + 512), "
+                "capped by the model's configured context window."
             ),
         ] = None
 
-        allow_fetch: Annotated[
-            bool,
-            typer.Option(
-                help="Allow downloading from HuggingFace Hub. "
-                "Do not allow if running on a compute node without network access"
-            ),
-        ] = False
-
-        vram_fraction: Annotated[
-            float,
-            typer.Option(
-                help="The fraction of free VRAM to use when calculating batch size",
-                min=0.01,
-                max=1,
-            ),
-        ] = 0.9
+        # override to remove help message
+        max_tokens: Annotated[
+            int,
+            typer.Option(hidden=True),
+        ] = int(DEFAULT_CHUNK_SIZE * 2.5)  # unused
 
     @staticmethod
     def setup(context: SetupContext):
+        from transformers import AutoConfig
 
         try:
             config = AutoConfig.from_pretrained(
@@ -127,6 +117,8 @@ class _TranslateBase:
             )
         except Exception as e:
             raise ConfigParsingError(f"Failed to load model config: {e}")
+            # TODO: make a warning, not a failure;
+            # #use max_model_len without taking the min with config
 
         tokenizer = _get_tokenizer(
             context.model,
@@ -146,20 +138,24 @@ class _TranslateBase:
 
         logger.info(f"Model: {context.model}")
         logger.info("Initializing HuggingFace backend...")
+
         context.translator = build_translator(
             context.model,
             tokenizer=tokenizer,
             max_chunk_tokens=context.chunk_size,
+            max_model_len=context.max_model_len,
             config=config,
-            batch_size=context.batch_size,
+            seed=context.seed,
+            temperature=context.temperature,
             fetch=context.allow_fetch,
             prompt_template=context.prompt_template,
             system_message=context.system_message,
             backend=context.model_backend,
             revision=context.revision,
             cache_dir=context.cache_dir,
-            device=context.device,
-            vram_fraction=context.vram_fraction,
+            user_llm_kwargs=parse_kwargs(context.llm_kwargs),
+            user_sampling_kwargs=parse_kwargs(context.sampling_kwargs),
+            user_chat_kwargs=parse_kwargs(context.chat_kwargs),
         )
 
     @staticmethod
@@ -213,6 +209,8 @@ def _load_tokenizer(
     Raises:
         OSError: If tokenizer not found in cache.
     """
+    from transformers import AutoTokenizer, PreTrainedTokenizerBase
+
     return cast(
         PreTrainedTokenizerBase,
         AutoTokenizer.from_pretrained(
@@ -242,7 +240,7 @@ def _download_tokenizer(
 
 
 def _translate_file(
-    translator: HuggingFaceTranslator,
+    translator: Translator,
     input_file: Path,
     output_file: Path,
     source_lang: str | None = None,
@@ -326,7 +324,7 @@ def _translate_file(
 
 def _translate_text(
     text: str,
-    translator: HuggingFaceTranslator,
+    translator: Translator,
     source_lang: str,
     target_lang: str = "en",
     max_retries: int = 3,
@@ -370,7 +368,7 @@ def _translate_text(
 
 def _translate_chunk_with_retry(
     text: str,
-    translator: HuggingFaceTranslator,
+    translator: Translator,
     source_lang: str,
     target_lang: str,
     tokenizer: PreTrainedTokenizerBase,
