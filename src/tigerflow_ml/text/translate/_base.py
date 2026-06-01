@@ -113,8 +113,7 @@ class _TranslateBase:
             bool,
             typer.Option(
                 help="Use a fallback prompt for files where language detection fails. "
-                '("Translate the following text to {target_lang}. '
-                'Output only the translated text, nothing else. Text: {text}")'
+                f'("{_FALLBACK_PROMPT}")'
             ),
         ] = False
 
