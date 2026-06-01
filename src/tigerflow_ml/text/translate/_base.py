@@ -122,6 +122,13 @@ class _TranslateBase:
     @staticmethod
     def setup(context: SetupContext):
         from transformers import AutoConfig
+        from .translator import build_translator
+
+        if "{text}" not in context.prompt_template:
+            raise ValueError(
+                '--prompt-template needs to contain "{text}".'
+                " This is a placeholder for input file contents."
+            )
 
         from .translator import build_translator
 
