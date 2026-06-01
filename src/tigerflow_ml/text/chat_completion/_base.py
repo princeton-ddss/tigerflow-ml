@@ -5,9 +5,7 @@ Apply a chat prompt to input texts using Hugging Face models.
 from pathlib import Path
 from typing import Annotated, Any
 
-import torch
 import typer
-from huggingface_hub import snapshot_download
 from tigerflow.logconfig import logger
 from tigerflow.utils import SetupContext
 
@@ -42,6 +40,8 @@ class _ChatCompletionBase:
 
     @staticmethod
     def setup(context: SetupContext):
+        import torch
+        from huggingface_hub import snapshot_download
         from vllm import LLM, SamplingParams
 
         if context.max_model_len and context.max_tokens >= context.max_model_len:
