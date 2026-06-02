@@ -258,6 +258,7 @@ def build_translator(
     Returns:
         A concrete Translator subclass.
     """
+
     kwargs: dict[str, Any] = dict(
         model_name=model_name,
         max_chunk_tokens=max_chunk_tokens,
@@ -275,6 +276,7 @@ def build_translator(
         user_sampling_kwargs=user_sampling_kwargs,
         user_chat_kwargs=user_chat_kwargs,
     )
+
     from transformers import set_seed
 
     set_seed(42)
