@@ -5,11 +5,14 @@ Splits text into chunks that fit within a token limit while preserving
 document structure (paragraphs, sentences) as much as possible.
 """
 
+from __future__ import annotations
+
 import re
 from collections.abc import Callable
-from typing import cast
+from typing import TYPE_CHECKING, cast
 
-from transformers import PreTrainedTokenizerBase
+if TYPE_CHECKING:
+    from transformers import PreTrainedTokenizerBase
 
 # TranslateGemma context window is 2048 tokens (input + output).
 # Reserve ~248 tokens for the prompt template and split the rest

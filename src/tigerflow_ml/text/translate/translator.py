@@ -5,19 +5,20 @@ Translators handle single-chunk translation only. Chunking, retry logic,
 and orchestration are handled by the orchestration module.
 """
 
+from __future__ import annotations
+
 import logging
 import os
 import re
-from typing import Any, Protocol, cast
+from typing import TYPE_CHECKING, Any, Protocol, cast
 
-import torch
-import transformers
 from tigerflow.logconfig import logger
-from transformers import PretrainedConfig, PreTrainedTokenizerBase, pipeline, set_seed
-from vllm import LLM, SamplingParams
 
 from .chunking import DEFAULT_CHUNK_SIZE, chunk_text_by_tokens, count_tokens
 from .utils import TranslationError
+
+if TYPE_CHECKING:
+    from transformers import PretrainedConfig, PreTrainedTokenizerBase
 
 _TRANSFORMERS_WARNINGS_TO_IGNORE = (
     "Kwargs passed to `processor.__call__`",
@@ -37,6 +38,7 @@ class _ProcessorKwargsFilter(logging.Filter):
 
 
 def _log_gpu_info(model) -> None:
+    import torch
 
     if hasattr(model, "hf_device_map"):
         device_map = model.hf_device_map
@@ -98,6 +100,8 @@ class HuggingFaceTranslator:
         revision: str | None = None,
         device: str | int = "auto",
     ):
+        import torch
+
         self.tokenizer = tokenizer
         self.max_chunk_tokens = max_chunk_tokens
         if device == "auto":
@@ -139,6 +143,7 @@ class HuggingFaceTranslator:
 
     def _auto_batch_size(self, vram_fraction) -> int:
         """Estimate batch size from free VRAM and model KV-cache footprint."""
+        import torch
 
         if not torch.cuda.is_available():
             return 1
@@ -271,6 +276,9 @@ class GemmaTranslator(HuggingFaceTranslator):
     def _load_pipeline(
         self, model_name: str, fetch: bool, cache_dir: str | None, revision: str | None
     ) -> Any:
+        import torch
+        import transformers
+        from transformers import pipeline
 
         logger.info(f"Loading model: {model_name}...")
         transformers.logging.disable_progress_bar()
@@ -408,7 +416,9 @@ class vllmTranslator:
         prompt_template: str = "",
         system_message: str = "You are an expert linguist",
     ):
+        import torch
         from huggingface_hub import snapshot_download
+        from vllm import LLM, SamplingParams
 
         if cache_dir is not None:
             resolved_model = snapshot_download(
@@ -536,6 +546,8 @@ def build_translator(
     Returns:
         A concrete Translator subclass.
     """
+    from transformers import set_seed
+
     kwargs: dict[str, Any] = dict(
         model_name=model_name,
         max_chunk_tokens=max_chunk_tokens,

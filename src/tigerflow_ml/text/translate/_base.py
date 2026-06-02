@@ -12,14 +12,15 @@ python -m tigerflow_ml.text.translate.slurm --input-dir ../tgemma/tests/input/
 --setup-command "source .venv/bin/activate" --model google/translategemma-27b-it
 """
 
+from __future__ import annotations
+
 from collections.abc import Callable
 from pathlib import Path
-from typing import Annotated, Literal, cast
+from typing import TYPE_CHECKING, Annotated, Literal, cast
 
 import typer
 from tigerflow.logconfig import logger
 from tigerflow.utils import SetupContext
-from transformers import AutoConfig, AutoTokenizer, PreTrainedTokenizerBase
 
 from tigerflow_ml.params import HFParams
 
@@ -31,13 +32,17 @@ from .chunking import (
     count_tokens,
 )
 from .detection import LANGUAGES, detect_language, get_language_name
-from .translator import HuggingFaceTranslator, build_translator
 from .utils import (
     ConfigParsingError,
     SkippedFileError,
     TranslationError,
     read_file_with_fallback,
 )
+
+if TYPE_CHECKING:
+    from transformers import PreTrainedTokenizerBase
+
+    from .translator import HuggingFaceTranslator
 
 _DEFAULT_PROMPT = (
     "Translate the following text from {source_lang} to {target_lang}. "
@@ -116,6 +121,9 @@ class _TranslateBase:
 
     @staticmethod
     def setup(context: SetupContext):
+        from transformers import AutoConfig
+
+        from .translator import build_translator
 
         try:
             config = AutoConfig.from_pretrained(
@@ -203,20 +211,18 @@ def _load_tokenizer(
     model_name: str, cache_dir: str | None = None, revision: str | None = None
 ) -> PreTrainedTokenizerBase:
     """
-    Load a HuggingFace tokenizer from local cache.
-
-    Args:
-        model_name: HuggingFace model name.
-        cache_dir: Optional cache directory override.
+    Load a HuggingFace tokenizer from local cache
 
     Returns:
         Loaded tokenizer.
 
     Raises:
-        OSError: If tokenizer not found in cache.
-    """
+        OSError: If tokenizer not found in cache."""
+
+    from transformers import AutoTokenizer
+
     return cast(
-        PreTrainedTokenizerBase,
+        "PreTrainedTokenizerBase",
         AutoTokenizer.from_pretrained(
             model_name, local_files_only=True, cache_dir=cache_dir, revision=revision
         ),
