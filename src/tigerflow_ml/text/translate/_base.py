@@ -33,8 +33,9 @@ from .chunking import (
 )
 from .detection import LANGUAGES, detect_language, get_language_name
 from .utils import (
+    AlreadyInTargetLanguageError,
     ConfigParsingError,
-    SkippedFileError,
+    EmptyFileError,
     TranslationError,
     read_file_with_fallback,
 )
@@ -171,18 +172,15 @@ class _TranslateBase:
 
     @staticmethod
     def run(context: SetupContext, input_file: Path, output_file: Path):
-        try:
-            _translate_file(
-                context.translator,
-                input_file,
-                output_file,
-                context.source_lang,
-                context.target_lang,
-                logger.info,
-            )
-        except SkippedFileError as e:
-            logger.warning(f"  Skipping: {e}")
-            return
+
+        _translate_file(
+            context.translator,
+            input_file,
+            output_file,
+            context.source_lang,
+            context.target_lang,
+            logger.info,
+        )
 
         logger.info("Translation complete!")
 
@@ -269,7 +267,8 @@ def _translate_file(
         on_progress: Callback for progress messages.
 
     Raises:
-        SkippedFileError: If file should be skipped.
+        EmptyFileError: If the input file is empty.
+        AlreadyInTargetLanguageError: If the input file is already 'translated.'
         TranslationError: If translation fails.
     """
     on_progress(f"Processing: {input_file.name}")
@@ -277,7 +276,7 @@ def _translate_file(
     content = read_file_with_fallback(input_file)
 
     if not content.strip():
-        raise SkippedFileError("Empty file")
+        raise EmptyFileError("Empty file")
 
     on_progress(f"  File size: {len(content):,} characters")
 
@@ -298,7 +297,9 @@ def _translate_file(
         )
 
     if detected_lang == target_lang:
-        raise SkippedFileError(f"Already in {get_language_name(target_lang)}")
+        raise AlreadyInTargetLanguageError(
+            f"Already in {get_language_name(target_lang)}"
+        )
 
     if detected_lang not in LANGUAGES:
         on_progress(

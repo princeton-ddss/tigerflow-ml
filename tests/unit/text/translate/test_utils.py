@@ -4,26 +4,8 @@ import pytest
 
 from tigerflow_ml.text.translate.utils import (
     ENCODING_FALLBACK_CHAIN,
-    SkippedFileError,
-    TranslationError,
     read_file_with_fallback,
 )
-
-
-class TestExceptions:
-    def test_translation_error_is_exception(self):
-        with pytest.raises(TranslationError):
-            raise TranslationError("test error")
-
-    def test_skipped_file_error_is_exception(self):
-        with pytest.raises(SkippedFileError):
-            raise SkippedFileError("test skip")
-
-    def test_exception_messages(self):
-        try:
-            raise TranslationError("custom message")
-        except TranslationError as e:
-            assert str(e) == "custom message"
 
 
 class TestEncodingFallbackChain:

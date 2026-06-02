@@ -8,7 +8,9 @@ import pytest
 from tigerflow_ml.text.translate._base import (
     _DEFAULT_PROMPT,
     _translate_chunk_with_retry,
+    _translate_file,
     _translate_text,
+    _TranslateBase,
 )
 from tigerflow_ml.text.translate.translator import (
     GemmaTranslator,
@@ -16,7 +18,11 @@ from tigerflow_ml.text.translate.translator import (
     get_model_type,
     vllmTranslator,
 )
-from tigerflow_ml.text.translate.utils import TranslationError
+from tigerflow_ml.text.translate.utils import (
+    AlreadyInTargetLanguageError,
+    EmptyFileError,
+    TranslationError,
+)
 
 
 @pytest.fixture
@@ -160,6 +166,54 @@ class TestTranslateText:
             _translate_text(text, mock_translator, "de", "en")
 
         mock_translator.translate.assert_not_called()
+
+
+class TestTranslateFile:
+    def test_empty_file_raises(self, tmp_path):
+        empty_file = tmp_path / "empty.txt"
+        empty_file.write_text("")
+        with pytest.raises(EmptyFileError):
+            _translate_file(MagicMock(), empty_file, tmp_path / "out.txt")
+
+    def test_already_in_target_lang_raises(self, tmp_path):
+        input_file = tmp_path / "doc.txt"
+        input_file.write_text("Hello world")
+        with patch(
+            "tigerflow_ml.text.translate._base.detect_language", return_value="en"
+        ):
+            with pytest.raises(AlreadyInTargetLanguageError):
+                _translate_file(
+                    MagicMock(), input_file, tmp_path / "out.txt", target_lang="en"
+                )
+
+    def test_language_detection_fails_raises(self, tmp_path):
+        input_file = tmp_path / "doc.txt"
+        input_file.write_text("Hello world")
+        with patch(
+            "tigerflow_ml.text.translate._base.detect_language", return_value=None
+        ):
+            with pytest.raises(TranslationError):
+                _translate_file(MagicMock(), input_file, tmp_path / "out.txt")
+
+
+class TestRun:
+    @pytest.mark.parametrize(
+        "error",
+        [
+            EmptyFileError("empty"),
+            AlreadyInTargetLanguageError("same lang"),
+            TranslationError("failed"),
+        ],
+    )
+    def test_run_propagates_translate_file_errors(self, tmp_path, error):
+        context = SimpleNamespace(
+            translator=MagicMock(), source_lang=None, target_lang="en"
+        )
+        with patch(
+            "tigerflow_ml.text.translate._base._translate_file", side_effect=error
+        ):
+            with pytest.raises(type(error)):
+                _TranslateBase.run(context, tmp_path / "in.txt", tmp_path / "out.txt")
 
 
 def _make_tgemma_hf_translator(mock_tokenizer, max_chunk_tokens=5, batch_size=4):
