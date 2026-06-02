@@ -24,6 +24,7 @@ class Translator(Protocol):
     tokenizer: PreTrainedTokenizerBase
     max_chunk_tokens: int
     prompt_template: str
+    model_name: str
 
     def translate(self, text: str, source_lang: str | None, target_lang: str) -> str:
         """Translate a single chunk of text."""
@@ -124,6 +125,7 @@ class vllmTranslator:
         self.prompt_template = prompt_template
         self.system_message = system_message
         self.tokenizer = tokenizer  # used for chunking
+        self.model_name = model_name
 
         logger.info("Model loaded using vLLM!")
 

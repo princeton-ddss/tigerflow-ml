@@ -76,7 +76,7 @@ class _TranslateBase:
             typer.Option(
                 help="Prompt template for chat-based translation models "
                 "Use {source_lang}, {target_lang}, and {text} as placeholders."
-                "This is unused if using a tgemma model."
+                "This is ignored if using a tgemma model."
             ),
         ] = _DEFAULT_PROMPT
 
@@ -301,6 +301,8 @@ def _translate_file(
         AlreadyInTargetLanguageError: If the input file is already 'translated.'
         TranslationError: If translation fails.
     """
+    from .translator import get_model_type
+
     on_progress(f"Processing: {input_file.name}")
 
     content = read_file_with_fallback(input_file)
@@ -350,6 +352,13 @@ def _translate_file(
             f"  Source language: {get_language_name(source_lang)} ({source_lang})"
         )
     elif detected_lang is None and needs_source_lang:
+        if get_model_type(translator.model_name) == "tgemma":
+            hint = (
+                "Explicitly set --source-lang"
+                if auto_lang_detect
+                else "Explicitly set --source-lang or enable --auto-lang-detect"
+            )
+            raise TranslationError("Source language could not be determined. " + hint)
         if use_fallback_prompt:
             logger.warning(f"  Attempting to use fallback prompt: {_FALLBACK_PROMPT}")
             translator.prompt_template = _FALLBACK_PROMPT

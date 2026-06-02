@@ -431,6 +431,7 @@ class TestTranslateFileFallback:
         t = MagicMock()
         t.tokenizer = mock_tokenizer
         t.max_chunk_tokens = 100
+        t.model_name = "test/model"
         t.prompt_template = _DEFAULT_PROMPT
         t.translate.return_value = "translated content"
         return t
@@ -517,6 +518,7 @@ class TestTranslateFile:
         input_file = tmp_path / "doc.txt"
         input_file.write_text("Hello world")
         translator = MagicMock()
+        translator.model_name = "test/model"
         translator.prompt_template = _DEFAULT_PROMPT
         with patch(
             "tigerflow_ml.text.translate._base.detect_language", return_value=None
@@ -533,6 +535,7 @@ class TestTranslateFileAutoLangDetect:
         t = MagicMock()
         t.tokenizer = mock_tokenizer
         t.max_chunk_tokens = 100
+        t.model_name = "test/model"
         t.prompt_template = _DEFAULT_PROMPT
         t.translate.return_value = "translated content"
         return t
@@ -670,6 +673,62 @@ class TestTranslateFileAutoLangDetect:
         ):
             _translate_file(translator, input_file, tmp_path / "out.txt")
         translator.translate.assert_called_once()
+
+
+class TestTranslateFileTgemma:
+    """_translate_file: tgemma models always require a source language."""
+
+    @pytest.fixture
+    def translator(self, mock_tokenizer):
+        t = MagicMock()
+        t.tokenizer = mock_tokenizer
+        t.max_chunk_tokens = 100
+        t.model_name = "translategemma-27b-it"
+        t.prompt_template = (
+            "<<<source>>>{source_lang}<<<target>>>{target_lang}<<<text>>>{text}"
+        )
+        t.translate.return_value = "translated content"
+        return t
+
+    def test_tgemma_raises_even_when_fallback_prompt_enabled(
+        self, translator, tmp_path
+    ):
+        """ignores use_fallback_prompt — it always requires a source language."""
+        input_file = tmp_path / "doc.txt"
+        input_file.write_text("Bonjour le monde")
+        with (
+            patch(
+                "tigerflow_ml.text.translate._base.detect_language", return_value=None
+            ),
+            pytest.raises(TranslationError),
+        ):
+            _translate_file(
+                translator,
+                input_file,
+                tmp_path / "out.txt",
+                use_fallback_prompt=True,
+            )
+        assert (
+            translator.prompt_template
+            == "<<<source>>>{source_lang}<<<target>>>{target_lang}<<<text>>>{text}"
+        )  # never switched
+
+    def test_tgemma_error_hint_when_auto_lang_detect_enabled(
+        self, translator, tmp_path
+    ):
+        """When auto_lang_detect=True fails for tgemma, error hints only --source-lang
+        (not --use-fallback-prompt, which is irrelevant for tgemma)."""
+        input_file = tmp_path / "doc.txt"
+        input_file.write_text("Bonjour le monde")
+        with (
+            patch(
+                "tigerflow_ml.text.translate._base.detect_language", return_value=None
+            ),
+            pytest.raises(TranslationError) as exc_info,
+        ):
+            _translate_file(translator, input_file, tmp_path / "out.txt")
+        assert "--source-lang" in str(exc_info.value)
+        assert "--use-fallback-prompt" not in str(exc_info.value)
 
 
 class TestSetupValidation:
