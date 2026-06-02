@@ -168,34 +168,6 @@ class TestTranslateText:
         mock_translator.translate.assert_not_called()
 
 
-class TestTranslateFile:
-    def test_empty_file_raises(self, tmp_path):
-        empty_file = tmp_path / "empty.txt"
-        empty_file.write_text("")
-        with pytest.raises(EmptyFileError):
-            _translate_file(MagicMock(), empty_file, tmp_path / "out.txt")
-
-    def test_already_in_target_lang_raises(self, tmp_path):
-        input_file = tmp_path / "doc.txt"
-        input_file.write_text("Hello world")
-        with patch(
-            "tigerflow_ml.text.translate._base.detect_language", return_value="en"
-        ):
-            with pytest.raises(AlreadyInTargetLanguageError):
-                _translate_file(
-                    MagicMock(), input_file, tmp_path / "out.txt", target_lang="en"
-                )
-
-    def test_language_detection_fails_raises(self, tmp_path):
-        input_file = tmp_path / "doc.txt"
-        input_file.write_text("Hello world")
-        with patch(
-            "tigerflow_ml.text.translate._base.detect_language", return_value=None
-        ):
-            with pytest.raises(TranslationError):
-                _translate_file(MagicMock(), input_file, tmp_path / "out.txt")
-
-
 class TestRun:
     @pytest.mark.parametrize(
         "error",
@@ -207,7 +179,11 @@ class TestRun:
     )
     def test_run_propagates_translate_file_errors(self, tmp_path, error):
         context = SimpleNamespace(
-            translator=MagicMock(), source_lang=None, target_lang="en"
+            translator=MagicMock(),
+            source_lang=None,
+            target_lang="en",
+            use_fallback_prompt=False,
+            auto_lang_detect=True,
         )
         with patch(
             "tigerflow_ml.text.translate._base._translate_file", side_effect=error
@@ -464,7 +440,7 @@ class TestTranslateFileFallback:
         input_file.write_text("xyz")
         captured = []
 
-        def capture(*args, **kwargs):
+        def capture(*_):
             captured.append(translator.prompt_template)
             return "translated content"
 
@@ -515,6 +491,185 @@ class TestTranslateFileFallback:
             )
 
         assert translator.prompt_template == _DEFAULT_PROMPT
+
+
+class TestTranslateFile:
+    def test_empty_file_raises(self, tmp_path):
+        empty_file = tmp_path / "empty.txt"
+        empty_file.write_text("")
+        with pytest.raises(EmptyFileError):
+            _translate_file(MagicMock(), empty_file, tmp_path / "out.txt")
+
+    def test_already_in_target_lang_raises(self, tmp_path):
+        input_file = tmp_path / "doc.txt"
+        input_file.write_text("Hello world")
+        translator = MagicMock()
+        translator.prompt_template = _DEFAULT_PROMPT
+        with patch(
+            "tigerflow_ml.text.translate._base.detect_language", return_value="en"
+        ):
+            with pytest.raises(AlreadyInTargetLanguageError):
+                _translate_file(
+                    translator, input_file, tmp_path / "out.txt", target_lang="en"
+                )
+
+    def test_language_detection_fails_raises(self, tmp_path):
+        input_file = tmp_path / "doc.txt"
+        input_file.write_text("Hello world")
+        translator = MagicMock()
+        translator.prompt_template = _DEFAULT_PROMPT
+        with patch(
+            "tigerflow_ml.text.translate._base.detect_language", return_value=None
+        ):
+            with pytest.raises(TranslationError):
+                _translate_file(translator, input_file, tmp_path / "out.txt")
+
+
+class TestTranslateFileAutoLangDetect:
+    """_translate_file: auto_lang_detect / source_lang interaction."""
+
+    @pytest.fixture
+    def translator(self, mock_tokenizer):
+        t = MagicMock()
+        t.tokenizer = mock_tokenizer
+        t.max_chunk_tokens = 100
+        t.prompt_template = _DEFAULT_PROMPT
+        t.translate.return_value = "translated content"
+        return t
+
+    def test_source_lang_overrides_detected(self, translator, tmp_path):
+        """Explicit --source-lang wins over auto-detected language."""
+        input_file = tmp_path / "doc.txt"
+        input_file.write_text("Bonjour le monde")
+        with patch(
+            "tigerflow_ml.text.translate._base.detect_language", return_value="es"
+        ):
+            _translate_file(
+                translator,
+                input_file,
+                tmp_path / "out.txt",
+                source_lang="fr",
+                target_lang="en",
+            )
+        assert translator.translate.call_args.args[1] == "fr"
+
+    def test_detection_failure_with_source_lang_succeeds(self, translator, tmp_path):
+        """Detection failure is non-fatal when --source-lang is explicitly set."""
+        input_file = tmp_path / "doc.txt"
+        input_file.write_text("Bonjour le monde")
+        with patch(
+            "tigerflow_ml.text.translate._base.detect_language", return_value=None
+        ):
+            _translate_file(
+                translator,
+                input_file,
+                tmp_path / "out.txt",
+                source_lang="fr",
+                target_lang="en",
+            )
+        translator.translate.assert_called_once()
+
+    def test_auto_lang_detect_disabled_skips_detection(self, translator, tmp_path):
+        """auto_lang_detect=False never calls detect_language."""
+        input_file = tmp_path / "doc.txt"
+        input_file.write_text("Bonjour le monde")
+        with patch("tigerflow_ml.text.translate._base.detect_language") as mock_detect:
+            _translate_file(
+                translator,
+                input_file,
+                tmp_path / "out.txt",
+                source_lang="fr",
+                target_lang="en",
+                auto_lang_detect=False,
+            )
+        mock_detect.assert_not_called()
+
+    def test_auto_lang_detect_disabled_no_source_lang_raises(
+        self, translator, tmp_path
+    ):
+        """auto_lang_detect=False + no source_lang → TranslationError hinting
+        --auto-lang-detect."""
+        input_file = tmp_path / "doc.txt"
+        input_file.write_text("Bonjour le monde")
+        with pytest.raises(TranslationError, match="--auto-lang-detect"):
+            _translate_file(
+                translator,
+                input_file,
+                tmp_path / "out.txt",
+                auto_lang_detect=False,
+            )
+
+    def test_auto_lang_detect_disabled_with_fallback_uses_fallback_prompt(
+        self, translator, tmp_path
+    ):
+        """Fallback prompt used when: prompt has {source_lang}, no source_lang given,
+        auto_lang_detect=False (or fails), and use_fallback_prompt=True."""
+        assert "{source_lang}" in translator.prompt_template
+        input_file = tmp_path / "doc.txt"
+        input_file.write_text("Bonjour le monde")
+        captured = []
+
+        def capture(*_):
+            captured.append(translator.prompt_template)
+            return "translated"
+
+        translator.translate.side_effect = capture
+        _translate_file(
+            translator,
+            input_file,
+            tmp_path / "out.txt",
+            auto_lang_detect=False,
+            use_fallback_prompt=True,
+        )
+        assert captured[0] == _FALLBACK_PROMPT
+        assert translator.prompt_template == _DEFAULT_PROMPT
+
+    def test_fallback_prompt_not_used_when_source_lang_not_in_prompt(
+        self, translator, tmp_path
+    ):
+        """Fallback prompt is not used when the prompt has no {source_lang} placeholder—
+        use_fallback_prompt is only triggered when {source_lang} is actually needed."""
+        translator.prompt_template = "Translate to {target_lang}: {text}"
+        assert "{source_lang}" not in translator.prompt_template
+        input_file = tmp_path / "doc.txt"
+        input_file.write_text("Bonjour le monde")
+        _translate_file(
+            translator,
+            input_file,
+            tmp_path / "out.txt",
+            auto_lang_detect=False,
+            use_fallback_prompt=True,
+        )
+        assert translator.prompt_template == "Translate to {target_lang}: {text}"
+
+    def test_detection_failure_error_hints_fallback_not_detect_flag(
+        self, translator, tmp_path
+    ):
+        """When auto_lang_detect=True and detection fails, error hints
+        --use-fallback-prompt (not --auto-lang-detect, since detection
+        was already attempted)."""
+        input_file = tmp_path / "doc.txt"
+        input_file.write_text("Hello world")
+        with (
+            patch(
+                "tigerflow_ml.text.translate._base.detect_language", return_value=None
+            ),
+            pytest.raises(TranslationError) as exc_info,
+        ):
+            _translate_file(translator, input_file, tmp_path / "out.txt")
+        assert "--auto-lang-detect" not in str(exc_info.value)
+        assert "--use-fallback-prompt" in str(exc_info.value)
+
+    def test_no_source_lang_needed_when_absent_from_prompt(self, translator, tmp_path):
+        """{source_lang} absent from prompt: detection failure is non-fatal."""
+        translator.prompt_template = _FALLBACK_PROMPT
+        input_file = tmp_path / "doc.txt"
+        input_file.write_text("Bonjour le monde")
+        with patch(
+            "tigerflow_ml.text.translate._base.detect_language", return_value=None
+        ):
+            _translate_file(translator, input_file, tmp_path / "out.txt")
+        translator.translate.assert_called_once()
 
 
 class TestSetupValidation:
