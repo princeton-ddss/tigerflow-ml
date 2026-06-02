@@ -10,6 +10,7 @@ from tigerflow_ml.text.translate._base import (
     _translate_chunk_with_retry,
     _translate_file,
     _translate_text,
+    _TranslateBase,
 )
 from tigerflow_ml.text.translate.translator import (
     GemmaTranslator,
@@ -193,6 +194,26 @@ class TestTranslateFile:
         ):
             with pytest.raises(TranslationError):
                 _translate_file(MagicMock(), input_file, tmp_path / "out.txt")
+
+
+class TestRun:
+    @pytest.mark.parametrize(
+        "error",
+        [
+            EmptyFileError("empty"),
+            AlreadyInTargetLanguageError("same lang"),
+            TranslationError("failed"),
+        ],
+    )
+    def test_run_propagates_translate_file_errors(self, tmp_path, error):
+        context = SimpleNamespace(
+            translator=MagicMock(), source_lang=None, target_lang="en"
+        )
+        with patch(
+            "tigerflow_ml.text.translate._base._translate_file", side_effect=error
+        ):
+            with pytest.raises(type(error)):
+                _TranslateBase.run(context, tmp_path / "in.txt", tmp_path / "out.txt")
 
 
 def _make_tgemma_hf_translator(mock_tokenizer, max_chunk_tokens=5, batch_size=4):
