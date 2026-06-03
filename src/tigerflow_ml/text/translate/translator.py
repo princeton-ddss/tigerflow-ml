@@ -50,13 +50,17 @@ class vllmTranslator:
         revision: str | None = None,
         prompt_template: str = "",
         system_message: str | None = None,
-        user_llm_kwargs: dict = {},
-        user_sampling_kwargs: dict = {},
-        user_chat_kwargs: dict = {},
+        user_llm_kwargs: dict | None = None,
+        user_sampling_kwargs: dict | None = None,
+        user_chat_kwargs: dict | None = None,
     ):
         import torch
         from huggingface_hub import snapshot_download
         from vllm import LLM, SamplingParams
+
+        user_llm_kwargs = user_llm_kwargs or {}
+        user_sampling_kwargs = user_sampling_kwargs or {}
+        user_chat_kwargs = user_chat_kwargs or {}
 
         if cache_dir is not None:
             resolved_model = snapshot_download(
@@ -160,48 +164,15 @@ class vllmTranslator:
 
 
 class TgemmaTranslator(vllmTranslator):
-    """Translation for vLLM optimaized translateGemma models
+    """Translation for vLLM optimized translateGemma models
     https://docs.vllm.ai/projects/recipes/en/latest/Google/TranslateGemma.html"""
 
-    def __init__(
-        self,
-        model_name: str,
-        config: PretrainedConfig,
-        tokenizer: PreTrainedTokenizerBase,
-        seed: int,
-        temperature: float,
-        max_model_len: int | None = None,
-        max_chunk_tokens: int = DEFAULT_CHUNK_SIZE,
-        fetch: bool = False,
-        cache_dir: str | None = None,
-        revision: str | None = None,
-        prompt_template: str = "",
-        system_message: str | None = None,
-        user_llm_kwargs: dict = {},
-        user_sampling_kwargs: dict = {},
-        user_chat_kwargs: dict = {},
-    ):
-        super().__init__(
-            model_name=model_name,
-            config=config,
-            tokenizer=tokenizer,
-            seed=seed,
-            temperature=temperature,
-            max_model_len=max_model_len,
-            max_chunk_tokens=max_chunk_tokens,
-            fetch=fetch,
-            cache_dir=cache_dir,
-            revision=revision,
-            prompt_template=prompt_template,
-            system_message=system_message,
-            user_llm_kwargs=user_llm_kwargs,
-            user_sampling_kwargs=user_sampling_kwargs,
-            user_chat_kwargs=user_chat_kwargs,
-        )
-        self.prompt_template = (
+    def __init__(self, *args, **kwargs):
+        kwargs["prompt_template"] = (
             "<<<source>>>{source_lang}<<<target>>>{target_lang}<<<text>>>{text}"
         )
-        self.system_message = None
+        kwargs["system_message"] = None
+        super().__init__(*args, **kwargs)
 
 
 def get_model_type(
@@ -258,8 +229,6 @@ def build_translator(
     Returns:
         A concrete Translator subclass.
     """
-    from transformers import set_seed
-
     kwargs: dict[str, Any] = dict(
         model_name=model_name,
         max_chunk_tokens=max_chunk_tokens,
@@ -277,8 +246,6 @@ def build_translator(
         user_sampling_kwargs=user_sampling_kwargs,
         user_chat_kwargs=user_chat_kwargs,
     )
-
-    set_seed(42)
 
     if backend == "tgemma":
         return TgemmaTranslator(**kwargs)

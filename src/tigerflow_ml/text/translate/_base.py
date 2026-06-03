@@ -24,9 +24,6 @@ from tigerflow.utils import SetupContext
 
 from tigerflow_ml.params import VLLMParams
 
-if TYPE_CHECKING:
-    from transformers import PreTrainedTokenizerBase
-
 from .chunking import (
     DEFAULT_CHUNK_SIZE,
     MAX_CHUNK_TOKENS,
@@ -159,9 +156,11 @@ class _TranslateBase:
             backend=context.model_backend,
             revision=context.revision,
             cache_dir=context.cache_dir,
-            user_llm_kwargs=parse_kwargs(context.llm_kwargs),
-            user_sampling_kwargs=parse_kwargs(context.sampling_kwargs),
-            user_chat_kwargs=parse_kwargs(context.chat_kwargs),
+            user_llm_kwargs=parse_kwargs(context.llm_kwargs, name="llm-kwargs"),
+            user_sampling_kwargs=parse_kwargs(
+                context.sampling_kwargs, name="sampling-kwargs"
+            ),
+            user_chat_kwargs=parse_kwargs(context.chat_kwargs, name="chat-kwargs"),
         )
 
     @staticmethod

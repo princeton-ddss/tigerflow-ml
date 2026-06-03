@@ -89,23 +89,25 @@ class VLLMParams:
     llm_kwargs: Annotated[
         str,
         typer.Option(
-            help="Additional kwargs for vLLM's LLM() constructor. "
-            "Supplied values override task defaults."
+            help="Additional kwargs for vLLM's LLM() constructor (e.g., "
+            "{'gpu_memory_utilization': 0.85}). Supplied values override task "
+            "defaults."
         ),
     ] = "{}"
 
     sampling_kwargs: Annotated[
         str,
         typer.Option(
-            help="Additional kwargs for vLLM's SamplingParams() constructor. "
-            "Supplied values override task defaults."
+            help="Additional kwargs for vLLM's SamplingParams() "
+            "constructor (e.g., {'top_p': 0.95}). Supplied values override "
+            "task defaults."
         ),
     ] = "{}"
 
     chat_kwargs: Annotated[
         str,
         typer.Option(
-            help="Additional kwargs for vLLM's LLM.chat(). "
+            help="Additional kwargs for vLLM's LLM.chat() (e.g., {'use_tqdm':True}). "
             "Supplied values override task defaults."
         ),
     ] = "{}"
