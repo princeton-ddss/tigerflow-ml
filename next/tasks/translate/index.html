@@ -816,7 +816,7 @@
 
 
 <h1 id="translation">Translation<a class="headerlink" href="#translation" title="Permanent link">&para;</a></h1>
-<p>Translate text documents using HuggingFace <a href="https://huggingface.co/collections/google/translategemma">TranslateGemma</a> models or chat models.</p>
+<p>Translate text documents using HuggingFace <a href="https://docs.vllm.ai/projects/recipes/en/latest/Google/TranslateGemma.html">vLLM optimized TranslateGemma</a> models or chat models via vLLM.</p>
 <h2 id="parameters">Parameters<a class="headerlink" href="#parameters" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
@@ -840,12 +840,12 @@
 <tr>
 <td><code>--cache-dir</code></td>
 <td></td>
-<td>HuggingFace cache directory for model files</td>
+<td>HuggingFace cache directory for model files (equivalent to <code>HF_HOME</code>)</td>
 </tr>
 <tr>
-<td><code>--device</code></td>
-<td><code>auto</code></td>
-<td>Device to use (<code>cuda</code>, <code>cpu</code>, or <code>auto</code>)</td>
+<td><code>--allow-fetch</code></td>
+<td><code>--no-allow-fetch</code></td>
+<td>Allow downloads from HuggingFace Hub (network access required)</td>
 </tr>
 <tr>
 <td><code>--source-lang</code></td>
@@ -860,37 +860,52 @@
 <tr>
 <td><code>--chunk-size</code></td>
 <td><code>900</code></td>
-<td>Maximum token sequence length in a batch</td>
+<td>Maximum input tokens per chunk</td>
 </tr>
 <tr>
-<td><code>--prompt-template</code></td>
-<td><em>(see below)</em></td>
-<td>Prompt template for chat-based models (uses <code>{source_lang}</code>, <code>{target_lang}</code>, and <code>{text}</code>)</td>
-</tr>
-<tr>
-<td><code>--system-message</code></td>
-<td><code>You are an expert linguist</code></td>
-<td>System message for chat-based translation models</td>
+<td><code>--max-model-len</code></td>
+<td><code>chunk_size × 2.5 + 512</code></td>
+<td>Maximum sequence length (input + output tokens) passed to vLLM. Capped by the model's configured context window.</td>
 </tr>
 <tr>
 <td><code>--model-backend</code></td>
 <td><code>auto</code></td>
-<td>Model backend (<code>chat</code>, <code>tgemma</code>, or <code>auto</code>)</td>
+<td>Model backend: <code>chat</code>, <code>tgemma</code>, or <code>auto</code> (auto-detects from model name)</td>
 </tr>
 <tr>
-<td><code>--batch-size</code></td>
+<td><code>--prompt-template</code></td>
+<td><em>(see below)</em></td>
+<td>Prompt template for chat-based models (uses <code>{source_lang}</code>, <code>{target_lang}</code>, and <code>{text}</code>). Ignored for tgemma models.</td>
+</tr>
+<tr>
+<td><code>--system-message</code></td>
 <td></td>
-<td>Maximum number of chunks to translate in parallel for long documents -- will attempt auto optimization by default</td>
+<td>System message for chat models. Ignored for tgemma models.</td>
 </tr>
 <tr>
-<td><code>--vram-fraction</code></td>
-<td><code>0.9</code></td>
-<td>Fraction of free VRAM used when auto-computing batch size (lower values reduce OOM risk)</td>
+<td><code>--temperature</code></td>
+<td><code>0.0</code></td>
+<td>Sampling temperature. Lower values make output more deterministic.</td>
 </tr>
 <tr>
-<td><code>--allow-fetch</code></td>
-<td><code>--no-allow-fetch</code></td>
-<td>Allow downloads from HuggingFace Hub (network access required)</td>
+<td><code>--seed</code></td>
+<td><code>42</code></td>
+<td>Random seed for reproducibility</td>
+</tr>
+<tr>
+<td><code>--llm-kwargs</code></td>
+<td><code>{}</code></td>
+<td>JSON string of extra kwargs for vLLM's <code>LLM()</code> constructor. Overrides task defaults.</td>
+</tr>
+<tr>
+<td><code>--sampling-kwargs</code></td>
+<td><code>{}</code></td>
+<td>JSON string of extra kwargs for vLLM's <code>SamplingParams()</code>. Overrides task defaults.</td>
+</tr>
+<tr>
+<td><code>--chat-kwargs</code></td>
+<td><code>{}</code></td>
+<td>JSON string of extra kwargs for <code>LLM.chat()</code>. Overrides task defaults.</td>
 </tr>
 </tbody>
 </table>
@@ -899,11 +914,16 @@
 <h2 id="output-format">Output Format<a class="headerlink" href="#output-format" title="Permanent link">&para;</a></h2>
 <p>Plain text, encoded as UTF-8.</p>
 <h2 id="models">Models<a class="headerlink" href="#models" title="Permanent link">&para;</a></h2>
-<p>Any HuggingFace <a href="https://huggingface.co/collections/google/translategemma"><code>TranslateGemma</code></a> model is supported using transformers. Large language <em>chat</em> models run using vLLM with a <code>prompt template</code> and <code>system message</code>. The default prompt template is:</p>
+<p>All models are served via vLLM. There are two backends, selected automatically from the model name (<code>--model-backend auto</code>) or set explicitly:</p>
+<ul>
+<li><strong><code>tgemma</code></strong> — <a href="https://docs.vllm.ai/projects/recipes/en/latest/Google/TranslateGemma.html">vLLM compatible TranslateGemma</a> models (any <code>translategemma-*-it</code> repo). Uses the native <code>&lt;&lt;&lt;source&gt;&gt;&gt;{src_lang}&lt;&lt;&lt;target&gt;&gt;&gt;{tgt_lang}&lt;&lt;&lt;text&gt;&gt;&gt;{text}</code> prompt format and ignores <code>--prompt-template</code> and <code>--system-message</code>.</li>
+<li><strong><code>chat</code></strong> — Any instruction-tuned LLM. Uses <code>LLM.chat()</code> with the configurable <code>--prompt-template</code> and <code>--system-message</code>.</li>
+</ul>
+<p>The default prompt template for chat models is:</p>
 <div class="highlight"><pre><span></span><code>Translate the following text from {source_lang} to {target_lang}. Output only the translated text, nothing else. Text: {text}
 </code></pre></div>
-<p>Most models will be time consuming to run on a CPU. To scale translation, we recommend running this task on a sufficiently large GPU. This might mean running on an HPC compute node without network access. If this is the case for you, you'll have to download the model files before running this task. To download a gated model, first run <code>hf auth login</code> or <code>export HF_TOKEN="hf_token"</code>. Then, download the model to a cache directory of your choice (here <code>./.hf</code>):</p>
-<div class="highlight"><pre><span></span><code><span class="nv">HF_HOME</span><span class="o">=</span>./.hf<span class="w"> </span>hf<span class="w"> </span>download<span class="w"> </span>google/translategemma-27b-it
+<p>We recommend running this task on a sufficiently large GPU. This might mean running on an HPC compute node without network access. If this is the case for you, you'll have to download the model files before running this task. To download a gated model, first run <code>hf auth login</code> or <code>export HF_TOKEN="hf_token"</code>. Then, download the model to a cache directory of your choice (here <code>./.hf</code>):</p>
+<div class="highlight"><pre><span></span><code><span class="nv">HF_HOME</span><span class="o">=</span>./.hf<span class="w"> </span>hf<span class="w"> </span>download<span class="w"> </span>Infomaniak-AI/vllm-translategemma-27b-it
 </code></pre></div>
 <h2 id="examples">Examples<a class="headerlink" href="#examples" title="Permanent link">&para;</a></h2>
 <h3 id="local-translation-with-pre-downloaded-translategemma-model">Local translation with pre-downloaded TranslateGemma model<a class="headerlink" href="#local-translation-with-pre-downloaded-translategemma-model" title="Permanent link">&para;</a></h3>
@@ -919,7 +939,7 @@ Run with the command: <code>tigerflow run config.yaml ./input/ ./output/</code>.
 <span class="w">    </span><span class="nt">input_ext</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">.txt</span>
 <span class="w">    </span><span class="nt">output_ext</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">.txt</span>
 <span class="w">    </span><span class="nt">params</span><span class="p">:</span>
-<span class="w">      </span><span class="nt">model</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">google/translategemma-4b-it</span>
+<span class="w">      </span><span class="nt">model</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Infomaniak-AI/vllm-translategemma-27b-it</span>
 <span class="w">      </span><span class="nt">source-lang</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">en</span>
 <span class="w">      </span><span class="nt">target-lang</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">de</span>
 <span class="w">      </span><span class="nt">cache-dir</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/path/to/.hf/hub/</span>
@@ -939,9 +959,9 @@ Er wird seit über einem Jahrhundert als Übung für das Tippen verwendet.
 </div>
 </div>
 </div>
-<p>*This task can also be run from the command line with the command: <code>python -m tigerflow_ml.text.translate.local --input-dir ./input/ --input-ext .txt --output-dir ./output/ --output-ext .txt --model google/translategemma-4b-it --cache-dir /path/to/.hf/hub/ --target-lang de</code></p>
+<p>*This task can also be run from the command line with the command: <code>python -m tigerflow_ml.text.translate.local --input-dir ./input/ --input-ext .txt --output-dir ./output/ --output-ext .txt --model Infomaniak-AI/vllm-translategemma-27b-it --cache-dir /path/to/.hf/hub/ --source-lang en --target-lang de</code></p>
 <h3 id="local-translation-fetching-an-llm-from-huggingface-hub">Local translation fetching an LLM from HuggingFace Hub<a class="headerlink" href="#local-translation-fetching-an-llm-from-huggingface-hub" title="Permanent link">&para;</a></h3>
-<p>Uses <code>google/gemma-3-4b-it</code> (an image-text-to-text chat model) to translate a short Chinese text to English locally with network access.</p>
+<p>Uses <code>google/gemma-3-4b-it</code> (an instruction-tuned chat model) to translate a short Chinese text to English locally with network access.</p>
 <div class="tabbed-set tabbed-alternate" data-tabs="2:3"><input checked="checked" id="__tabbed_2_1" name="__tabbed_2" type="radio" /><input id="__tabbed_2_2" name="__tabbed_2" type="radio" /><input id="__tabbed_2_3" name="__tabbed_2" type="radio" /><div class="tabbed-labels"><label for="__tabbed_2_1">Config</label><label for="__tabbed_2_2">Input</label><label for="__tabbed_2_3">Output</label></div>
 <div class="tabbed-content">
 <div class="tabbed-block">
