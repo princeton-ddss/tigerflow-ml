@@ -120,8 +120,6 @@ class _TranslateBase:
             )
         except Exception as e:
             raise ConfigParsingError(f"Failed to load model config: {e}")
-            # TODO: make a warning, not a failure;
-            # #use max_model_len without taking the min with config
 
         tokenizer = _get_tokenizer(
             context.model,
