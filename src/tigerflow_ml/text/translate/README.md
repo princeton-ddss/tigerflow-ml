@@ -6,35 +6,34 @@ Translate `.txt` documents into English (or another target language) using any c
 
 1. The source language for each `.txt` file in the input directory is detected via `langdetect` (or supplied with `--source-lang`).
 2. If the document exceeds the token budget, it is split into chunks at paragraph and/or sentence boundaries.
-3. If using a TranslateGemma model, chunks are translated via the HuggingFace Transformers pipeline. Otherwise, vLLM is used with a `chat` prompt.
+3. Each chunk is translated via vLLM.
 4. Translated chunks are reassembled and written to the output directory.
 
 ### Setup (login node)
 
-Once you have TigerFlow ready to go, you'll want to download the HuggingFace model you wish to use. You can use LLMs, which will use the prompt:
+Once you have TigerFlow ready to go, you'll want to download the HuggingFace model you wish to use. You can use any chat/instruction-tuned LLM, which will use, by default, the prompt:
 
     "Translate the following text from {source_lang} to {target_lang}. Output only the translated text, nothing else. Text: {text}"
 
-
-Or you can use any translation specific model you like. For this tutorial, we will use the `google/translategemma-27b-it` model (to use this family of models, you will need to accept the [TranslateGemma license](https://huggingface.co/google/translategemma-27b-it) on HuggingFace).
+Or you can use a [vLLM optimized TranslateGemma model](https://docs.vllm.ai/projects/recipes/en/latest/Google/TranslateGemma.html). If doing this, there is no need to provide a prompt_template. For this tutorial, we will use the `Infomaniak-AI/vllm-translategemma-27b-it` model.
 
 First, make sure you are in a directory/virtual environment with `tigerflow-ml` installed. Authenticate and download the HuggingFace model to the local cache:
 
 ```bash
 hf auth login
-HF_HOME=./.hf hf download google/translategemma-27b-it
+HF_HOME=./.hf hf download Infomaniak-AI/vllm-translategemma-27b-it
 ```
 
-Setting `HF_HOME=./.hf` defines the directory where the model's files will be downloaded. Using `./.hf` means the files will be downloaded to the current working directory (`./`) and will be in a new directory named `.hf`. If you encounter any issues with downloading the model, even after accepting the license, you can also try:
+Setting `HF_HOME=./.hf` defines the directory where the model's files will be downloaded. Using `./.hf` means the files will be downloaded to the current working directory (`./`) and will be in a new directory named `.hf`. If you encounter any issues with downloading models (even after accepting any licenses), you can also try:
 
 ```bash
 export HF_TOKEN="hf_token"
-HF_HOME=./.hf hf download google/translategemma-27b-it
+HF_HOME=./.hf hf download Infomaniak-AI/vllm-translategemma-27b-it
 ```
 
 ### Running the task
 
-Once this model is downloaded, you can run the translation task. To see the options you have, you can enter the following in your terminal:
+Once the model is downloaded, you can run the translation task. To see the options you have, you can enter the following in your terminal:
 
 ```
 python -m tigerflow_ml.text.translate.slurm --help
@@ -43,7 +42,7 @@ python -m tigerflow_ml.text.translate.slurm --help
 To run this task directly, run:
 
 ```
-python -m tigerflow_ml.text.translate.slurm --input-dir path/to/inputs/ --input-ext .txt --output-dir path/to/outputs/ --output-ext .txt --max-workers 1 --cpus 1 --memory 10G --time 24:00:00 --gpus 1 --sbatch-option "--constraint=gpu80" --setup-command "export HF_HOME=./.hf" --setup-command "source .venv/bin/activate" --setup-command "export VLLM_USE_FLASHINFER_SAMPLER=0" --model google/translategemma-27b-it
+python -m tigerflow_ml.text.translate.slurm --input-dir path/to/inputs/ --input-ext .txt --output-dir path/to/outputs/ --output-ext .txt --max-workers 1 --cpus 1 --memory 10G --time 24:00:00 --gpus 1 --sbatch-option "--constraint=gpu80" --setup-command "export HF_HOME=./.hf" --setup-command "source .venv/bin/activate" --setup-command "export VLLM_USE_FLASHINFER_SAMPLER=0" --model Infomaniak-AI/vllm-translategemma-27b-it
 ```
 
 Here's a breakdown of what each of these arguments does:
@@ -66,18 +65,22 @@ Some other arguments you can use are:
 - `--source-lang` : Source language code (e.g. 'en', 'de', 'zh'). If this is not specified, the input files' language is detected via `langdetect`.
 - `--target-lang` : Target language code (e.g. 'de', 'en', 'fr'). This defaults to English (en).
 - `--chunk-size` : The maximum tokens per chunk. The documents are translated one chunk at a time, so if your model cannot handle large inputs, this should be small. Defaults to `900`.
-- `--batch-size` : The number of chunks to translate in parallel. If not specified, there will be an attempt to identify an optimal number based on resources available and model size. If this process fails, a batch size of `1` will be used.
+- `--max-model-len` : Maximum sequence length (input + output tokens) passed to vLLM. Defaults to `chunk_size * 2.5 + 512`, capped by the model's configured context window.
 - `--allow-fetch` : If included, allows downloading from the HuggingFace Hub. Only include `--allow-fetch` if your hardware will have internet access.
-- `--task-name` : The task name, which defaults to "Translate"
-- `--revision` : The model revision
-- `--cache-dir` : The HuggingFace cache directory for model files. This would be an alternative for specifying the path using `HF_HOME` in a `setup-command`. **It is important to note that, when using `cache-dir`, you need to specify the path to `/hub` (i.e., `./.hf/hub`)**.
-- `--device` : Device to use (cuda, cpu, or auto)
-- `--vram-fraction` : Fraction of free VRAM used when auto-computing batch size (lower values reduce OOM risk). Defaults to `0.9`.
+- `--task-name` : The task name, which defaults to "Translate".
+- `--revision` : The model revision.
+- `--cache-dir` : The HuggingFace cache directory for model files. This is equivalent to specifying the path via `HF_HOME` in a `--setup-command`, though you need to specify the path to `.hf/hub/`.
 - `--model-backend` : Specifies which translation model backend will be used. By default, this will auto-detect whether a TranslateGemma model is being used -- all other models will use the `chat` backend via vLLM.
+- `--prompt-template` : (**not used for tgemma models**) Prompt template for chat-based translation models. Defaults to `Translate the following text from {source_lang} to {target_lang}. Output only the translated text, nothing else. Text: {text}`.
+- `--system-message` : (**not used for tgemma models**) Optional system message for chat models.
+- `--temperature` : Sampling temperature. Lower values make output more deterministic. Defaults to `0.0`.
+- `--seed` : Random seed for reproducibility. Defaults to `42`.
 
-LLM-specific options:
-- `--prompt-template` : Prompt template for chat-based translation models. Defaults to `Translate the following text from {source_lang} to {target_lang}. Output only the translated text, nothing else. Text: {text}`.
-- `--system-message` : System message for chat-based translation models. Defaults to `You are an expert linguist`.
+Advanced vLLM options (accept JSON strings):
+
+- `--llm-kwargs` : Additional keyword arguments passed to vLLM's `LLM()` constructor (e.g. `{"quantization": "fp8"}`). Overrides task defaults.
+- `--sampling-kwargs` : Additional keyword arguments for vLLM's `SamplingParams()` (e.g. `{"top_p": 0.95}`). Overrides task defaults.
+- `--chat-kwargs` : Additional keyword arguments for `LLM.chat()` (e.g. `{"use_tqdm": True}`). Overrides task defaults.
 
 ### Running as a part of a pipeline
 
@@ -103,7 +106,8 @@ tasks:
       - export VLLM_USE_FLASHINFER_SAMPLER=0
       - export HF_HOME=./.hf
     params:
-      model: google/translategemma-27b-it
+      model: Infomaniak-AI/vllm-translategemma-27b-it
+      cache-dir: .hf/hub/
 ```
 
 Run your final config with: `tigerflow run config.yaml ./input/ ./output/`

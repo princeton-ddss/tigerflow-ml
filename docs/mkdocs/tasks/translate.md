@@ -1,24 +1,27 @@
 # Translation
 
-Translate text documents using HuggingFace [TranslateGemma](https://huggingface.co/collections/google/translategemma) models or chat models.
+Translate text documents using HuggingFace [vLLM optimized TranslateGemma](https://docs.vllm.ai/projects/recipes/en/latest/Google/TranslateGemma.html) models or chat models via vLLM.
 
 ## Parameters
 
-| Parameter           | Default                  | Description                                                                              |
-|---------------------|--------------------------|------------------------------------------------------------------------------------------|
-| `--model`           |                          | HuggingFace model repo ID                                                                |
-| `--revision`        | `main`                   | Model revision (branch, tag, or commit hash)                                             |
-| `--cache-dir`       |                          | HuggingFace cache directory for model files                                              |
-| `--device`          | `auto`                   | Device to use (`cuda`, `cpu`, or `auto`)                                                 |
-| `--source-lang`     |                          | Source language code (e.g. `en`, `de`, `zh`) -- will attempt auto detection by default   |
-| `--target-lang`     | `en`                     | Target language code (e.g. `de`, `en`, `fr`)                                             |
-| `--chunk-size`      | `900`                    | Maximum token sequence length in a batch                                                 |
-| `--prompt-template` | *(see below)*            | Prompt template for chat-based models (uses `{source_lang}`, `{target_lang}`, and `{text}`)    |
-| `--system-message`  | `You are an expert linguist` | System message for chat-based translation models                                    |
-| `--model-backend`   | `auto`                   | Model backend (`chat`, `tgemma`, or `auto`)                                              |
-| `--batch-size`      |                          | Maximum number of chunks to translate in parallel for long documents -- will attempt auto optimization by default |
-| `--vram-fraction`   | `0.9`                    | Fraction of free VRAM used when auto-computing batch size (lower values reduce OOM risk) |
-| `--allow-fetch`     | `--no-allow-fetch`       | Allow downloads from HuggingFace Hub (network access required)                           |
+| Parameter            | Default                          | Description                                                                                                                      |
+|----------------------|----------------------------------|----------------------------------------------------------------------------------------------------------------------------------|
+| `--model`            |                                  | HuggingFace model repo ID                                                                                                        |
+| `--revision`         | `main`                           | Model revision (branch, tag, or commit hash)                                                                                     |
+| `--cache-dir`        |                                  | HuggingFace cache directory for model files (equivalent to `HF_HOME`)                                                            |
+| `--allow-fetch`      | `--no-allow-fetch`               | Allow downloads from HuggingFace Hub (network access required)                                                                   |
+| `--source-lang`      |                                  | Source language code (e.g. `en`, `de`, `zh`) -- will attempt auto detection by default                                           |
+| `--target-lang`      | `en`                             | Target language code (e.g. `de`, `en`, `fr`)                                                                                     |
+| `--chunk-size`       | `900`                            | Maximum input tokens per chunk                                                                                                   |
+| `--max-model-len`    | `chunk_size × 2.5 + 512`         | Maximum sequence length (input + output tokens) passed to vLLM. Capped by the model's configured context window.                 |
+| `--model-backend`    | `auto`                           | Model backend: `chat`, `tgemma`, or `auto` (auto-detects from model name)                                                        |
+| `--prompt-template`  | *(see below)*                    | Prompt template for chat-based models (uses `{source_lang}`, `{target_lang}`, and `{text}`). Ignored for tgemma models.          |
+| `--system-message`   |                                  | System message for chat models. Ignored for tgemma models.                                                                       |
+| `--temperature`      | `0.0`                            | Sampling temperature. Lower values make output more deterministic.                                                               |
+| `--seed`             | `42`                             | Random seed for reproducibility                                                                                                  |
+| `--llm-kwargs`       | `{}`                             | JSON string of extra kwargs for vLLM's `LLM()` constructor. Overrides task defaults.        |
+| `--sampling-kwargs`  | `{}`                             | JSON string of extra kwargs for vLLM's `SamplingParams()`. Overrides task defaults.                 |
+| `--chat-kwargs`      | `{}`                             | JSON string of extra kwargs for `LLM.chat()`. Overrides task defaults.                           |
 
 
 ## Chunking Strategy
@@ -31,16 +34,21 @@ Plain text, encoded as UTF-8.
 
 ## Models
 
-Any HuggingFace [`TranslateGemma`](https://huggingface.co/collections/google/translategemma) model is supported using transformers. Large language _chat_ models run using vLLM with a `prompt template` and `system message`. The default prompt template is:
+All models are served via vLLM. There are two backends, selected automatically from the model name (`--model-backend auto`) or set explicitly:
+
+- **`tgemma`** — [vLLM compatible TranslateGemma](https://docs.vllm.ai/projects/recipes/en/latest/Google/TranslateGemma.html) models (any `translategemma-*-it` repo). Uses the native `<<<source>>>{src_lang}<<<target>>>{tgt_lang}<<<text>>>{text}` prompt format and ignores `--prompt-template` and `--system-message`.
+- **`chat`** — Any instruction-tuned LLM. Uses `LLM.chat()` with the configurable `--prompt-template` and `--system-message`.
+
+The default prompt template for chat models is:
 
 ```text
 Translate the following text from {source_lang} to {target_lang}. Output only the translated text, nothing else. Text: {text}
 ```
 
-Most models will be time consuming to run on a CPU. To scale translation, we recommend running this task on a sufficiently large GPU. This might mean running on an HPC compute node without network access. If this is the case for you, you'll have to download the model files before running this task. To download a gated model, first run `hf auth login` or `export HF_TOKEN="hf_token"`. Then, download the model to a cache directory of your choice (here `./.hf`):
+We recommend running this task on a sufficiently large GPU. This might mean running on an HPC compute node without network access. If this is the case for you, you'll have to download the model files before running this task. To download a gated model, first run `hf auth login` or `export HF_TOKEN="hf_token"`. Then, download the model to a cache directory of your choice (here `./.hf`):
 
 ```bash
-HF_HOME=./.hf hf download google/translategemma-27b-it
+HF_HOME=./.hf hf download Infomaniak-AI/vllm-translategemma-27b-it
 ```
 
 ## Examples
@@ -61,7 +69,7 @@ Run with the command: `tigerflow run config.yaml ./input/ ./output/`.*
         input_ext: .txt
         output_ext: .txt
         params:
-          model: google/translategemma-4b-it
+          model: Infomaniak-AI/vllm-translategemma-27b-it
           source-lang: en
           target-lang: de
           cache-dir: /path/to/.hf/hub/
@@ -83,12 +91,12 @@ Run with the command: `tigerflow run config.yaml ./input/ ./output/`.*
     Er wird seit über einem Jahrhundert als Übung für das Tippen verwendet.
     ```
 
-*This task can also be run from the command line with the command: `python -m tigerflow_ml.text.translate.local --input-dir ./input/ --input-ext .txt --output-dir ./output/ --output-ext .txt --model google/translategemma-4b-it --cache-dir /path/to/.hf/hub/ --target-lang de`
+*This task can also be run from the command line with the command: `python -m tigerflow_ml.text.translate.local --input-dir ./input/ --input-ext .txt --output-dir ./output/ --output-ext .txt --model Infomaniak-AI/vllm-translategemma-27b-it --cache-dir /path/to/.hf/hub/ --source-lang en --target-lang de`
 
 
 ### Local translation fetching an LLM from HuggingFace Hub
 
-Uses `google/gemma-3-4b-it` (an image-text-to-text chat model) to translate a short Chinese text to English locally with network access.
+Uses `google/gemma-3-4b-it` (an instruction-tuned chat model) to translate a short Chinese text to English locally with network access.
 
 === "Config"
 

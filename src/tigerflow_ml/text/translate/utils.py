@@ -2,6 +2,8 @@
 Utility functions for file I/O and encoding detection.
 """
 
+import ast
+import json
 from pathlib import Path
 
 from tigerflow.logconfig import logger
@@ -73,3 +75,16 @@ def read_file_with_fallback(path: Path) -> str:
 
     # This should never be reached since latin-1 accepts all byte values
     raise TranslationError(f"Could not decode file {path}: {last_error}")
+
+
+def parse_kwargs(value: str | dict, *, name: str = "kwargs") -> dict:
+    if isinstance(value, dict):
+        return value
+    try:
+        return json.loads(value)
+    except json.JSONDecodeError:
+        pass
+    try:
+        return ast.literal_eval(value)
+    except (ValueError, SyntaxError) as e:
+        raise ValueError(f"--{name} is not a valid dict: {value!r}") from e
