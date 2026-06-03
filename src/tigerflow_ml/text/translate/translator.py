@@ -75,26 +75,31 @@ class vllmTranslator:
 
         tp = torch.cuda.device_count() or 1
 
-        # user set max_model_len overrides all else
+        # identify model context window to ensure max_model_len does not exceed this
+        _MAX_LEN_ATTRS = (
+            "max_position_embeddings",
+            "n_positions",
+            "n_ctx",
+            "max_seq_len",
+            "seq_length",
+        )
+        model_len_cap = next(
+            (getattr(config, a) for a in _MAX_LEN_ATTRS if hasattr(config, a)),
+            None,
+        )
+        requested_model_len = max_model_len
         if not max_model_len:
-            # identify model context window to ensure max_model_len does not exceed this
-            _MAX_LEN_ATTRS = (
-                "max_position_embeddings",
-                "n_positions",
-                "n_ctx",
-                "max_seq_len",
-                "seq_length",
-            )
-            model_len_cap = next(
-                (getattr(config, a) for a in _MAX_LEN_ATTRS if hasattr(config, a)),
-                None,
-            )
             # max_model_len should be approx max_chunk_tokens*2 + overhead
             max_model_len = int(
                 max_chunk_tokens * 2.5 + 512
             )  # 2.5 for extra wiggle room
-            if model_len_cap is not None:
-                max_model_len = min(max_model_len, model_len_cap)
+        if model_len_cap is not None:
+            if requested_model_len and model_len_cap < max_model_len:
+                logger.warning(
+                    f"  Provided --max-model-len ({max_model_len}) exceeds model's "
+                    f"found max length ({model_len_cap}). Clamping..."
+                )
+            max_model_len = min(max_model_len, model_len_cap)
 
         llm_kwargs = dict(
             model=resolved_model,
@@ -103,7 +108,7 @@ class vllmTranslator:
             enforce_eager=True,
         )
         llm_kwargs.update(user_llm_kwargs)
-        logger.info(f"    llm_kwargs={llm_kwargs}")
+        logger.info(f"  llm_kwargs={llm_kwargs}")
 
         sampling_kwargs = dict(
             temperature=temperature,
@@ -111,12 +116,12 @@ class vllmTranslator:
             max_tokens=max_chunk_tokens,
         )
         sampling_kwargs.update(user_sampling_kwargs)
-        logger.info(f"    sampling_kwargs={sampling_kwargs}")
+        logger.info(f"  sampling_kwargs={sampling_kwargs}")
         self.sampling_params = SamplingParams(**cast(Any, sampling_kwargs))
 
         extra_chat_kwargs: dict[str, Any] = {"use_tqdm": False}
         extra_chat_kwargs.update(user_chat_kwargs)
-        logger.info(f"    extra_chat_kwargs={extra_chat_kwargs}")
+        logger.info(f"  extra_chat_kwargs={extra_chat_kwargs}")
         self.extra_chat_kwargs = extra_chat_kwargs
 
         self.model = LLM(**cast(Any, llm_kwargs))
