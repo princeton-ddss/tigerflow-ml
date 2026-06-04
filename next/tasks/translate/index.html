@@ -883,6 +883,11 @@
 <td>Prompt template for chat-based models (uses <code>{source_lang}</code>, <code>{target_lang}</code>, and <code>{text}</code>). Ignored for tgemma models.</td>
 </tr>
 <tr>
+<td><code>--use-fallback-prompt</code></td>
+<td><code>False</code></td>
+<td>When no source language can be determined and the prompt template uses <code>{source_lang}</code>, fall back to a source-language-free prompt (<code>Translate the following text to {target_lang}…</code>). Not supported for <code>tgemma</code> models.</td>
+</tr>
+<tr>
 <td><code>--system-message</code></td>
 <td></td>
 <td>System message for chat models. Ignored for tgemma models.</td>
