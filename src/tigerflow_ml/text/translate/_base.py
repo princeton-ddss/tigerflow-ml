@@ -51,6 +51,11 @@ _DEFAULT_PROMPT = (
     "Output only the translated text, nothing else. Text: {text}"
 )
 
+_FALLBACK_PROMPT = (
+    "Translate the following text to {target_lang}. "
+    "Output only the translated text, nothing else. Text: {text}"
+)
+
 
 class _TranslateBase:
     """Translate documents using Hugging Face models."""
@@ -96,6 +101,15 @@ class _TranslateBase:
                 "When disabled, --source-lang is required."
             ),
         ] = True
+
+        use_fallback_prompt: Annotated[
+            bool,
+            typer.Option(
+                help="Use a source-language-free fallback prompt when "
+                "no source language can be determined. Not supported for "
+                "tgemma models."
+            ),
+        ] = False
 
         # override for custom help message
         max_model_len: Annotated[
@@ -191,6 +205,7 @@ class _TranslateBase:
             context.target_lang,
             logger.info,
             auto_lang_detect=context.auto_lang_detect,
+            use_fallback_prompt=context.use_fallback_prompt,
         )
 
         logger.info("Translation complete!")
@@ -264,13 +279,14 @@ def _resolve_source_lang(
     target_lang: str,
     auto_lang_detect: bool,
     on_progress: Callable[..., None],
-) -> str:
+) -> str | None:
     """
     Resolve the source language for a file.
 
     Explicit source_lang always takes precedence. When auto_lang_detect is
     True, langdetect fills in a missing source_lang and a mismatch between
-    detected and given is warned about.
+    detected and given is warned about. Returns None when no source language
+    can be determined; the caller decides whether that's an error.
 
     Args:
         content: File contents (used for detection).
@@ -280,11 +296,11 @@ def _resolve_source_lang(
         on_progress: Callback for progress messages.
 
     Returns:
-        Resolved source language code.
+        Resolved source language code, or None if unresolvable.
 
     Raises:
         AlreadyInTargetLanguageError: If resolved language equals target_lang.
-        TranslationError: If no source language can be determined.
+        TranslationError: If auto_lang_detect is False and source_lang is None.
     """
     if not auto_lang_detect:
         if source_lang is None:
@@ -295,7 +311,7 @@ def _resolve_source_lang(
         on_progress(
             f"  Source language: {get_language_name(source_lang)} ({source_lang})"
         )
-        resolved = source_lang
+        resolved: str | None = source_lang
     else:
         detected = detect_language(content)
         if detected is not None:
@@ -312,15 +328,10 @@ def _resolve_source_lang(
                     f" {source_lang}; using --source-lang"
                 )
             resolved = source_lang
-        elif detected is not None:
-            resolved = detected
         else:
-            raise TranslationError(
-                "Could not detect language (text may be too short or mixed). "
-                "Explicitly set --source-lang."
-            )
+            resolved = detected
 
-    if resolved == target_lang:
+    if resolved is not None and resolved == target_lang:
         raise AlreadyInTargetLanguageError(
             f"Already in {get_language_name(target_lang)}"
         )
@@ -335,6 +346,7 @@ def _translate_file(
     target_lang: str = "en",
     on_progress: Callable[..., None] = print,
     auto_lang_detect: bool = True,
+    use_fallback_prompt: bool = False,
 ) -> str:
     """
     Translate a single file.
@@ -349,12 +361,18 @@ def _translate_file(
         on_progress: Callback for progress messages.
         auto_lang_detect: Run langdetect on the file. Explicit source_lang
             takes precedence; when False, source_lang is required.
+        use_fallback_prompt: When no source language can be determined and
+            the translator's prompt template requires {source_lang}, swap to
+            a source-language-free fallback prompt for this file. Not
+            supported for tgemma models.
 
     Raises:
         EmptyFileError: If the input file is empty.
         AlreadyInTargetLanguageError: If the input file is already 'translated.'
         TranslationError: If translation fails.
     """
+    from .translator import TgemmaTranslator
+
     on_progress(f"Processing: {input_file.name}")
 
     content = read_file_with_fallback(input_file)
@@ -368,17 +386,41 @@ def _translate_file(
         content, source_lang, target_lang, auto_lang_detect, on_progress
     )
 
-    if resolved_lang not in LANGUAGES:
+    original_prompt = translator.prompt_template
+    use_fallback = False
+
+    if resolved_lang is None:
+        if isinstance(translator, TgemmaTranslator):
+            raise TranslationError(
+                "Source language could not be determined. Explicitly set --source-lang."
+            )
+        if "{source_lang}" in original_prompt:
+            if not use_fallback_prompt:
+                raise TranslationError(
+                    "Source language could not be determined. "
+                    "Explicitly set --source-lang or run with"
+                    " --use-fallback-prompt."
+                )
+            on_progress(f"  Using fallback prompt: {_FALLBACK_PROMPT}")
+            use_fallback = True
+
+    if resolved_lang is not None and resolved_lang not in LANGUAGES:
         on_progress(
             f"  Note: '{resolved_lang}' not in common language list,"
             " attempting anyway..."
         )
 
-    # Translate
     on_progress(
         f"  Translating to: {get_language_name(target_lang)} ({target_lang})..."
     )
-    translated = _translate_text(content, translator, resolved_lang, target_lang)
+
+    try:
+        if use_fallback:
+            translator.prompt_template = _FALLBACK_PROMPT
+        translated = _translate_text(content, translator, resolved_lang, target_lang)
+    finally:
+        if use_fallback:
+            translator.prompt_template = original_prompt
 
     # Sanity check
     if len(translated) > 100 and resolved_lang != "en":
@@ -400,7 +442,7 @@ def _translate_file(
 def _translate_text(
     text: str,
     translator: Translator,
-    source_lang: str,
+    source_lang: str | None,
     target_lang: str = "en",
     max_retries: int = 3,
 ) -> str:
@@ -444,7 +486,7 @@ def _translate_text(
 def _translate_chunk_with_retry(
     text: str,
     translator: Translator,
-    source_lang: str,
+    source_lang: str | None,
     target_lang: str,
     tokenizer: PreTrainedTokenizerBase,
     max_tokens: int,

@@ -17,6 +17,7 @@ Translate text documents using HuggingFace [vLLM optimized TranslateGemma](https
 | `--max-model-len`    | `chunk_size × 2.5 + 512`         | Maximum sequence length (input + output tokens) passed to vLLM. Capped by the model's configured context window.                 |
 | `--model-backend`    | `auto`                           | Model backend: `chat`, `tgemma`, or `auto` (auto-detects from model name)                                                        |
 | `--prompt-template`  | *(see below)*                    | Prompt template for chat-based models (uses `{source_lang}`, `{target_lang}`, and `{text}`). Ignored for tgemma models.          |
+| `--use-fallback-prompt` | `False`                       | When no source language can be determined and the prompt template uses `{source_lang}`, fall back to a source-language-free prompt (`Translate the following text to {target_lang}…`). Not supported for `tgemma` models. |
 | `--system-message`   |                                  | System message for chat models. Ignored for tgemma models.                                                                       |
 | `--temperature`      | `0.0`                            | Sampling temperature. Lower values make output more deterministic.                                                               |
 | `--seed`             | `42`                             | Random seed for reproducibility                                                                                                  |
