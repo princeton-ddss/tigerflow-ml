@@ -89,6 +89,14 @@ class _TranslateBase:
             typer.Option(help="Translation model backend. 'auto' uses model name."),
         ] = "auto"
 
+        auto_lang_detect: Annotated[
+            bool,
+            typer.Option(
+                help="Auto-detect source language with langdetect. "
+                "When disabled, --source-lang is required."
+            ),
+        ] = True
+
         # override for custom help message
         max_model_len: Annotated[
             int | None,
@@ -182,6 +190,7 @@ class _TranslateBase:
             context.source_lang,
             context.target_lang,
             logger.info,
+            auto_lang_detect=context.auto_lang_detect,
         )
 
         logger.info("Translation complete!")
@@ -249,6 +258,75 @@ def _download_tokenizer(
     )
 
 
+def _resolve_source_lang(
+    content: str,
+    source_lang: str | None,
+    target_lang: str,
+    auto_lang_detect: bool,
+    on_progress: Callable[..., None],
+) -> str:
+    """
+    Resolve the source language for a file.
+
+    Explicit source_lang always takes precedence. When auto_lang_detect is
+    True, langdetect fills in a missing source_lang and a mismatch between
+    detected and given is warned about.
+
+    Args:
+        content: File contents (used for detection).
+        source_lang: Explicit source language code, or None.
+        target_lang: Target language code.
+        auto_lang_detect: Whether to run langdetect.
+        on_progress: Callback for progress messages.
+
+    Returns:
+        Resolved source language code.
+
+    Raises:
+        AlreadyInTargetLanguageError: If resolved language equals target_lang.
+        TranslationError: If no source language can be determined.
+    """
+    if not auto_lang_detect:
+        if source_lang is None:
+            raise TranslationError(
+                "Source language could not be determined. "
+                "Explicitly set --source-lang or enable --auto-lang-detect."
+            )
+        on_progress(
+            f"  Source language: {get_language_name(source_lang)} ({source_lang})"
+        )
+        resolved = source_lang
+    else:
+        detected = detect_language(content)
+        if detected is not None:
+            on_progress(
+                f"  Detected language: {get_language_name(detected)} ({detected})"
+            )
+        if source_lang is not None:
+            on_progress(
+                f"  Source language: {get_language_name(source_lang)} ({source_lang})"
+            )
+            if detected is not None and detected != source_lang:
+                on_progress(
+                    f"  Warning: detected {detected} but --source-lang is"
+                    f" {source_lang}; using --source-lang"
+                )
+            resolved = source_lang
+        elif detected is not None:
+            resolved = detected
+        else:
+            raise TranslationError(
+                "Could not detect language (text may be too short or mixed). "
+                "Explicitly set --source-lang."
+            )
+
+    if resolved == target_lang:
+        raise AlreadyInTargetLanguageError(
+            f"Already in {get_language_name(target_lang)}"
+        )
+    return resolved
+
+
 def _translate_file(
     translator: Translator,
     input_file: Path,
@@ -256,6 +334,7 @@ def _translate_file(
     source_lang: str | None = None,
     target_lang: str = "en",
     on_progress: Callable[..., None] = print,
+    auto_lang_detect: bool = True,
 ) -> str:
     """
     Translate a single file.
@@ -264,9 +343,12 @@ def _translate_file(
         translator: Translator instance.
         input_file: Path to input file.
         output_file: Path to output file.
-        source_lang: Source language code (auto-detect if None).
+        source_lang: Source language code. Required when auto_lang_detect is
+            False; otherwise overrides auto-detection if provided.
         target_lang: Target language code.
         on_progress: Callback for progress messages.
+        auto_lang_detect: Run langdetect on the file. Explicit source_lang
+            takes precedence; when False, source_lang is required.
 
     Raises:
         EmptyFileError: If the input file is empty.
@@ -282,30 +364,13 @@ def _translate_file(
 
     on_progress(f"  File size: {len(content):,} characters")
 
-    # Detect language
-    detected_lang = source_lang
-    if detected_lang is None:
-        detected_lang = detect_language(content)
-        if detected_lang is None:
-            raise TranslationError(
-                "Could not detect language (text may be too short or mixed)"
-            )
-        on_progress(
-            f"  Detected language: {get_language_name(detected_lang)} ({detected_lang})"
-        )
-    else:
-        on_progress(
-            f"  Source language: {get_language_name(detected_lang)} ({detected_lang})"
-        )
+    resolved_lang = _resolve_source_lang(
+        content, source_lang, target_lang, auto_lang_detect, on_progress
+    )
 
-    if detected_lang == target_lang:
-        raise AlreadyInTargetLanguageError(
-            f"Already in {get_language_name(target_lang)}"
-        )
-
-    if detected_lang not in LANGUAGES:
+    if resolved_lang not in LANGUAGES:
         on_progress(
-            f"  Note: '{detected_lang}' not in common language list,"
+            f"  Note: '{resolved_lang}' not in common language list,"
             " attempting anyway..."
         )
 
@@ -313,10 +378,10 @@ def _translate_file(
     on_progress(
         f"  Translating to: {get_language_name(target_lang)} ({target_lang})..."
     )
-    translated = _translate_text(content, translator, detected_lang, target_lang)
+    translated = _translate_text(content, translator, resolved_lang, target_lang)
 
     # Sanity check
-    if len(translated) > 100 and detected_lang != "en":
+    if len(translated) > 100 and resolved_lang != "en":
         if content[:100] == translated[:100]:
             on_progress(
                 "  Warning: Output appears identical to input -"
