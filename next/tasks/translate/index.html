@@ -850,12 +850,17 @@
 <tr>
 <td><code>--source-lang</code></td>
 <td></td>
-<td>Source language code (e.g. <code>en</code>, <code>de</code>, <code>zh</code>) -- will attempt auto detection by default</td>
+<td>Source language code (e.g. <code>en</code>, <code>de</code>, <code>zh</code>). Overrides auto-detection when <code>--auto-lang-detect</code> is on.</td>
 </tr>
 <tr>
 <td><code>--target-lang</code></td>
 <td><code>en</code></td>
 <td>Target language code (e.g. <code>de</code>, <code>en</code>, <code>fr</code>)</td>
+</tr>
+<tr>
+<td><code>--auto-lang-detect</code></td>
+<td><code>True</code></td>
+<td>Auto-detect source language with <code>langdetect</code>. When disabled (<code>--no-auto-lang-detect</code>), <code>--source-lang</code> is required.</td>
 </tr>
 <tr>
 <td><code>--chunk-size</code></td>
