@@ -408,3 +408,23 @@ class TestTgemmaTranslator:
 
         messages = translator.model.chat.call_args[0][0]
         assert all(m["role"] != "system" for m in messages)
+
+
+class TestSetupValidation:
+    def test_setup_raises_if_prompt_template_lacks_text_placeholder(self):
+        context = SimpleNamespace(
+            prompt_template="Translate to {target_lang}.",
+            source_lang="fr",
+            target_lang="en",
+        )
+        with pytest.raises(ValueError, match=r"\{text\}"):
+            _TranslateBase.setup(context)
+
+    def test_setup_raises_if_source_lang_equals_target_lang(self):
+        context = SimpleNamespace(
+            prompt_template=_DEFAULT_PROMPT,
+            source_lang="en",
+            target_lang="en",
+        )
+        with pytest.raises(ValueError, match="No translation required"):
+            _TranslateBase.setup(context)

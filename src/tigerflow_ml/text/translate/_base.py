@@ -111,6 +111,17 @@ class _TranslateBase:
 
         from .translator import build_translator
 
+        if "{text}" not in context.prompt_template:
+            raise ValueError(
+                '--prompt-template must contain "{text}"'
+                " as a placeholder for input file contents."
+            )
+        if context.source_lang == context.target_lang:
+            raise ValueError(
+                f"--source-lang ({context.source_lang}) is the same as"
+                f" --target-lang ({context.target_lang}). No translation required."
+            )
+
         try:
             config = AutoConfig.from_pretrained(
                 context.model,
