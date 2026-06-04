@@ -7,6 +7,7 @@ import pytest
 
 from tigerflow_ml.text.translate._base import (
     _DEFAULT_PROMPT,
+    _FALLBACK_PROMPT,
     _translate_chunk_with_retry,
     _translate_file,
     _translate_text,
@@ -46,6 +47,7 @@ def mock_translator(mock_tokenizer):
     translator = MagicMock()
     translator.tokenizer = mock_tokenizer
     translator.max_chunk_tokens = 10
+    translator.prompt_template = _DEFAULT_PROMPT
     return translator
 
 
@@ -185,14 +187,14 @@ class TestTranslateFile:
                     MagicMock(), input_file, tmp_path / "out.txt", target_lang="en"
                 )
 
-    def test_language_detection_fails_raises(self, tmp_path):
+    def test_language_detection_fails_raises(self, mock_translator, tmp_path):
         input_file = tmp_path / "doc.txt"
         input_file.write_text("Hello world")
         with patch(
             "tigerflow_ml.text.translate._base.detect_language", return_value=None
         ):
             with pytest.raises(TranslationError):
-                _translate_file(MagicMock(), input_file, tmp_path / "out.txt")
+                _translate_file(mock_translator, input_file, tmp_path / "out.txt")
 
 
 class TestTranslateFileAutoLangDetect:
@@ -302,6 +304,132 @@ class TestTranslateFileAutoLangDetect:
         assert translator.translate.call_args.args[1] == "fr"
 
 
+class TestTranslateFileFallback:
+    """_translate_file: --use-fallback-prompt routing."""
+
+    def test_fallback_prompt_reaches_model_when_detection_fails(
+        self, mock_tokenizer, tmp_path
+    ):
+        """When detection fails and fallback is enabled, the model.chat
+        payload uses _FALLBACK_PROMPT (not the default {source_lang} prompt).
+        """
+        translator = _make_vllm_translator(mock_tokenizer)
+        translator.model.chat.return_value = [_vllm_output("translated")]
+        input_file = tmp_path / "in.txt"
+        input_file.write_text("xyz")
+
+        with patch(
+            "tigerflow_ml.text.translate._base.detect_language", return_value=None
+        ):
+            _translate_file(
+                translator,
+                input_file,
+                tmp_path / "out.txt",
+                target_lang="en",
+                use_fallback_prompt=True,
+            )
+
+        sent = translator.model.chat.call_args[0][0][-1]["content"]
+        assert sent == _FALLBACK_PROMPT.format(target_lang="en", text="xyz")
+
+    def test_prompt_template_restored_after_translation_exception(
+        self, mock_tokenizer, tmp_path
+    ):
+        """try/finally restores prompt_template if translation raises.
+
+        Note: this test exercises the mutate-restore pattern in
+        _translate_file and should be removed alongside that pattern in the
+        follow-up refactor that threads prompt_template through translate().
+        """
+        translator = _make_vllm_translator(mock_tokenizer)
+        translator.model.chat.side_effect = RuntimeError("boom")
+        input_file = tmp_path / "in.txt"
+        input_file.write_text("xyz")
+
+        with patch(
+            "tigerflow_ml.text.translate._base.detect_language", return_value=None
+        ):
+            with pytest.raises(RuntimeError):
+                _translate_file(
+                    translator,
+                    input_file,
+                    tmp_path / "out.txt",
+                    target_lang="en",
+                    use_fallback_prompt=True,
+                )
+
+        assert translator.prompt_template == _DEFAULT_PROMPT
+
+    def test_no_source_lang_in_template_translates_without_fallback(
+        self, mock_tokenizer, tmp_path
+    ):
+        """When the active template doesn't reference {source_lang},
+        detection failure is non-fatal and the custom template (not the
+        fallback) reaches the model."""
+        custom_template = "Render in {target_lang}: {text}"
+        translator = _make_vllm_translator(mock_tokenizer)
+        translator.prompt_template = custom_template
+        translator.model.chat.return_value = [_vllm_output("translated")]
+        input_file = tmp_path / "in.txt"
+        input_file.write_text("xyz")
+
+        with patch(
+            "tigerflow_ml.text.translate._base.detect_language", return_value=None
+        ):
+            _translate_file(
+                translator,
+                input_file,
+                tmp_path / "out.txt",
+                target_lang="en",
+                use_fallback_prompt=False,
+            )
+
+        sent = translator.model.chat.call_args[0][0][-1]["content"]
+        assert sent == custom_template.format(target_lang="en", text="xyz")
+        assert translator.prompt_template == custom_template
+
+
+class TestTranslateFileTgemma:
+    """_translate_file: tgemma models reject the fallback path."""
+
+    def _make_tgemma(self, mock_tokenizer):
+        translator = object.__new__(TgemmaTranslator)
+        translator.tokenizer = mock_tokenizer
+        translator.max_chunk_tokens = 5
+        translator.sampling_params = MagicMock()
+        translator.extra_chat_kwargs = {"use_tqdm": False}
+        translator.prompt_template = (
+            "<<<source>>>{source_lang}<<<target>>>{target_lang}<<<text>>>{text}"
+        )
+        translator.system_message = None
+        translator.model = MagicMock()
+        return translator
+
+    def test_tgemma_raises_even_when_use_fallback_prompt_enabled(
+        self, mock_tokenizer, tmp_path
+    ):
+        """tgemma ignores use_fallback_prompt and requires a source language.
+        Its prompt_template stays untouched."""
+        translator = self._make_tgemma(mock_tokenizer)
+        original_prompt = translator.prompt_template
+        input_file = tmp_path / "in.txt"
+        input_file.write_text("xyz")
+
+        with patch(
+            "tigerflow_ml.text.translate._base.detect_language", return_value=None
+        ):
+            with pytest.raises(TranslationError):
+                _translate_file(
+                    translator,
+                    input_file,
+                    tmp_path / "out.txt",
+                    target_lang="en",
+                    use_fallback_prompt=True,
+                )
+
+        assert translator.prompt_template == original_prompt
+
+
 class TestRun:
     @pytest.mark.parametrize(
         "error",
@@ -317,6 +445,7 @@ class TestRun:
             source_lang=None,
             target_lang="en",
             auto_lang_detect=True,
+            use_fallback_prompt=False,
         )
         with patch(
             "tigerflow_ml.text.translate._base._translate_file", side_effect=error
@@ -418,6 +547,16 @@ class TestVllmTranslator:
 
         messages = translator.model.chat.call_args[0][0]
         assert messages[0]["content"] == custom_msg
+
+    def test_build_message_raises_when_source_lang_none_and_template_requires_it(
+        self, mock_tokenizer
+    ):
+        """Guard the new None input space opened by widening source_lang."""
+        translator = _make_vllm_translator(mock_tokenizer)
+        assert "{source_lang}" in translator.prompt_template
+
+        with pytest.raises(ValueError, match="source_lang"):
+            translator._build_message("hello", None, "en")
 
 
 class TestGetModelType:
