@@ -4,7 +4,7 @@ Translate `.txt` documents into English (or another target language) using any c
 
 ## How it works
 
-1. The source language for each `.txt` file in the input directory is detected via `langdetect` (or supplied with `--source-lang`).
+1. The source language for each `.txt` file is resolved using the provided `--source-lang` or autodetection via `langdetect` (unless `--auto-lang-detect` is disabled).
 2. If the document exceeds the token budget, it is split into chunks at paragraph and/or sentence boundaries.
 3. Each chunk is translated via vLLM.
 4. Translated chunks are reassembled and written to the output directory.
@@ -62,7 +62,8 @@ Here's a breakdown of what each of these arguments does:
 
 Some other arguments you can use are:
 
-- `--source-lang` : Source language code (e.g. 'en', 'de', 'zh'). If this is not specified, the input files' language is detected via `langdetect`.
+- `--source-lang` : Source language code (e.g. 'en', 'de', 'zh'). Overrides auto-detection when `--auto-lang-detect` is on.
+- `--auto-lang-detect` / `--no-auto-lang-detect` : Whether to auto-detect the source language via `langdetect` (default: on). When enabled alongside `--source-lang`, detection still runs, but `--source-lang` takes precedence.
 - `--target-lang` : Target language code (e.g. 'de', 'en', 'fr'). This defaults to English (en).
 - `--chunk-size` : The maximum tokens per chunk. The documents are translated one chunk at a time, so if your model cannot handle large inputs, this should be small. Defaults to `900`.
 - `--max-model-len` : Maximum sequence length (input + output tokens) passed to vLLM. Defaults to `chunk_size * 2.5 + 512`, capped by the model's configured context window.

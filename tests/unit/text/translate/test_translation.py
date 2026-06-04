@@ -195,6 +195,113 @@ class TestTranslateFile:
                 _translate_file(MagicMock(), input_file, tmp_path / "out.txt")
 
 
+class TestTranslateFileAutoLangDetect:
+    """_translate_file: auto_lang_detect / source_lang interaction."""
+
+    @pytest.fixture
+    def translator(self, mock_translator):
+        mock_translator.translate.return_value = "translated content"
+        return mock_translator
+
+    def test_source_lang_overrides_detected(self, translator, tmp_path):
+        """Explicit --source-lang wins over auto-detected language."""
+        input_file = tmp_path / "doc.txt"
+        input_file.write_text("Bonjour le monde")
+        with patch(
+            "tigerflow_ml.text.translate._base.detect_language", return_value="es"
+        ):
+            _translate_file(
+                translator,
+                input_file,
+                tmp_path / "out.txt",
+                source_lang="fr",
+                target_lang="en",
+            )
+        assert translator.translate.call_args.args[1] == "fr"
+
+    def test_detection_failure_with_source_lang_succeeds(self, translator, tmp_path):
+        """Detection failure is non-fatal when --source-lang is explicitly set."""
+        input_file = tmp_path / "doc.txt"
+        input_file.write_text("Bonjour le monde")
+        with patch(
+            "tigerflow_ml.text.translate._base.detect_language", return_value=None
+        ):
+            _translate_file(
+                translator,
+                input_file,
+                tmp_path / "out.txt",
+                source_lang="fr",
+                target_lang="en",
+            )
+        translator.translate.assert_called_once()
+        assert translator.translate.call_args.args[1] == "fr"
+
+    def test_auto_lang_detect_disabled_skips_detection(self, translator, tmp_path):
+        """auto_lang_detect=False never calls detect_language."""
+        input_file = tmp_path / "doc.txt"
+        input_file.write_text("Bonjour le monde")
+        with patch("tigerflow_ml.text.translate._base.detect_language") as mock_detect:
+            _translate_file(
+                translator,
+                input_file,
+                tmp_path / "out.txt",
+                source_lang="fr",
+                target_lang="en",
+                auto_lang_detect=False,
+            )
+        mock_detect.assert_not_called()
+
+    def test_auto_lang_detect_disabled_no_source_lang_raises(
+        self, translator, tmp_path
+    ):
+        """auto_lang_detect=False + no source_lang -> TranslationError."""
+        input_file = tmp_path / "doc.txt"
+        input_file.write_text("Bonjour le monde")
+        with pytest.raises(TranslationError, match="--auto-lang-detect"):
+            _translate_file(
+                translator,
+                input_file,
+                tmp_path / "out.txt",
+                auto_lang_detect=False,
+            )
+
+    def test_source_lang_equals_target_raises_even_when_detected_differs(
+        self, translator, tmp_path
+    ):
+        """Explicit source_lang wins, so source_lang==target_lang trips the check."""
+        input_file = tmp_path / "doc.txt"
+        input_file.write_text("Hello world")
+        with patch(
+            "tigerflow_ml.text.translate._base.detect_language", return_value="fr"
+        ):
+            with pytest.raises(AlreadyInTargetLanguageError):
+                _translate_file(
+                    translator,
+                    input_file,
+                    tmp_path / "out.txt",
+                    source_lang="en",
+                    target_lang="en",
+                )
+
+    def test_explicit_source_lang_avoids_already_in_target_when_detected_matches(
+        self, translator, tmp_path
+    ):
+        """Detected=='en' would normally raise, but user said --source-lang=fr."""
+        input_file = tmp_path / "doc.txt"
+        input_file.write_text("ambiguous")
+        with patch(
+            "tigerflow_ml.text.translate._base.detect_language", return_value="en"
+        ):
+            _translate_file(
+                translator,
+                input_file,
+                tmp_path / "out.txt",
+                source_lang="fr",
+                target_lang="en",
+            )
+        assert translator.translate.call_args.args[1] == "fr"
+
+
 class TestRun:
     @pytest.mark.parametrize(
         "error",
@@ -206,7 +313,10 @@ class TestRun:
     )
     def test_run_propagates_translate_file_errors(self, tmp_path, error):
         context = SimpleNamespace(
-            translator=MagicMock(), source_lang=None, target_lang="en"
+            translator=MagicMock(),
+            source_lang=None,
+            target_lang="en",
+            auto_lang_detect=True,
         )
         with patch(
             "tigerflow_ml.text.translate._base._translate_file", side_effect=error

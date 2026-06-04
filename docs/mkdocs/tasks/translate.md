@@ -10,8 +10,9 @@ Translate text documents using HuggingFace [vLLM optimized TranslateGemma](https
 | `--revision`         | `main`                           | Model revision (branch, tag, or commit hash)                                                                                     |
 | `--cache-dir`        |                                  | HuggingFace cache directory for model files (equivalent to `HF_HOME`)                                                            |
 | `--allow-fetch`      | `--no-allow-fetch`               | Allow downloads from HuggingFace Hub (network access required)                                                                   |
-| `--source-lang`      |                                  | Source language code (e.g. `en`, `de`, `zh`) -- will attempt auto detection by default                                           |
+| `--source-lang`      |                                  | Source language code (e.g. `en`, `de`, `zh`). Overrides auto-detection when `--auto-lang-detect` is on.                          |
 | `--target-lang`      | `en`                             | Target language code (e.g. `de`, `en`, `fr`)                                                                                     |
+| `--auto-lang-detect` | `True`                           | Auto-detect source language with `langdetect`. When disabled (`--no-auto-lang-detect`), `--source-lang` is required.             |
 | `--chunk-size`       | `900`                            | Maximum input tokens per chunk                                                                                                   |
 | `--max-model-len`    | `chunk_size × 2.5 + 512`         | Maximum sequence length (input + output tokens) passed to vLLM. Capped by the model's configured context window.                 |
 | `--model-backend`    | `auto`                           | Model backend: `chat`, `tgemma`, or `auto` (auto-detects from model name)                                                        |
@@ -19,9 +20,9 @@ Translate text documents using HuggingFace [vLLM optimized TranslateGemma](https
 | `--system-message`   |                                  | System message for chat models. Ignored for tgemma models.                                                                       |
 | `--temperature`      | `0.0`                            | Sampling temperature. Lower values make output more deterministic.                                                               |
 | `--seed`             | `42`                             | Random seed for reproducibility                                                                                                  |
-| `--llm-kwargs`       | `{}`                             | JSON string of extra kwargs for vLLM's `LLM()` constructor. Overrides task defaults.        |
-| `--sampling-kwargs`  | `{}`                             | JSON string of extra kwargs for vLLM's `SamplingParams()`. Overrides task defaults.                 |
-| `--chat-kwargs`      | `{}`                             | JSON string of extra kwargs for `LLM.chat()`. Overrides task defaults.                           |
+| `--llm-kwargs`       | `{}`                             | JSON string of extra kwargs for vLLM's `LLM()` constructor. Overrides task defaults.                                             |
+| `--sampling-kwargs`  | `{}`                             | JSON string of extra kwargs for vLLM's `SamplingParams()`. Overrides task defaults.                                              |
+| `--chat-kwargs`      | `{}`                             | JSON string of extra kwargs for `LLM.chat()`. Overrides task defaults.                                                           |
 
 
 ## Chunking Strategy
