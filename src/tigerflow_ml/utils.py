@@ -39,7 +39,7 @@ def read_file_with_fallback(path: Path) -> str:
         The file contents as a string.
 
     Raises:
-        TranslationError: If the file cannot be decoded with any encoding
+        RuntimeError: If the file cannot be decoded with any encoding
             (should not happen since latin-1 accepts all byte values).
     """
     last_error = None
@@ -63,6 +63,16 @@ def read_file_with_fallback(path: Path) -> str:
 
 
 def parse_kwargs(value: str | dict, *, name: str = "kwargs") -> dict:
+    """
+    Parse a string or dict into a dict, trying JSON then Python literal syntax.
+
+    Args:
+        value: A dict (returned as-is) or a string in JSON or Python dict syntax.
+        name: Used in the ValueError message to identify which argument failed.
+
+    Raises:
+        ValueError: If the string cannot be parsed as a valid dict.
+    """
     if isinstance(value, dict):
         return value
     try:
