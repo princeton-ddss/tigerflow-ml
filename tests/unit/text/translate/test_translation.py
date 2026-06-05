@@ -477,7 +477,62 @@ def _vllm_output(text):
 
 
 class TestVllmTranslator:
-    """vllmTranslator: uses vLLM's LLM.chat() API directly."""
+    def _init(self, mock_tokenizer, config, max_model_len=None, max_chunk_tokens=100):
+        mock_torch = MagicMock()
+        mock_torch.cuda.device_count.return_value = 0  # triggers "or 1" fallback
+
+        mock_llm_cls = MagicMock()
+        mock_vllm = MagicMock()
+        mock_vllm.LLM = mock_llm_cls
+        mock_vllm.SamplingParams = MagicMock(return_value=MagicMock())
+
+        modules = {
+            "torch": mock_torch,
+            "vllm": mock_vllm,
+            "huggingface_hub": MagicMock(),
+        }
+        with (
+            patch.dict("sys.modules", modules),
+            patch("tigerflow_ml.text.translate.translator.logger") as mock_logger,
+        ):
+            translator = object.__new__(vllmTranslator)
+            translator.__init__(
+                model_name="any/model",
+                config=config,
+                seed=42,
+                temperature=0.0,
+                tokenizer=mock_tokenizer,
+                max_model_len=max_model_len,
+                max_chunk_tokens=max_chunk_tokens,
+                fetch=False,
+            )
+        return mock_llm_cls, mock_logger
+
+    def test_user_max_model_len_clamped_and_warns_when_exceeds_cap(
+        self, mock_tokenizer
+    ):
+        config = SimpleNamespace(max_position_embeddings=4096)
+        llm_cls, mock_logger = self._init(mock_tokenizer, config, max_model_len=10000)
+        assert llm_cls.call_args.kwargs["max_model_len"] == 4096
+        mock_logger.warning.assert_called_once()
+        assert "Clamping" in mock_logger.warning.call_args[0][0]
+
+    def test_user_max_model_len_preserved_when_within_cap(self, mock_tokenizer):
+        config = SimpleNamespace(max_position_embeddings=4096)
+        llm_cls, _ = self._init(mock_tokenizer, config, max_model_len=2048)
+        assert llm_cls.call_args.kwargs["max_model_len"] == 2048
+
+    def test_auto_max_model_len_clamped_to_cap(self, mock_tokenizer):
+        # max_chunk_tokens=1000 → int(1000 * 2.5 + 512) = 3012
+        config = SimpleNamespace(max_position_embeddings=2048)
+        llm_cls, _ = self._init(mock_tokenizer, config, max_chunk_tokens=1000)
+        assert llm_cls.call_args.kwargs["max_model_len"] == 2048
+
+    def test_no_cap_attr_uses_computed_model_len(self, mock_tokenizer):
+        config = SimpleNamespace()  # no model len cap
+        llm_cls, _ = self._init(mock_tokenizer, config, max_chunk_tokens=10000)
+        expected = int(10000 * 2.5 + 512)
+        assert llm_cls.call_args.kwargs["max_model_len"] == expected
 
     def test_translate_returns_generated_text(self, mock_tokenizer):
         """translate() calls model.chat() once and returns the output text."""
