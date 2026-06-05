@@ -13,7 +13,7 @@ from tigerflow_ml.text.chat_completion._base import (
     _build_txt_message,
     _ChatCompletionBase,
 )
-from tigerflow_ml.text.chat_completion.utils import SkippedFileError
+from tigerflow_ml.text.chat_completion.utils import EmptyFileError
 
 
 def _make_context(**kwargs):
@@ -109,7 +109,7 @@ class TestRun:
         input_file = tmp_path / "file.xyz"
         input_file.write_text("content")
 
-        with pytest.raises(SkippedFileError, match="not currently supported"):
+        with pytest.raises(ValueError, match="not currently supported"):
             _ChatCompletionBase.run(context, input_file, tmp_path / "out.txt")
 
     def test_empty_text_file_raises_skipped(self, tmp_path):
@@ -117,7 +117,7 @@ class TestRun:
         input_file = tmp_path / "file.txt"
         input_file.write_text("   \n  ")
 
-        with pytest.raises(SkippedFileError, match="Empty file"):
+        with pytest.raises(EmptyFileError, match="Empty file"):
             _ChatCompletionBase.run(context, input_file, tmp_path / "out.txt")
 
     def test_whitespace_only_text_file_raises_skipped(self, tmp_path):
@@ -125,7 +125,7 @@ class TestRun:
         input_file = tmp_path / "file.txt"
         input_file.write_text("\t\n\r\n")
 
-        with pytest.raises(SkippedFileError, match="Empty file"):
+        with pytest.raises(EmptyFileError, match="Empty file"):
             _ChatCompletionBase.run(context, input_file, tmp_path / "out.txt")
 
 
