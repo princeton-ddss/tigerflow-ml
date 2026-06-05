@@ -122,6 +122,6 @@ class TestLanguagesConstant:
         for code, name in LANGUAGES.items():
             assert isinstance(code, str)
             assert isinstance(name, str)
-            assert (len(code) == 2) or (
-                re.match(r"[a-z]{2}-[a-z]{2}", code)
+            assert re.fullmatch(
+                r"[a-z]{2}(-[a-z]{2})?", code
             )  # ISO 639-1 codes are 2 chars or 2-2
