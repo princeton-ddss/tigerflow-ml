@@ -120,4 +120,3 @@ class TestLanguagesConstant:
         for code, name in LANGUAGES.items():
             assert isinstance(code, str)
             assert isinstance(name, str)
-            assert len(code) == 2  # ISO 639-1 codes are 2 chars

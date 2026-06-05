@@ -37,6 +37,8 @@ LANGUAGES = {
     "sv": "Swedish",
     "tr": "Turkish",
     "zh": "Chinese",
+    "zh-cn": "Simplified Chinese",
+    "zh-tw": "Traditional Chinese",
 }
 
 
