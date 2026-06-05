@@ -1,3 +1,5 @@
+"""Shared util across all tasks"""
+
 import ast
 import json
 from pathlib import Path
@@ -6,11 +8,23 @@ from tigerflow.logconfig import logger
 
 
 class EmptyFileError(Exception):
-    """Raised when an input file is empty"""
+    """Raised when a input file is empty"""
 
     pass
 
 
+class ConfigParsingError(Exception):
+    """Raised when errors occur while trying
+    to access, read, or parse model configs"""
+
+    pass
+
+
+# Encoding fallback chain for reading files.
+# Note: utf-8-sig handles both BOM and non-BOM UTF-8 files (strips BOM if present).
+# latin-1 always succeeds (maps all 256 byte values), so it must be last.
+# Files encoded in non-Western encodings (Shift-JIS, GB2312, etc.) will decode
+# as garbage rather than failing-consider using charset-normalizer for better detection.
 ENCODING_FALLBACK_CHAIN = ["utf-8-sig", "cp1252", "iso-8859-15", "latin-1"]
 
 
@@ -48,10 +62,14 @@ def read_file_with_fallback(path: Path) -> str:
     raise RuntimeError(f"Could not decode file {path}: {last_error}")
 
 
-def parse_kwargs(value: str | dict) -> dict:
+def parse_kwargs(value: str | dict, *, name: str = "kwargs") -> dict:
     if isinstance(value, dict):
         return value
     try:
         return json.loads(value)
     except json.JSONDecodeError:
+        pass
+    try:
         return ast.literal_eval(value)
+    except (ValueError, SyntaxError) as e:
+        raise ValueError(f"--{name} is not a valid dict: {value!r}") from e
