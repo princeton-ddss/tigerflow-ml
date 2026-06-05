@@ -1,9 +1,13 @@
 """Tests for the shared utils module."""
 
+from unittest.mock import MagicMock, patch
+
 import pytest
 
 from tigerflow_ml.utils import (
     ENCODING_FALLBACK_CHAIN,
+    ConfigParsingError,
+    load_model_config,
     read_file_with_fallback,
 )
 
@@ -75,3 +79,47 @@ class TestReadFileWithFallback:
 
         result = read_file_with_fallback(file_path)
         assert result == "   \n\n   \t\t   "
+
+
+class TestLoadModelConfig:
+    def test_returns_config_on_success(self):
+        mock_config = MagicMock()
+        with patch("transformers.AutoConfig.from_pretrained", return_value=mock_config):
+            result = load_model_config("some/model")
+        assert result is mock_config
+
+    def test_passes_args_to_from_pretrained(self):
+        mock_config = MagicMock()
+        with patch(
+            "transformers.AutoConfig.from_pretrained", return_value=mock_config
+        ) as mock_fn:
+            load_model_config(
+                "some/model", allow_fetch=True, cache_dir="/cache", revision="v1"
+            )
+        mock_fn.assert_called_once_with(
+            "some/model",
+            local_files_only=False,
+            cache_dir="/cache",
+            revision="v1",
+        )
+
+    def test_oserror_no_fetch_raises_file_not_found(self):
+        with patch("transformers.AutoConfig.from_pretrained", side_effect=OSError):
+            with pytest.raises(FileNotFoundError, match="some/model"):
+                load_model_config("some/model", allow_fetch=False)
+
+    def test_oserror_allow_fetch_raises_config_parsing_error(self):
+        with patch(
+            "transformers.AutoConfig.from_pretrained",
+            side_effect=OSError("network error"),
+        ):
+            with pytest.raises(ConfigParsingError):
+                load_model_config("some/model", allow_fetch=True)
+
+    def test_unexpected_exception_raises_config_parsing_error(self):
+        with patch(
+            "transformers.AutoConfig.from_pretrained",
+            side_effect=ValueError("bad config"),
+        ):
+            with pytest.raises(ConfigParsingError, match="bad config"):
+                load_model_config("some/model")
