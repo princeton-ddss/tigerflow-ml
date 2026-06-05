@@ -11,7 +11,7 @@ from tigerflow.utils import SetupContext
 
 from tigerflow_ml.params import VLLMParams
 
-from .utils import SkippedFileError, parse_kwargs, read_file_with_fallback
+from .utils import EmptyFileError, parse_kwargs, read_file_with_fallback
 
 _TEXT_EXTENSIONS = [".txt", ".text", ".md", ".log", ".rtf"]
 _IMG_EXTENSIONS = [".jpg", ".jpeg", ".png", ".tiff", ".tif", ".bmp"]
@@ -109,7 +109,7 @@ class _ChatCompletionBase:
         elif input_file.suffix.lower() in _IMG_EXTENSIONS:
             result = _ChatCompletionBase._process_img_file(context, input_file)
         else:
-            raise SkippedFileError(
+            raise ValueError(
                 f"File extension {input_file.suffix} not currently supported - "
                 "raise an issue on Github"
             )
@@ -122,7 +122,7 @@ class _ChatCompletionBase:
         content = read_file_with_fallback(input_file)
 
         if not content.strip():
-            raise SkippedFileError("Empty file")
+            raise EmptyFileError("Empty file")
 
         message = _build_txt_message(
             prompt=context.prompt,
@@ -163,7 +163,7 @@ def _run_chat(context: SetupContext, message: Any) -> str:
     except ValueError as e:
         msg = str(e).lower()
         if "max_model_len" in msg or "too long" in msg:
-            raise SkippedFileError(
+            raise ValueError(
                 f"Input exceeds max-model-len={context.max_model_len} — "
                 "increase --max-model-len or reduce the file size"
             ) from e
@@ -181,7 +181,7 @@ def _run_chat(context: SetupContext, message: Any) -> str:
             "--max-tokens and/or --max_model_len for a complete result"
         )
     elif result.finish_reason != "stop":
-        raise SkippedFileError(f"Unexpected finish reason: {result.finish_reason!r}")
+        raise RuntimeError(f"Unexpected finish reason: {result.finish_reason!r}")
 
     return result.text
 

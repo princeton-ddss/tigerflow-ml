@@ -5,9 +5,8 @@ from pathlib import Path
 from tigerflow.logconfig import logger
 
 
-class SkippedFileError(Exception):
-    """Raised when a file should be skipped
-    (e.g., empty)."""
+class EmptyFileError(Exception):
+    """Raised when an input file is empty"""
 
     pass
 
