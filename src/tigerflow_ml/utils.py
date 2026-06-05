@@ -3,8 +3,12 @@
 import ast
 import json
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from tigerflow.logconfig import logger
+
+if TYPE_CHECKING:
+    from transformers import PretrainedConfig
 
 
 class EmptyFileError(Exception):
@@ -83,3 +87,51 @@ def parse_kwargs(value: str | dict, *, name: str = "kwargs") -> dict:
         return ast.literal_eval(value)
     except (ValueError, SyntaxError) as e:
         raise ValueError(f"--{name} is not a valid dict: {value!r}") from e
+
+
+def load_model_config(
+    model: str,
+    allow_fetch: bool = False,
+    cache_dir: str | None = None,
+    revision: str = "main",
+) -> "PretrainedConfig":
+    """
+    Load a HuggingFace model config via transformers AutoConfig.
+
+    Args:
+        model: HuggingFace model repo ID or local path.
+        allow_fetch: If False, only use locally cached files (no network access).
+        cache_dir: HuggingFace cache directory for model files.
+        revision: Model revision (branch, tag, or commit hash).
+
+    Returns:
+        The model's PretrainedConfig (architecture, vocab size, etc.).
+
+    Raises:
+        FileNotFoundError: If the config cannot be found in the cache dir and
+            --allow-fetch is False
+        ConfigParsingError: If the config cannot be loaded or parsed, wrapping
+            any underlying error.
+    """
+    from transformers import AutoConfig
+
+    try:
+        config = AutoConfig.from_pretrained(
+            model,
+            local_files_only=not allow_fetch,
+            cache_dir=cache_dir,
+            revision=revision,
+        )
+    except OSError as e:
+        if not allow_fetch:
+            raise FileNotFoundError(
+                f"Config for '{model}' not found in cache. "
+                "Run with --allow_fetch to download, or manually with: "
+                f"hf download {model}"
+            ) from e
+
+        raise ModelConfigParsingError(f"Failed to load model config: {e}") from e
+    except Exception as e:
+        raise ModelConfigParsingError(f"Failed to load model config: {e}") from e
+
+    return config

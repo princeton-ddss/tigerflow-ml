@@ -25,7 +25,7 @@ from tigerflow.utils import SetupContext
 from tigerflow_ml.params import VLLMParams
 from tigerflow_ml.utils import (
     EmptyFileError,
-    ModelConfigParsingError,
+    load_model_config,
     parse_kwargs,
     read_file_with_fallback,
 )
@@ -131,7 +131,6 @@ class _TranslateBase:
 
     @staticmethod
     def setup(context: SetupContext):
-        from transformers import AutoConfig
 
         from .translator import build_translator
 
@@ -146,15 +145,12 @@ class _TranslateBase:
                 f" --target-lang ({context.target_lang}). No translation required."
             )
 
-        try:
-            config = AutoConfig.from_pretrained(
-                context.model,
-                local_files_only=not context.allow_fetch,
-                cache_dir=context.cache_dir,
-                revision=context.revision,
-            )
-        except Exception as e:
-            raise ModelConfigParsingError(f"Failed to load model config: {e}")
+        config = load_model_config(
+            model=context.model,
+            allow_fetch=context.allow_fetch,
+            cache_dir=context.cache_dir,
+            revision=context.revision,
+        )
 
         tokenizer = _get_tokenizer(
             context.model,
@@ -225,7 +221,7 @@ def _get_tokenizer(
     except OSError:
         if not fetch:
             logger.error(f"Error: Tokenizer for '{model_name}' not found in cache.")
-            logger.error("  Run with --fetch to download, or manually with:")
+            logger.error("  Run with --allow_fetch to download, or manually with:")
             logger.error(f"    hf download {model_name} --include 'tokenizer*'")
             raise typer.Exit(1)
         logger.info("Downloading tokenizer from HuggingFace Hub...")

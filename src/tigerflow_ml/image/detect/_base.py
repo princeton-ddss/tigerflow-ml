@@ -80,6 +80,7 @@ class _DetectBase:
         if device == "auto":
             device = "cuda" if torch.cuda.is_available() else "cpu"
 
+        # TODO: use shared utils load_model_config helper
         config = AutoConfig.from_pretrained(
             context.model,
             revision=context.revision,
