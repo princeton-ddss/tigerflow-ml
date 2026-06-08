@@ -727,10 +727,14 @@
 <li><a href="tasks/translate/">Translation</a> — Translate text documents</li>
 <li><a href="tasks/transcribe/">Transcription</a> — Transcribe audio to text</li>
 <li><a href="tasks/detect/">Object Detection</a> — Detect objects in images and videos</li>
+<li><a href="tasks/chat_completion/">Chat Completion</a> - Apply a chat prompt to text or image documents</li>
 </ul>
 <h2 id="installation">Installation<a class="headerlink" href="#installation" title="Permanent link">&para;</a></h2>
 <p>TigerFlow ML requires <a href="https://github.com/princeton-ddss/tigerflow">TigerFlow</a> to be installed.</p>
 <div class="highlight"><pre><span></span><code>pip<span class="w"> </span>install<span class="w"> </span>tigerflow<span class="w"> </span>tigerflow-ml
+</code></pre></div>
+<p>If using a task that relies on <code>vllm</code> (chat completion or translation), install with:</p>
+<div class="highlight"><pre><span></span><code>pip<span class="w"> </span>install<span class="w"> </span>tigerflow-ml<span class="o">[</span>vllm<span class="o">]</span>
 </code></pre></div>
 <h2 id="next-steps">Next Steps<a class="headerlink" href="#next-steps" title="Permanent link">&para;</a></h2>
 <p>Check out the <a href="tasks/ocr/">Task Guide</a> for detailed usage, parameters, and examples.</p>
