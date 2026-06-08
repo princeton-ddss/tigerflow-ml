@@ -57,7 +57,7 @@ class vllmTranslator:
     ):
         import torch
         from huggingface_hub import snapshot_download
-        from vllm import LLM, SamplingParams
+        from vllm import LLM, SamplingParams  # type: ignore[import-unresolved]
 
         user_llm_kwargs = user_llm_kwargs or {}
         user_sampling_kwargs = user_sampling_kwargs or {}
