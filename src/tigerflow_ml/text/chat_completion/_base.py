@@ -41,7 +41,6 @@ class _ChatCompletionBase:
     def setup(context: SetupContext):
         import torch
         from huggingface_hub import snapshot_download
-        from vllm import LLM, SamplingParams
 
         if context.max_model_len and context.max_tokens >= context.max_model_len:
             raise ValueError(
@@ -68,6 +67,8 @@ class _ChatCompletionBase:
                 logger.error(f"    hf download {context.model}")
                 raise typer.Exit(1)
             raise RuntimeError(f"Failed to download '{context.model}': {e}") from e
+
+        from vllm import LLM, SamplingParams
 
         tp = torch.cuda.device_count() or 1
 
