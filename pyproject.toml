@@ -35,8 +35,10 @@ dependencies = [
     "langdetect>=1.0.9",
     "protobuf",
     "accelerate>=1.13.0",
-    "vllm>=0.19.1",
 ]
+
+[project.optional-dependencies]
+vllm = [ "vllm>=0.19.1"]
 
 [project.urls]
 Repository = "https://github.com/princeton-ddss/tigerflow-ml"
