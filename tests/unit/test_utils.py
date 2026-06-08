@@ -1,5 +1,6 @@
 """Tests for the shared utils module."""
 
+from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -7,6 +8,7 @@ import pytest
 from tigerflow_ml.utils import (
     ENCODING_FALLBACK_CHAIN,
     ModelConfigParsingError,
+    get_model_context_window,
     load_model_config,
     read_file_with_fallback,
 )
@@ -123,3 +125,34 @@ class TestLoadModelConfig:
         ):
             with pytest.raises(ModelConfigParsingError, match="bad config"):
                 load_model_config("some/model")
+
+
+class TestGetModelContextWindow:
+    def test_returns_all_max_len_attributes(self):
+        _MAX_LEN_ATTRS = (
+            "max_position_embeddings",
+            "n_positions",
+            "n_ctx",
+            "max_seq_len",
+            "seq_length",
+        )
+        for attr in _MAX_LEN_ATTRS:
+            config = SimpleNamespace(**{attr: 4096})
+            assert get_model_context_window(config) == 4096
+
+    def test_priority_order(self):
+        # max_position_embeddings takes precedence over all others
+        config = SimpleNamespace(
+            max_position_embeddings=4096,
+            n_positions=2048,
+            n_ctx=1024,
+        )
+        assert get_model_context_window(config) == 4096
+
+    def test_skips_none_valued_attribute(self):
+        config = SimpleNamespace(max_position_embeddings=None, n_positions=2048)
+        assert get_model_context_window(config) == 2048
+
+    def test_returns_none_when_no_known_attrs(self):
+        config = SimpleNamespace(hidden_size=768, num_layers=12)
+        assert get_model_context_window(config) is None
