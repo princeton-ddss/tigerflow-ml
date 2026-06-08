@@ -24,10 +24,9 @@ from tigerflow.utils import SetupContext
 
 from tigerflow_ml.params import VLLMParams
 from tigerflow_ml.utils import (
-    EmptyFileError,
     load_model_config,
     parse_kwargs,
-    read_file_with_fallback,
+    read_nonempty_text_file,
 )
 
 from .chunking import (
@@ -373,10 +372,7 @@ def _translate_file(
 
     on_progress(f"Processing: {input_file.name}")
 
-    content = read_file_with_fallback(input_file)
-
-    if not content.strip():
-        raise EmptyFileError("Empty file")
+    content = read_nonempty_text_file(input_file)
 
     on_progress(f"  File size: {len(content):,} characters")
 

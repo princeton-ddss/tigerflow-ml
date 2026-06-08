@@ -32,7 +32,7 @@ class ModelConfigParsingError(Exception):
 ENCODING_FALLBACK_CHAIN = ["utf-8-sig", "cp1252", "iso-8859-15", "latin-1"]
 
 
-def read_file_with_fallback(path: Path) -> str:
+def read_text_file_with_fallback(path: Path) -> str:
     """
     Read a text file, trying multiple encodings until one succeeds.
 
@@ -64,6 +64,25 @@ def read_file_with_fallback(path: Path) -> str:
 
     # This should never be reached since latin-1 accepts all byte values
     raise RuntimeError(f"Could not decode file {path}: {last_error}")
+
+
+def read_nonempty_text_file(path: Path) -> str:
+    """
+    Read a text file, trying multiple encodings until one succeeds and raise
+    if file is empty.
+
+    Returns:
+        The file contents as a string.
+
+    Raises:
+        RuntimeError: If the file cannot be decoded with any encoding
+            (should not happen since latin-1 accepts all byte values).
+        EmptyFileError: If the file contents are empty
+    """
+    content = read_text_file_with_fallback(path)
+    if not content.strip():
+        raise EmptyFileError("Empty file")
+    return content
 
 
 def parse_kwargs(value: str | dict, *, name: str = "kwargs") -> dict:

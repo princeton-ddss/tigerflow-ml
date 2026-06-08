@@ -7,10 +7,12 @@ import pytest
 
 from tigerflow_ml.utils import (
     ENCODING_FALLBACK_CHAIN,
+    EmptyFileError,
     ModelConfigParsingError,
     get_model_context_window,
     load_model_config,
-    read_file_with_fallback,
+    read_nonempty_text_file,
+    read_text_file_with_fallback,
 )
 
 
@@ -33,7 +35,7 @@ class TestReadFileWithFallback:
         content = "Hello, world! Привет мир! 你好世界!"
         file_path.write_text(content, encoding="utf-8")
 
-        result = read_file_with_fallback(file_path)
+        result = read_text_file_with_fallback(file_path)
         assert result == content
 
     def test_reads_utf8_bom_file(self, tmp_path):
@@ -41,7 +43,7 @@ class TestReadFileWithFallback:
         content = "Hello with BOM"
         file_path.write_bytes(b"\xef\xbb\xbf" + content.encode("utf-8"))
 
-        result = read_file_with_fallback(file_path)
+        result = read_text_file_with_fallback(file_path)
         assert result == content
 
     def test_reads_cp1252_file(self, tmp_path):
@@ -50,7 +52,7 @@ class TestReadFileWithFallback:
         content = "Hello \u201cworld\u201d \u2014 test"
         file_path.write_bytes(content.encode("cp1252"))
 
-        result = read_file_with_fallback(file_path)
+        result = read_text_file_with_fallback(file_path)
         assert "Hello" in result
         assert "test" in result
 
@@ -59,28 +61,51 @@ class TestReadFileWithFallback:
         content = "Café résumé naïve"
         file_path.write_bytes(content.encode("latin-1"))
 
-        result = read_file_with_fallback(file_path)
+        result = read_text_file_with_fallback(file_path)
         # Should successfully read (though may decode differently)
         assert len(result) > 0
 
     def test_nonexistent_file_raises(self, tmp_path):
         file_path = tmp_path / "nonexistent.txt"
         with pytest.raises(FileNotFoundError):
-            read_file_with_fallback(file_path)
+            read_text_file_with_fallback(file_path)
 
     def test_empty_file_returns_empty_string(self, tmp_path):
         file_path = tmp_path / "empty.txt"
         file_path.write_text("")
 
-        result = read_file_with_fallback(file_path)
+        result = read_text_file_with_fallback(file_path)
         assert result == ""
 
     def test_file_with_only_whitespace(self, tmp_path):
         file_path = tmp_path / "whitespace.txt"
         file_path.write_text("   \n\n   \t\t   ")
 
-        result = read_file_with_fallback(file_path)
+        result = read_text_file_with_fallback(file_path)
         assert result == "   \n\n   \t\t   "
+
+
+class TestReadNonemptyTextFile:
+    def test_returns_content_for_normal_file(self, tmp_path):
+        file_path = tmp_path / "test.txt"
+        file_path.write_text("Hello, world!")
+        assert read_nonempty_text_file(file_path) == "Hello, world!"
+
+    def test_empty_file_raises(self, tmp_path):
+        file_path = tmp_path / "empty.txt"
+        file_path.write_text("")
+        with pytest.raises(EmptyFileError):
+            read_nonempty_text_file(file_path)
+
+    def test_whitespace_only_raises(self, tmp_path):
+        file_path = tmp_path / "whitespace.txt"
+        file_path.write_text("   \n\n\t  ")
+        with pytest.raises(EmptyFileError):
+            read_nonempty_text_file(file_path)
+
+    def test_nonexistent_file_raises(self, tmp_path):
+        with pytest.raises(FileNotFoundError):
+            read_nonempty_text_file(tmp_path / "nonexistent.txt")
 
 
 class TestLoadModelConfig:

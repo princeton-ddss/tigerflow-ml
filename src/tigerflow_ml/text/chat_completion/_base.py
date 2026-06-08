@@ -10,7 +10,7 @@ from tigerflow.logconfig import logger
 from tigerflow.utils import SetupContext
 
 from tigerflow_ml.params import VLLMParams
-from tigerflow_ml.utils import EmptyFileError, parse_kwargs, read_file_with_fallback
+from tigerflow_ml.utils import parse_kwargs, read_nonempty_text_file
 
 _TEXT_EXTENSIONS = [".txt", ".text", ".md", ".log", ".rtf"]
 _IMG_EXTENSIONS = [".jpg", ".jpeg", ".png", ".tiff", ".tif", ".bmp"]
@@ -119,10 +119,7 @@ class _ChatCompletionBase:
 
     @staticmethod
     def _process_text_file(context: SetupContext, input_file: Path) -> str:
-        content = read_file_with_fallback(input_file)
-
-        if not content.strip():
-            raise EmptyFileError("Empty file")
+        content = read_nonempty_text_file(input_file)
 
         message = _build_txt_message(
             prompt=context.prompt,
