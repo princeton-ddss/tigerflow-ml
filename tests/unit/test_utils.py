@@ -9,8 +9,9 @@ from tigerflow_ml.utils import (
     ENCODING_FALLBACK_CHAIN,
     EmptyFileError,
     ModelConfigParsingError,
+    get_model_config,
     get_model_context_window,
-    load_model_config,
+    get_tokenizer,
     read_nonempty_text_file,
     read_text_file_with_fallback,
 )
@@ -108,11 +109,11 @@ class TestReadNonemptyTextFile:
             read_nonempty_text_file(tmp_path / "nonexistent.txt")
 
 
-class TestLoadModelConfig:
+class TestGetModelConfig:
     def test_returns_config_on_success(self):
         mock_config = MagicMock()
         with patch("transformers.AutoConfig.from_pretrained", return_value=mock_config):
-            result = load_model_config("some/model")
+            result = get_model_config("some/model")
         assert result is mock_config
 
     def test_passes_args_to_from_pretrained(self):
@@ -120,7 +121,7 @@ class TestLoadModelConfig:
         with patch(
             "transformers.AutoConfig.from_pretrained", return_value=mock_config
         ) as mock_fn:
-            load_model_config(
+            get_model_config(
                 "some/model", allow_fetch=True, cache_dir="/cache", revision="v1"
             )
         mock_fn.assert_called_once_with(
@@ -133,7 +134,7 @@ class TestLoadModelConfig:
     def test_oserror_no_fetch_raises_file_not_found(self):
         with patch("transformers.AutoConfig.from_pretrained", side_effect=OSError):
             with pytest.raises(FileNotFoundError, match="some/model"):
-                load_model_config("some/model", allow_fetch=False)
+                get_model_config("some/model", allow_fetch=False)
 
     def test_oserror_allow_fetch_raises_config_parsing_error(self):
         with patch(
@@ -141,7 +142,7 @@ class TestLoadModelConfig:
             side_effect=OSError("network error"),
         ):
             with pytest.raises(ModelConfigParsingError):
-                load_model_config("some/model", allow_fetch=True)
+                get_model_config("some/model", allow_fetch=True)
 
     def test_unexpected_exception_raises_config_parsing_error(self):
         with patch(
@@ -149,7 +150,46 @@ class TestLoadModelConfig:
             side_effect=ValueError("bad config"),
         ):
             with pytest.raises(ModelConfigParsingError, match="bad config"):
-                load_model_config("some/model")
+                get_model_config("some/model")
+
+
+class TestGetTokenizer:
+    def test_returns_tokenizer_on_success(self):
+        mock_tokenizer = MagicMock()
+        with patch("tigerflow_ml.utils._load_tokenizer", return_value=mock_tokenizer):
+            result = get_tokenizer("some/model", fetch=False)
+        assert result is mock_tokenizer
+
+    def test_passes_args_to_load_tokenizer(self):
+        mock_tokenizer = MagicMock()
+        with patch(
+            "tigerflow_ml.utils._load_tokenizer", return_value=mock_tokenizer
+        ) as mock_fn:
+            get_tokenizer("some/model", fetch=False, cache_dir="/cache", revision="v1")
+        mock_fn.assert_called_once_with("some/model", cache_dir="/cache", revision="v1")
+
+    def test_oserror_no_fetch_raises_runtime_error(self):
+        with patch("tigerflow_ml.utils._load_tokenizer", side_effect=OSError):
+            with pytest.raises(RuntimeError, match="some/model"):
+                get_tokenizer("some/model", fetch=False)
+
+    def test_fetch_downloads_then_loads_tokenizer(self):
+        mock_tokenizer = MagicMock()
+        # First call raises OSError (cache miss), second succeeds after download
+        with (
+            patch(
+                "tigerflow_ml.utils._load_tokenizer",
+                side_effect=[OSError, mock_tokenizer],
+            ) as mock_load,
+            patch("tigerflow_ml.utils._download_tokenizer") as mock_download,
+        ):
+            result = get_tokenizer("some/model", fetch=True, cache_dir="/cache")
+
+        assert result is mock_tokenizer
+        mock_download.assert_called_once_with(
+            "some/model", cache_dir="/cache", revision=None
+        )
+        assert mock_load.call_count == 2
 
 
 class TestGetModelContextWindow:

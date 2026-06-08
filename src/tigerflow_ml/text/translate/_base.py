@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from pathlib import Path
-from typing import TYPE_CHECKING, Annotated, Literal, cast
+from typing import TYPE_CHECKING, Annotated, Literal
 
 import typer
 from tigerflow.logconfig import logger
@@ -24,7 +24,8 @@ from tigerflow.utils import SetupContext
 
 from tigerflow_ml.params import VLLMParams
 from tigerflow_ml.utils import (
-    load_model_config,
+    get_model_config,
+    get_tokenizer,
     parse_kwargs,
     read_nonempty_text_file,
 )
@@ -144,14 +145,14 @@ class _TranslateBase:
                 f" --target-lang ({context.target_lang}). No translation required."
             )
 
-        config = load_model_config(
+        config = get_model_config(
             model=context.model,
             allow_fetch=context.allow_fetch,
             cache_dir=context.cache_dir,
             revision=context.revision,
         )
 
-        tokenizer = _get_tokenizer(
+        tokenizer = get_tokenizer(
             context.model,
             fetch=context.allow_fetch,
             cache_dir=context.cache_dir,
@@ -206,68 +207,6 @@ class _TranslateBase:
         )
 
         logger.info("Translation complete!")
-
-
-def _get_tokenizer(
-    model_name: str,
-    fetch: bool,
-    cache_dir: str | None = None,
-    revision: str | None = None,
-) -> PreTrainedTokenizerBase:
-    """Load tokenizer, downloading if needed and allowed."""
-    try:
-        return _load_tokenizer(model_name, cache_dir=cache_dir, revision=revision)
-    except OSError:
-        if not fetch:
-            logger.error(f"Error: Tokenizer for '{model_name}' not found in cache.")
-            logger.error("  Run with --allow_fetch to download, or manually with:")
-            logger.error(f"    hf download {model_name} --include 'tokenizer*'")
-            raise typer.Exit(1)
-        logger.info("Downloading tokenizer from HuggingFace Hub...")
-        _download_tokenizer(model_name, cache_dir=cache_dir, revision=revision)
-        return _load_tokenizer(model_name, cache_dir=cache_dir, revision=revision)
-
-
-def _load_tokenizer(
-    model_name: str, cache_dir: str | None = None, revision: str | None = None
-) -> PreTrainedTokenizerBase:
-    """
-    Load a HuggingFace tokenizer from local cache
-
-    Returns:
-        Loaded tokenizer.
-
-    Raises:
-        OSError: If tokenizer not found in cache."""
-
-    from transformers import AutoTokenizer
-
-    return cast(
-        "PreTrainedTokenizerBase",
-        AutoTokenizer.from_pretrained(
-            model_name, local_files_only=True, cache_dir=cache_dir, revision=revision
-        ),
-    )
-
-
-def _download_tokenizer(
-    model_name: str, cache_dir: str | None = None, revision: str | None = None
-) -> None:
-    """
-    Download tokenizer files from HuggingFace Hub.
-
-    Args:
-        model_name: HuggingFace model name.
-        cache_dir: Optional cache directory override.
-    """
-    from huggingface_hub import snapshot_download
-
-    snapshot_download(
-        model_name,
-        allow_patterns=["tokenizer*", "special_tokens_map.json"],
-        cache_dir=cache_dir,
-        revision=revision,
-    )
 
 
 def _resolve_source_lang(
