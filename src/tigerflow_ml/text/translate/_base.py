@@ -24,8 +24,8 @@ from tigerflow.utils import SetupContext
 
 from tigerflow_ml.params import VLLMParams
 from tigerflow_ml.utils import (
-    ConfigParsingError,
     EmptyFileError,
+    ModelConfigParsingError,
     parse_kwargs,
     read_file_with_fallback,
 )
@@ -154,7 +154,7 @@ class _TranslateBase:
                 revision=context.revision,
             )
         except Exception as e:
-            raise ConfigParsingError(f"Failed to load model config: {e}")
+            raise ModelConfigParsingError(f"Failed to load model config: {e}")
 
         tokenizer = _get_tokenizer(
             context.model,

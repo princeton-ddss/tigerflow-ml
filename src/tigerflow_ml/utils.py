@@ -13,7 +13,7 @@ class EmptyFileError(Exception):
     pass
 
 
-class ConfigParsingError(Exception):
+class ModelConfigParsingError(Exception):
     """Raised when errors occur while trying
     to access, read, or parse model configs"""
 
@@ -50,7 +50,7 @@ def read_file_with_fallback(path: Path) -> str:
             # Warn if we fell back to latin-1 (might be decoding garbage)
             if encoding == "latin-1" and i > 0:
                 logger.warning(
-                    " Warning: Fell back to latin-1 encoding - content may be incorrect"
+                    " Fell back to latin-1 encoding - content may be incorrect"
                     " if file uses a non-Western encoding (e.g., Shift-JIS, GB2312)"
                 )
             return content
