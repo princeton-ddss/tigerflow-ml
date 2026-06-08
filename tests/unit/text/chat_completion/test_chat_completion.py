@@ -13,7 +13,7 @@ from tigerflow_ml.text.chat_completion._base import (
     _build_txt_message,
     _ChatCompletionBase,
 )
-from tigerflow_ml.text.chat_completion.utils import EmptyFileError
+from tigerflow_ml.utils import EmptyFileError
 
 
 def _make_context(**kwargs):

@@ -23,6 +23,12 @@ from tigerflow.logconfig import logger
 from tigerflow.utils import SetupContext
 
 from tigerflow_ml.params import VLLMParams
+from tigerflow_ml.utils import (
+    EmptyFileError,
+    ModelConfigParsingError,
+    parse_kwargs,
+    read_file_with_fallback,
+)
 
 from .chunking import (
     DEFAULT_CHUNK_SIZE,
@@ -32,13 +38,9 @@ from .chunking import (
     count_tokens,
 )
 from .detection import LANGUAGES, detect_language, get_language_name
-from .utils import (
+from .errors import (
     AlreadyInTargetLanguageError,
-    ConfigParsingError,
-    EmptyFileError,
     TranslationError,
-    parse_kwargs,
-    read_file_with_fallback,
 )
 
 if TYPE_CHECKING:
@@ -152,7 +154,7 @@ class _TranslateBase:
                 revision=context.revision,
             )
         except Exception as e:
-            raise ConfigParsingError(f"Failed to load model config: {e}")
+            raise ModelConfigParsingError(f"Failed to load model config: {e}")
 
         tokenizer = _get_tokenizer(
             context.model,

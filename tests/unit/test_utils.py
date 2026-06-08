@@ -1,6 +1,8 @@
+"""Tests for the shared utils module."""
+
 import pytest
 
-from tigerflow_ml.text.chat_completion.utils import (
+from tigerflow_ml.utils import (
     ENCODING_FALLBACK_CHAIN,
     read_file_with_fallback,
 )
