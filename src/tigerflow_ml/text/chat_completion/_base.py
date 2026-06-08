@@ -68,7 +68,7 @@ class _ChatCompletionBase:
                 raise typer.Exit(1)
             raise RuntimeError(f"Failed to download '{context.model}': {e}") from e
 
-        from vllm import LLM, SamplingParams  # type: ignore[import-unresolved]
+        from vllm import LLM, SamplingParams  # type: ignore
 
         tp = torch.cuda.device_count() or 1
 
