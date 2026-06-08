@@ -110,7 +110,7 @@ def load_model_config(
     Raises:
         FileNotFoundError: If the config cannot be found in the cache dir and
             --allow-fetch is False
-        ConfigParsingError: If the config cannot be loaded or parsed, wrapping
+        ModelConfigParsingError: If the config cannot be loaded or parsed, wrapping
             any underlying error.
     """
     from transformers import AutoConfig

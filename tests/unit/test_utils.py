@@ -6,7 +6,7 @@ import pytest
 
 from tigerflow_ml.utils import (
     ENCODING_FALLBACK_CHAIN,
-    ConfigParsingError,
+    ModelConfigParsingError,
     load_model_config,
     read_file_with_fallback,
 )
@@ -113,7 +113,7 @@ class TestLoadModelConfig:
             "transformers.AutoConfig.from_pretrained",
             side_effect=OSError("network error"),
         ):
-            with pytest.raises(ConfigParsingError):
+            with pytest.raises(ModelConfigParsingError):
                 load_model_config("some/model", allow_fetch=True)
 
     def test_unexpected_exception_raises_config_parsing_error(self):
@@ -121,5 +121,5 @@ class TestLoadModelConfig:
             "transformers.AutoConfig.from_pretrained",
             side_effect=ValueError("bad config"),
         ):
-            with pytest.raises(ConfigParsingError, match="bad config"):
+            with pytest.raises(ModelConfigParsingError, match="bad config"):
                 load_model_config("some/model")
