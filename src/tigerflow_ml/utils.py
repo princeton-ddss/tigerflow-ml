@@ -125,7 +125,7 @@ def load_model_config(
     except OSError as e:
         if not allow_fetch:
             raise FileNotFoundError(
-                f"Config for '{model}' not found in cache. "
+                f"Config for '{model}' not found in cache ({cache_dir}). "
                 "Run with --allow_fetch to download, or manually with: "
                 f"hf download {model}"
             ) from e
@@ -135,3 +135,35 @@ def load_model_config(
         raise ModelConfigParsingError(f"Failed to load model config: {e}") from e
 
     return config
+
+
+def get_model_context_window(config: "PretrainedConfig") -> int | None:
+    """
+    Parses a model config to identify the model's context window
+
+    Uses the attributes: max_position_embeddings, n_positions, n_ctx, max_seq_len,
+    seq_length to attempt to identify the context window.
+
+    Args:
+        config: The model's PretrainedConfig
+
+    Returns:
+        An integer representing the context window, or None if this can't be resolved
+    """
+    _MAX_LEN_ATTRS = (
+        "max_position_embeddings",
+        "n_positions",
+        "n_ctx",
+        "max_seq_len",
+        "seq_length",
+    )
+    max_model_len = next(
+        (
+            getattr(config, a)
+            for a in _MAX_LEN_ATTRS
+            if getattr(config, a, None) is not None
+        ),
+        None,
+    )
+
+    return max_model_len
