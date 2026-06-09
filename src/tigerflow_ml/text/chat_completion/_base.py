@@ -10,7 +10,7 @@ from tigerflow.logconfig import logger
 from tigerflow.utils import SetupContext
 
 from tigerflow_ml.params import VLLMParams
-from tigerflow_ml.utils import parse_kwargs, read_nonempty_text_file
+from tigerflow_ml.utils import parse_kwargs, read_text_file_strict
 
 _TEXT_EXTENSIONS = [".txt", ".text", ".md", ".log", ".rtf"]
 _IMG_EXTENSIONS = [".jpg", ".jpeg", ".png", ".tiff", ".tif", ".bmp"]
@@ -119,7 +119,7 @@ class _ChatCompletionBase:
 
     @staticmethod
     def _process_text_file(context: SetupContext, input_file: Path) -> str:
-        content = read_nonempty_text_file(input_file)
+        content = read_text_file_strict(input_file)
 
         message = _build_txt_message(
             prompt=context.prompt,

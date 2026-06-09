@@ -66,10 +66,10 @@ def read_text_file_with_fallback(path: Path) -> str:
     raise RuntimeError(f"Could not decode file {path}: {last_error}")
 
 
-def read_nonempty_text_file(path: Path) -> str:
+def read_text_file_strict(path: Path) -> str:
     """
-    Read a text file, trying multiple encodings until one succeeds and raise
-    if file is empty.
+    Read a text file, trying multiple encodings until one succeeds, and raise
+    if file is empty or contains only white space.
 
     Args:
         path: Path to the file to read.
@@ -80,11 +80,12 @@ def read_nonempty_text_file(path: Path) -> str:
     Raises:
         RuntimeError: If the file cannot be decoded with any encoding
             (should not happen since latin-1 accepts all byte values).
-        EmptyFileError: If the file contents are empty
+        EmptyFileError: If the file contents are empty or contain only
+            white space
     """
     content = read_text_file_with_fallback(path)
     if not content.strip():
-        raise EmptyFileError("Empty file")
+        raise EmptyFileError(f"File is empty: {path}")
     return content
 
 
@@ -161,7 +162,7 @@ def get_model_config(
 
 def get_tokenizer(
     model_name: str,
-    fetch: bool,
+    allow_fetch: bool,
     cache_dir: str | None = None,
     revision: str | None = None,
 ) -> "PreTrainedTokenizerBase":
@@ -169,7 +170,7 @@ def get_tokenizer(
     try:
         return _load_tokenizer(model_name, cache_dir=cache_dir, revision=revision)
     except OSError:
-        if not fetch:
+        if not allow_fetch:
             raise RuntimeError(
                 f"Tokenizer for '{model_name}' not found in cache ({cache_dir}). "
                 "Run with --allow_fetch to download, or manually with: "

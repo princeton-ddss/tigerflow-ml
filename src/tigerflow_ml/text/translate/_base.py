@@ -27,7 +27,7 @@ from tigerflow_ml.utils import (
     get_model_config,
     get_tokenizer,
     parse_kwargs,
-    read_nonempty_text_file,
+    read_text_file_strict,
 )
 
 from .chunking import (
@@ -154,7 +154,7 @@ class _TranslateBase:
 
         tokenizer = get_tokenizer(
             context.model,
-            fetch=context.allow_fetch,
+            allow_fetch=context.allow_fetch,
             cache_dir=context.cache_dir,
             revision=context.revision,
         )
@@ -311,7 +311,7 @@ def _translate_file(
 
     on_progress(f"Processing: {input_file.name}")
 
-    content = read_nonempty_text_file(input_file)
+    content = read_text_file_strict(input_file)
 
     on_progress(f"  File size: {len(content):,} characters")
 

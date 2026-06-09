@@ -12,7 +12,7 @@ from tigerflow_ml.utils import (
     get_model_config,
     get_model_context_window,
     get_tokenizer,
-    read_nonempty_text_file,
+    read_text_file_strict,
     read_text_file_with_fallback,
 )
 
@@ -90,23 +90,23 @@ class TestReadNonemptyTextFile:
     def test_returns_content_for_normal_file(self, tmp_path):
         file_path = tmp_path / "test.txt"
         file_path.write_text("Hello, world!")
-        assert read_nonempty_text_file(file_path) == "Hello, world!"
+        assert read_text_file_strict(file_path) == "Hello, world!"
 
     def test_empty_file_raises(self, tmp_path):
         file_path = tmp_path / "empty.txt"
         file_path.write_text("")
         with pytest.raises(EmptyFileError):
-            read_nonempty_text_file(file_path)
+            read_text_file_strict(file_path)
 
     def test_whitespace_only_raises(self, tmp_path):
         file_path = tmp_path / "whitespace.txt"
         file_path.write_text("   \n\n\t  ")
         with pytest.raises(EmptyFileError):
-            read_nonempty_text_file(file_path)
+            read_text_file_strict(file_path)
 
     def test_nonexistent_file_raises(self, tmp_path):
         with pytest.raises(FileNotFoundError):
-            read_nonempty_text_file(tmp_path / "nonexistent.txt")
+            read_text_file_strict(tmp_path / "nonexistent.txt")
 
 
 class TestGetModelConfig:
@@ -157,7 +157,7 @@ class TestGetTokenizer:
     def test_returns_tokenizer_on_success(self):
         mock_tokenizer = MagicMock()
         with patch("tigerflow_ml.utils._load_tokenizer", return_value=mock_tokenizer):
-            result = get_tokenizer("some/model", fetch=False)
+            result = get_tokenizer("some/model", allow_fetch=False)
         assert result is mock_tokenizer
 
     def test_passes_args_to_load_tokenizer(self):
@@ -165,13 +165,15 @@ class TestGetTokenizer:
         with patch(
             "tigerflow_ml.utils._load_tokenizer", return_value=mock_tokenizer
         ) as mock_fn:
-            get_tokenizer("some/model", fetch=False, cache_dir="/cache", revision="v1")
+            get_tokenizer(
+                "some/model", allow_fetch=False, cache_dir="/cache", revision="v1"
+            )
         mock_fn.assert_called_once_with("some/model", cache_dir="/cache", revision="v1")
 
     def test_oserror_no_fetch_raises_runtime_error(self):
         with patch("tigerflow_ml.utils._load_tokenizer", side_effect=OSError):
             with pytest.raises(RuntimeError, match="some/model"):
-                get_tokenizer("some/model", fetch=False)
+                get_tokenizer("some/model", allow_fetch=False)
 
     def test_fetch_downloads_then_loads_tokenizer(self):
         mock_tokenizer = MagicMock()
@@ -183,7 +185,7 @@ class TestGetTokenizer:
             ) as mock_load,
             patch("tigerflow_ml.utils._download_tokenizer") as mock_download,
         ):
-            result = get_tokenizer("some/model", fetch=True, cache_dir="/cache")
+            result = get_tokenizer("some/model", allow_fetch=True, cache_dir="/cache")
 
         assert result is mock_tokenizer
         mock_download.assert_called_once_with(
@@ -211,6 +213,8 @@ class TestGetModelContextWindow:
             max_position_embeddings=4096,
             n_positions=2048,
             n_ctx=1024,
+            max_seq_len=512,
+            seq_length=256,
         )
         assert get_model_context_window(config) == 4096
 
