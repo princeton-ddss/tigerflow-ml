@@ -16,6 +16,9 @@ Transcribe audio to text using HuggingFace Whisper models.
 | `--chunk-length-s`    | `30.0`                    | Length of audio chunks in seconds                             |
 | `--stride-length-s`   | `5.0`                     | Overlap between chunks in seconds                             |
 | `--return-timestamps` | `false`                   | Return word/segment timestamps (required for SRT)             |
+| `--temperature`       | `0.0`                     | Sampling temperature. Lower values make output more deterministic. |
+| `--seed`              | `42`                      | Random seed for reproducibility                                |
+| `--allow-fetch`       | `--no-allow-fetch`        | Allow downloads from HuggingFace Hub (network access required) |
 
 ## Supported Input Formats
 

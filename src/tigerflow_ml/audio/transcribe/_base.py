@@ -78,7 +78,9 @@ class _TranscribeBase:
     @staticmethod
     def setup(context: SetupContext):
         import torch
-        from transformers import AutoFeatureExtractor, pipeline
+        from transformers import AutoFeatureExtractor, pipeline, set_seed
+
+        set_seed(context.seed)
 
         logger.info("Setting up transcription pipeline...")
         logger.info("Model: {}", context.model)
@@ -92,21 +94,35 @@ class _TranscribeBase:
 
         cache_dir = context.cache_dir or None
 
-        feature_extractor = AutoFeatureExtractor.from_pretrained(
-            context.model,
-            revision=context.revision,
-            cache_dir=cache_dir,
-        )
+        try:
+            feature_extractor = AutoFeatureExtractor.from_pretrained(
+                context.model,
+                revision=context.revision,
+                cache_dir=cache_dir,
+                local_files_only=not context.allow_fetch,
+            )
+            context.pipeline = pipeline(
+                "automatic-speech-recognition",
+                model=context.model,
+                revision=context.revision,
+                device=device_map,
+                torch_dtype=torch_dtype,
+                local_files_only=not context.allow_fetch,
+                model_kwargs={"cache_dir": cache_dir},
+                feature_extractor=feature_extractor,
+            )
+            # Transformers uses kwargs.get() (not pop) for local_files_only in the
+            # pipeline factory, so it leaks into _forward_params and then generate().
+            # Whisper validates generate kwargs strictly and raises; remove it here.
+            context.pipeline._forward_params.pop("local_files_only", None)
 
-        context.pipeline = pipeline(
-            "automatic-speech-recognition",
-            model=context.model,
-            revision=context.revision,
-            device=device_map,
-            torch_dtype=torch_dtype,
-            model_kwargs={"cache_dir": cache_dir},
-            feature_extractor=feature_extractor,
-        )
+        except OSError as e:
+            if not context.allow_fetch:
+                raise RuntimeError(
+                    f"'{context.model}' not found in cache ({context.cache_dir}). "
+                    "Run with --allow_fetch or download manually."
+                ) from e
+            raise
         logger.info("Pipeline ready")
 
     @staticmethod
@@ -120,6 +136,9 @@ class _TranscribeBase:
         generate_kwargs = {}
         if context.language:
             generate_kwargs["language"] = context.language
+        if context.temperature > 0:
+            generate_kwargs["temperature"] = context.temperature
+            generate_kwargs["do_sample"] = True
 
         logger.info(
             "Processing with batch_size={}, chunk_length_s={}",
@@ -139,7 +158,6 @@ class _TranscribeBase:
         }
         if generate_kwargs:
             pipeline_kwargs["generate_kwargs"] = generate_kwargs
-
         result = context.pipeline(str(input_file), **pipeline_kwargs)
 
         if context.output_format == OutputFormat.JSON:
