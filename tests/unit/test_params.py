@@ -2,6 +2,7 @@
 
 from tigerflow_ml.audio.transcribe._base import _TranscribeBase
 from tigerflow_ml.image.detect._base import _DetectBase
+from tigerflow_ml.params import VLLMParams
 from tigerflow_ml.text.ocr._base import _OCRBase
 
 
@@ -32,3 +33,18 @@ def test_detect_defaults():
     assert p.batch_size == 4
     assert p.sample_fps == 1.0
     assert p.labels == ""
+
+
+def test_vLLM_defaults():
+    p = VLLMParams()
+    assert p.revision == "main"
+    assert p.cache_dir is None
+    assert p.allow_fetch is False
+    assert p.system_message is None
+    assert p.max_tokens == 512
+    assert p.max_model_len is None
+    assert p.temperature == 0
+    assert p.seed == 42
+    assert p.llm_kwargs == "{}"
+    assert p.sampling_kwargs == "{}"
+    assert p.chat_kwargs == "{}"

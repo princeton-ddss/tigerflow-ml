@@ -117,7 +117,7 @@ class TestRun:
         input_file = tmp_path / "file.txt"
         input_file.write_text("   \n  ")
 
-        with pytest.raises(EmptyFileError, match="Empty file"):
+        with pytest.raises(EmptyFileError, match="File is empty"):
             _ChatCompletionBase.run(context, input_file, tmp_path / "out.txt")
 
     def test_whitespace_only_text_file_raises_skipped(self, tmp_path):
@@ -125,7 +125,7 @@ class TestRun:
         input_file = tmp_path / "file.txt"
         input_file.write_text("\t\n\r\n")
 
-        with pytest.raises(EmptyFileError, match="Empty file"):
+        with pytest.raises(EmptyFileError, match="File is empty"):
             _ChatCompletionBase.run(context, input_file, tmp_path / "out.txt")
 
 

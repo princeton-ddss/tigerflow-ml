@@ -15,6 +15,8 @@ from tigerflow.logconfig import logger
 if TYPE_CHECKING:
     from transformers import PretrainedConfig, PreTrainedTokenizerBase
 
+from tigerflow_ml.utils import get_model_context_window
+
 from .chunking import DEFAULT_CHUNK_SIZE
 
 
@@ -76,17 +78,8 @@ class vllmTranslator:
         tp = torch.cuda.device_count() or 1
 
         # identify model context window to ensure max_model_len does not exceed this
-        _MAX_LEN_ATTRS = (
-            "max_position_embeddings",
-            "n_positions",
-            "n_ctx",
-            "max_seq_len",
-            "seq_length",
-        )
-        model_len_cap = next(
-            (getattr(config, a) for a in _MAX_LEN_ATTRS if hasattr(config, a)),
-            None,
-        )
+        model_len_cap = get_model_context_window(config)
+
         requested_model_len = max_model_len
         if not max_model_len:
             # max_model_len should be approx max_chunk_tokens*2 + overhead
