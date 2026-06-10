@@ -2,7 +2,7 @@
 
 from tigerflow_ml.audio.transcribe._base import _TranscribeBase
 from tigerflow_ml.image.detect._base import _DetectBase
-from tigerflow_ml.params import VLLMParams
+from tigerflow_ml.params import HFParams, VLLMParams
 from tigerflow_ml.text.ocr._base import _OCRBase
 
 
@@ -47,3 +47,13 @@ def test_vLLM_defaults():
     assert p.llm_kwargs == "{}"
     assert p.sampling_kwargs == "{}"
     assert p.chat_kwargs == "{}"
+
+
+def test_hfparams_defaults():
+    p = HFParams()
+    assert p.revision == "main"
+    assert p.cache_dir is None
+    assert p.allow_fetch is False
+    assert p.device == "auto"
+    assert p.temperature == 0
+    assert p.seed == 42
