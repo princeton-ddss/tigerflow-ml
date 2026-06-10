@@ -12,8 +12,11 @@ Extract text from images and PDFs using HuggingFace image-text-to-text models.
 | `--device`        | `auto`                        | Device to use (`cuda`, `cpu`, or `auto`)       |
 | `--output-format` | `text`                        | Output format: `text`, `markdown`, or `json`   |
 | `--max-length`    | `4096`                        | Maximum number of tokens to generate per image |
-| `--batch-size`    | `4`                           | Number of images to process in parallel on GPU |
 | `--prompt`        | `Extract all text from this image.` | Prompt for image-text-to-text models     |
+| `--temperature`   | `0.0`                         | Sampling temperature. Lower values make output more deterministic. |
+| `--seed`          | `42`                          | Random seed for reproducibility |
+| `--allow-fetch`   | `--no-allow-fetch`            | Allow downloads from HuggingFace Hub (network access required) |
+
 
 ## Supported Input Formats
 
