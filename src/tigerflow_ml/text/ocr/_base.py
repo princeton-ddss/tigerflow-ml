@@ -40,11 +40,6 @@ class _OCRBase:
             typer.Option(help="Maximum number of tokens to generate per image"),
         ] = 4096
 
-        batch_size: Annotated[
-            int,
-            typer.Option(help="Number of images to process in parallel on GPU"),
-        ] = 4
-
         output_format: Annotated[
             OutputFormat,
             typer.Option(help="Output format: 'text', 'markdown', or 'json'"),
@@ -58,7 +53,9 @@ class _OCRBase:
     @staticmethod
     def setup(context: SetupContext):
         import torch
-        from transformers import pipeline
+        from transformers import pipeline, set_seed
+
+        set_seed(context.seed)
 
         logger.info("Setting up OCR model...")
         logger.info("Model: {}", context.model)
@@ -67,13 +64,22 @@ class _OCRBase:
         if device == "auto":
             device = "cuda" if torch.cuda.is_available() else "cpu"
 
-        context.pipeline = pipeline(
-            "image-text-to-text",
-            model=context.model,
-            revision=context.revision,
-            device=device,
-            model_kwargs={"cache_dir": context.cache_dir or None},
-        )
+        try:
+            context.pipeline = pipeline(
+                "image-text-to-text",
+                model=context.model,
+                revision=context.revision,
+                device=device,
+                local_files_only=not context.allow_fetch,
+                model_kwargs={"cache_dir": context.cache_dir or None},
+            )
+        except OSError as e:
+            if not context.allow_fetch:
+                raise RuntimeError(
+                    f"'{context.model}' not found in cache ({context.cache_dir}). "
+                    "Run with --allow_fetch or download manually."
+                ) from e
+            raise
         logger.info("OCR ready on device: {}", device)
 
     @staticmethod
@@ -98,10 +104,11 @@ class _OCRBase:
                     ],
                 }
             ]
-            result = context.pipeline(
-                text=messages,
-                max_new_tokens=context.max_length,
-            )
+            gen_kwargs: dict = {"max_new_tokens": context.max_length}
+            if context.temperature > 0:
+                gen_kwargs["temperature"] = context.temperature
+                gen_kwargs["do_sample"] = True
+            result = context.pipeline(text=messages, **gen_kwargs)
             text = result[0]["generated_text"][-1]["content"]
             pages.append(text)
             logger.info("Page {}: {} chars", i + 1, len(text))
