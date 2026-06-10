@@ -28,6 +28,27 @@ class HFParams:
         typer.Option(help="Device to use (cuda, cpu, or auto)"),
     ] = "auto"
 
+    allow_fetch: Annotated[
+        bool,
+        typer.Option(
+            help="Allow downloading from HuggingFace Hub. "
+            "Do not allow if running on a compute node without network access"
+        ),
+    ] = False
+
+    temperature: Annotated[
+        float,
+        typer.Option(
+            help="The model temperature. Lower numbers make models more deterministic",
+            min=0.0,
+            max=2.0,
+        ),
+    ] = 0.0
+
+    seed: Annotated[
+        int, typer.Option(help="The seed to set for more reproducible behavior")
+    ] = 42
+
 
 class VLLMParams:
     """Common parameters for all vLLM tasks"""
