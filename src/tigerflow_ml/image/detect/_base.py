@@ -68,11 +68,23 @@ class _DetectBase:
             ),
         ] = 1.0
 
+        # override to remove help message
+        seed: Annotated[
+            int,
+            typer.Option(hidden=True),
+        ] = 42
+        # override to remove help message
+        temperature: Annotated[
+            int,
+            typer.Option(hidden=True),
+        ] = 0  # unused
+
     @staticmethod
     def setup(context: SetupContext):
         import torch
-        from transformers import AutoConfig, pipeline
+        from transformers import AutoConfig, pipeline, set_seed
 
+        set_seed(context.seed)
         logger.info("Setting up detection model...")
         logger.info("Model: {}", context.model)
 
@@ -80,11 +92,21 @@ class _DetectBase:
         if device == "auto":
             device = "cuda" if torch.cuda.is_available() else "cpu"
 
-        config = AutoConfig.from_pretrained(
-            context.model,
-            revision=context.revision,
-            cache_dir=context.cache_dir or None,
-        )
+        try:
+            config = AutoConfig.from_pretrained(
+                context.model,
+                revision=context.revision,
+                cache_dir=context.cache_dir or None,
+                local_files_only=not context.allow_fetch,
+            )
+        except OSError as e:
+            if not context.allow_fetch:
+                raise RuntimeError(
+                    f"'{context.model}' not found in cache ({context.cache_dir}). "
+                    "Run with --allow_fetch or download manually."
+                ) from e
+            raise
+
         is_zero_shot = config.model_type in _ZERO_SHOT_MODEL_TYPES
 
         if is_zero_shot and not context.labels:
@@ -99,13 +121,23 @@ class _DetectBase:
         )
         logger.info("Pipeline: {} (model_type: {})", pipeline_type, config.model_type)
 
-        context.pipeline = pipeline(
-            pipeline_type,
-            model=context.model,
-            revision=context.revision,
-            device=device,
-            model_kwargs={"cache_dir": context.cache_dir or None},
-        )
+        try:
+            context.pipeline = pipeline(
+                pipeline_type,
+                model=context.model,
+                revision=context.revision,
+                device=device,
+                local_files_only=not context.allow_fetch,
+                model_kwargs={"cache_dir": context.cache_dir or None},
+            )
+        except OSError as e:
+            if not context.allow_fetch:
+                raise RuntimeError(
+                    f"'{context.model}' not found in cache ({context.cache_dir}). "
+                    "Run with --allow_fetch or download manually."
+                ) from e
+            raise
+
         context.is_zero_shot = is_zero_shot
         context.labels_list = (
             [s.strip() for s in context.labels.split(",") if s.strip()]

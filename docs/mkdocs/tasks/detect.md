@@ -9,7 +9,7 @@ Supports both fixed-class models (e.g. RT-DETR) and open-vocabulary models
 
 | Parameter      | Default                | Description                                                            |
 |----------------|------------------------|------------------------------------------------------------------------|
-| `--model`      | `PekingU/rtdetr_r50vd` | HuggingFace model repo ID                                             |
+| `--model`      | `PekingU/rtdetr_r50vd` | HuggingFace model repo ID                                              |
 | `--revision`   | `main`                 | Model revision (branch, tag, or commit hash)                           |
 | `--cache-dir`  |                        | HuggingFace cache directory for model files                            |
 | `--device`     | `auto`                 | Device to use (`cuda`, `cpu`, or `auto`)                               |
@@ -17,6 +17,8 @@ Supports both fixed-class models (e.g. RT-DETR) and open-vocabulary models
 | `--threshold`  | `0.3`                  | Minimum confidence score for detections                                |
 | `--batch-size` | `4`                    | Number of video frames to process in parallel on GPU                   |
 | `--sample-fps` | `1.0`                  | Frames per second to sample from video (0 = every frame)               |
+| `--allow-fetch` | `--no-allow-fetch`    | Allow downloads from HuggingFace Hub (network access required)         |
+
 
 ## Supported Input Formats
 
