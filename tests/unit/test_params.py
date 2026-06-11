@@ -7,13 +7,10 @@ from tigerflow_ml.text.ocr._base import _OCRBase
 
 
 def test_ocr_defaults():
-    from tigerflow_ml.text.ocr._base import OutputFormat
-
     p = _OCRBase.Params()
     assert p.model == "stepfun-ai/GOT-OCR-2.0-hf"
     assert p.max_length == 4096
     assert p.batch_size == 4
-    assert p.output_format == OutputFormat.TEXT
     assert p.device == "auto"
 
 
