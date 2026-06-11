@@ -4,8 +4,6 @@ Perform OCR on images using Hugging Face image-text-to-text models.
 Supports VLMs compatible with the image-text-to-text pipeline.
 """
 
-import json
-from enum import Enum
 from pathlib import Path
 from typing import Annotated
 
@@ -16,14 +14,6 @@ from tigerflow.utils import SetupContext
 from tigerflow_ml.params import HFParams
 
 _DEFAULT_PROMPT = "Extract all text from this image."
-
-
-class OutputFormat(str, Enum):
-    """Output format for OCR results."""
-
-    TEXT = "text"
-    MARKDOWN = "markdown"
-    JSON = "json"
 
 
 class _OCRBase:
@@ -39,11 +29,6 @@ class _OCRBase:
             int,
             typer.Option(help="Maximum number of tokens to generate per image"),
         ] = 4096
-
-        output_format: Annotated[
-            OutputFormat,
-            typer.Option(help="Output format: 'text', 'markdown', or 'json'"),
-        ] = OutputFormat.TEXT
 
         prompt: Annotated[
             str,
@@ -102,10 +87,7 @@ class _OCRBase:
         images = _load_images(input_file)
         logger.info("Loaded {} image(s)", len(images))
 
-        # Determine effective prompt
         prompt = context.prompt
-        if context.output_format == OutputFormat.MARKDOWN and prompt == _DEFAULT_PROMPT:
-            prompt = "OCR with format"
 
         pages = []
         for i, image in enumerate(images):
@@ -127,14 +109,7 @@ class _OCRBase:
             pages.append(text)
             logger.info("Page {}: {} chars", i + 1, len(text))
 
-        if context.output_format == OutputFormat.JSON:
-            output_text = json.dumps(
-                {"pages": [{"page": i + 1, "text": p} for i, p in enumerate(pages)]},
-                indent=2,
-                ensure_ascii=False,
-            )
-        else:
-            output_text = "\f".join(pages)
+        output_text = "\f".join(pages)
 
         with open(output_file, "w", encoding="utf-8") as f:
             f.write(output_text)

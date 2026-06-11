@@ -10,7 +10,6 @@ Extract text from images and PDFs using HuggingFace image-text-to-text models.
 | `--revision`      | `main`                        | Model revision (branch, tag, or commit hash)   |
 | `--cache-dir`     |                               | HuggingFace cache directory for model files    |
 | `--device`        | `auto`                        | Device to use (`cuda`, `cpu`, or `auto`)       |
-| `--output-format` | `text`                        | Output format: `text`, `markdown`, or `json`   |
 | `--max-length`    | `4096`                        | Maximum number of tokens to generate per image |
 | `--prompt`        | `Extract all text from this image.` | Prompt for image-text-to-text models     |
 | `--temperature`   | `0.0`                         | Sampling temperature. Lower values make output more deterministic. |
@@ -25,11 +24,7 @@ Extract text from images and PDFs using HuggingFace image-text-to-text models.
 
 ## Output Format
 
-Depends on `--output-format`:
-
-- **`text`** (default) — Plain text. For multi-page inputs, pages are separated by form-feed characters (`\f`).
-- **`markdown`** — Formatted output preserving tables, equations, and document structure as markdown/LaTeX.
-- **`json`** — Structured JSON with per-page text: `{"pages": [{"page": 1, "text": "..."}, ...]}`.
+Plain text. For multi-page inputs, pages are separated by form-feed characters (`\f`).
 
 ## Models
 
@@ -42,10 +37,6 @@ Any HuggingFace [`image-text-to-text`](https://huggingface.co/models?pipeline_ta
 | [`zai-org/GLM-4.1V-9B-Thinking`](https://huggingface.co/zai-org/GLM-4.1V-9B-Thinking) | 10B | Bilingual (English/Chinese) VLM with reasoning, up to 4K image resolution | MIT |
 | [`Qwen/Qwen2.5-VL-7B-Instruct`](https://huggingface.co/Qwen/Qwen2.5-VL-7B-Instruct) | 7B | General-purpose VLM with strong OCR and multilingual support | Apache 2.0 |
 
-!!! tip
-
-    GOT-OCR supports plain text and formatted (markdown/LaTeX) output. Use
-    `--output-format markdown` to preserve tables, equations, and document structure.
 
 ## Examples
 
@@ -59,12 +50,8 @@ Any HuggingFace [`image-text-to-text`](https://huggingface.co/models?pipeline_ta
         kind: local
         module: tigerflow_ml.text.ocr.local
         input_ext: .jpg
-        output_ext: .txt  # or .md, .json
         params:
           allow-fetch: True #if model is not already downloaded
-          # output_format: text       # (default) plain text
-          # output_format: markdown   # formatted markdown/LaTeX
-          # output_format: json       # structured JSON with pages
     ```
 
 === "Input"
@@ -123,9 +110,8 @@ Any HuggingFace [`image-text-to-text`](https://huggingface.co/models?pipeline_ta
         kind: local
         module: tigerflow_ml.text.ocr.local
         input_ext: .png
-        output_ext: .md
+        output_ext: .txt
         params:
-          output_format: markdown
           allow_fetch: True
     ```
 
