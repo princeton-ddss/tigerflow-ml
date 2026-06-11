@@ -28,6 +28,14 @@ class HFParams:
         typer.Option(help="Device to use (cuda, cpu, or auto)"),
     ] = "auto"
 
+    allow_fetch: Annotated[
+        bool,
+        typer.Option(
+            help="Allow downloading from HuggingFace Hub. "
+            "Do not allow if running on a compute node without network access"
+        ),
+    ] = False
+
 
 class VLLMParams:
     """Common parameters for all vLLM tasks"""

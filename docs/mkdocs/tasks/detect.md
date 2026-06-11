@@ -9,7 +9,7 @@ Supports both fixed-class models (e.g. RT-DETR) and open-vocabulary models
 
 | Parameter      | Default                | Description                                                            |
 |----------------|------------------------|------------------------------------------------------------------------|
-| `--model`      | `PekingU/rtdetr_r50vd` | HuggingFace model repo ID                                             |
+| `--model`      | `PekingU/rtdetr_r50vd` | HuggingFace model repo ID                                              |
 | `--revision`   | `main`                 | Model revision (branch, tag, or commit hash)                           |
 | `--cache-dir`  |                        | HuggingFace cache directory for model files                            |
 | `--device`     | `auto`                 | Device to use (`cuda`, `cpu`, or `auto`)                               |
@@ -17,6 +17,8 @@ Supports both fixed-class models (e.g. RT-DETR) and open-vocabulary models
 | `--threshold`  | `0.3`                  | Minimum confidence score for detections                                |
 | `--batch-size` | `4`                    | Number of video frames to process in parallel on GPU                   |
 | `--sample-fps` | `1.0`                  | Frames per second to sample from video (0 = every frame)               |
+| `--allow-fetch` | `--no-allow-fetch`    | Allow downloads from HuggingFace Hub (network access required)         |
+
 
 ## Supported Input Formats
 
@@ -93,6 +95,8 @@ Uses the default RT-DETR model which recognizes 80 common object categories (COC
         module: tigerflow_ml.image.detect.local
         input_ext: .jpg
         output_ext: .json
+        params:
+          allow-fetch: True
     ```
 
 === "Input"
@@ -135,6 +139,7 @@ Use an open-vocabulary model to detect arbitrary objects described by text label
           model: IDEA-Research/grounding-dino-base
           labels: "solar panel,wind turbine,power line"
           threshold: 0.2
+          allow-fetch: True
     ```
 
 === "Input"
@@ -175,6 +180,7 @@ runs detection on each frame.
         params:
           sample_fps: 2.0
           batch_size: 8
+          allow-fetch: True
     ```
 
 === "Input"
@@ -228,4 +234,5 @@ tasks:
     params:
       sample_fps: 1.0
       batch_size: 8
+      cache_dir: ~/path/to/model/hub
 ```

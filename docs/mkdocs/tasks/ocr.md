@@ -11,8 +11,11 @@ Extract text from images and PDFs using HuggingFace image-text-to-text models.
 | `--cache-dir`     |                               | HuggingFace cache directory for model files    |
 | `--device`        | `auto`                        | Device to use (`cuda`, `cpu`, or `auto`)       |
 | `--max-length`    | `4096`                        | Maximum number of tokens to generate per image |
-| `--batch-size`    | `4`                           | Number of images to process in parallel on GPU |
 | `--prompt`        | `Extract all text from this image.` | Prompt for image-text-to-text models     |
+| `--temperature`   | `0.0`                         | Sampling temperature. Lower values make output more deterministic. |
+| `--seed`          | `42`                          | Random seed for reproducibility |
+| `--allow-fetch`   | `--no-allow-fetch`            | Allow downloads from HuggingFace Hub (network access required) |
+
 
 ## Supported Input Formats
 
@@ -47,7 +50,8 @@ Any HuggingFace [`image-text-to-text`](https://huggingface.co/models?pipeline_ta
         kind: local
         module: tigerflow_ml.text.ocr.local
         input_ext: .jpg
-        output_ext: .txt
+        params:
+          allow-fetch: True #if model is not already downloaded
     ```
 
 === "Input"
@@ -107,6 +111,8 @@ Any HuggingFace [`image-text-to-text`](https://huggingface.co/models?pipeline_ta
         module: tigerflow_ml.text.ocr.local
         input_ext: .png
         output_ext: .txt
+        params:
+          allow_fetch: True
     ```
 
 === "Input"
@@ -181,6 +187,8 @@ Any HuggingFace [`image-text-to-text`](https://huggingface.co/models?pipeline_ta
         module: tigerflow_ml.text.ocr.local
         input_ext: .pdf
         output_ext: .txt
+        params:
+          allow_fetch: True
     ```
 
 === "Input"
@@ -244,4 +252,6 @@ tasks:
       gpus: 1
       memory: 16G
       time: 04:00:00
+    params:
+      cache_dir: ~/path/to/model/hub/
 ```
