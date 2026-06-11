@@ -870,11 +870,6 @@
 <td>Device to use (<code>cuda</code>, <code>cpu</code>, or <code>auto</code>)</td>
 </tr>
 <tr>
-<td><code>--output-format</code></td>
-<td><code>text</code></td>
-<td>Output format: <code>text</code>, <code>markdown</code>, or <code>json</code></td>
-</tr>
-<tr>
 <td><code>--max-length</code></td>
 <td><code>4096</code></td>
 <td>Maximum number of tokens to generate per image</td>
@@ -897,12 +892,7 @@
 <li>PDF files (each page is rendered and processed separately)</li>
 </ul>
 <h2 id="output-format">Output Format<a class="headerlink" href="#output-format" title="Permanent link">&para;</a></h2>
-<p>Depends on <code>--output-format</code>:</p>
-<ul>
-<li><strong><code>text</code></strong> (default) — Plain text. For multi-page inputs, pages are separated by form-feed characters (<code>\f</code>).</li>
-<li><strong><code>markdown</code></strong> — Formatted output preserving tables, equations, and document structure as markdown/LaTeX.</li>
-<li><strong><code>json</code></strong> — Structured JSON with per-page text: <code>{"pages": [{"page": 1, "text": "..."}, ...]}</code>.</li>
-</ul>
+<p>Plain text. For multi-page inputs, pages are separated by form-feed characters (<code>\f</code>).</p>
 <h2 id="models">Models<a class="headerlink" href="#models" title="Permanent link">&para;</a></h2>
 <p>Any HuggingFace <a href="https://huggingface.co/models?pipeline_tag=image-text-to-text"><code>image-text-to-text</code></a> model is supported. The <a href="https://huggingface.co/stepfun-ai/GOT-OCR-2.0-hf">GOT-OCR</a> model is recommended for general-purpose English document OCR. For multilingual documents, see the alternatives below.</p>
 <table>
@@ -941,11 +931,6 @@
 </tr>
 </tbody>
 </table>
-<div class="admonition tip">
-<p class="admonition-title">Tip</p>
-<p>GOT-OCR supports plain text and formatted (markdown/LaTeX) output. Use
-<code>--output-format markdown</code> to preserve tables, equations, and document structure.</p>
-</div>
 <h2 id="examples">Examples<a class="headerlink" href="#examples" title="Permanent link">&para;</a></h2>
 <h3 id="extract-text-from-a-handwritten-document">Extract text from a handwritten document<a class="headerlink" href="#extract-text-from-a-handwritten-document" title="Permanent link">&para;</a></h3>
 <div class="tabbed-set tabbed-alternate" data-tabs="1:5"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><input id="__tabbed_1_3" name="__tabbed_1" type="radio" /><input id="__tabbed_1_4" name="__tabbed_1" type="radio" /><input id="__tabbed_1_5" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">Config</label><label for="__tabbed_1_2">Input</label><label for="__tabbed_1_3">Output (.txt)</label><label for="__tabbed_1_4">Output (.md)</label><label for="__tabbed_1_5">Output (.json)</label></div>
@@ -956,11 +941,7 @@
 <span class="w">    </span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">local</span>
 <span class="w">    </span><span class="nt">module</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">tigerflow_ml.text.ocr.local</span>
 <span class="w">    </span><span class="nt">input_ext</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">.jpg</span>
-<span class="w">    </span><span class="nt">output_ext</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">.txt</span><span class="w">  </span><span class="c1"># or .md, .json</span>
-<span class="w">    </span><span class="nt">params</span><span class="p">:</span>
-<span class="w">      </span><span class="c1"># output_format: text       # (default) plain text</span>
-<span class="w">      </span><span class="c1"># output_format: markdown   # formatted markdown/LaTeX</span>
-<span class="w">      </span><span class="c1"># output_format: json       # structured JSON with pages</span>
+<span class="w">    </span><span class="nt">output_ext</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">.txt</span>
 </code></pre></div>
 </div>
 <div class="tabbed-block">
@@ -1013,9 +994,7 @@ the residue of said County...
 <span class="w">    </span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">local</span>
 <span class="w">    </span><span class="nt">module</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">tigerflow_ml.text.ocr.local</span>
 <span class="w">    </span><span class="nt">input_ext</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">.png</span>
-<span class="w">    </span><span class="nt">output_ext</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">.md</span>
-<span class="w">    </span><span class="nt">params</span><span class="p">:</span>
-<span class="w">      </span><span class="nt">output_format</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">markdown</span>
+<span class="w">    </span><span class="nt">output_ext</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">.txt</span>
 </code></pre></div>
 </div>
 <div class="tabbed-block">
