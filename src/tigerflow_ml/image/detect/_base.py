@@ -68,23 +68,11 @@ class _DetectBase:
             ),
         ] = 1.0
 
-        # override to remove help message
-        seed: Annotated[
-            int,
-            typer.Option(hidden=True),
-        ] = 42
-        # override to remove help message
-        temperature: Annotated[
-            int,
-            typer.Option(hidden=True),
-        ] = 0  # unused
-
     @staticmethod
     def setup(context: SetupContext):
         import torch
-        from transformers import AutoConfig, pipeline, set_seed
+        from transformers import AutoConfig, pipeline
 
-        set_seed(context.seed)
         logger.info("Setting up detection model...")
         logger.info("Model: {}", context.model)
 

@@ -50,6 +50,20 @@ class _OCRBase:
             typer.Option(help="Prompt for image-text-to-text models"),
         ] = _DEFAULT_PROMPT
 
+        temperature: Annotated[
+            float,
+            typer.Option(
+                help="The model temperature. "
+                "Lower values make models more deterministic",
+                min=0.0,
+                max=2.0,
+            ),
+        ] = 0.0
+
+        seed: Annotated[
+            int, typer.Option(help="The seed to set for more reproducible behavior")
+        ] = 42
+
     @staticmethod
     def setup(context: SetupContext):
         import torch

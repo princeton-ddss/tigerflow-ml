@@ -14,6 +14,8 @@ def test_ocr_defaults():
     assert p.max_length == 4096
     assert p.output_format == OutputFormat.TEXT
     assert p.device == "auto"
+    assert p.temperature == 0
+    assert p.seed == 42
 
 
 def test_transcribe_defaults():
@@ -55,5 +57,3 @@ def test_hfparams_defaults():
     assert p.cache_dir is None
     assert p.allow_fetch is False
     assert p.device == "auto"
-    assert p.temperature == 0
-    assert p.seed == 42

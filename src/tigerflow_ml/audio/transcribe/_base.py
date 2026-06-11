@@ -78,9 +78,7 @@ class _TranscribeBase:
     @staticmethod
     def setup(context: SetupContext):
         import torch
-        from transformers import AutoFeatureExtractor, pipeline, set_seed
-
-        set_seed(context.seed)
+        from transformers import AutoFeatureExtractor, pipeline
 
         logger.info("Setting up transcription pipeline...")
         logger.info("Model: {}", context.model)
@@ -136,9 +134,6 @@ class _TranscribeBase:
         generate_kwargs = {}
         if context.language:
             generate_kwargs["language"] = context.language
-        if context.temperature > 0:
-            generate_kwargs["temperature"] = context.temperature
-            generate_kwargs["do_sample"] = True
 
         logger.info(
             "Processing with batch_size={}, chunk_length_s={}",
