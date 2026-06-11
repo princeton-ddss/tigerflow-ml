@@ -95,6 +95,8 @@ Uses the default RT-DETR model which recognizes 80 common object categories (COC
         module: tigerflow_ml.image.detect.local
         input_ext: .jpg
         output_ext: .json
+        params:
+          allow-fetch: True
     ```
 
 === "Input"
@@ -137,6 +139,7 @@ Use an open-vocabulary model to detect arbitrary objects described by text label
           model: IDEA-Research/grounding-dino-base
           labels: "solar panel,wind turbine,power line"
           threshold: 0.2
+          allow-fetch: True
     ```
 
 === "Input"
@@ -177,6 +180,7 @@ runs detection on each frame.
         params:
           sample_fps: 2.0
           batch_size: 8
+          allow-fetch: True
     ```
 
 === "Input"
@@ -230,4 +234,5 @@ tasks:
     params:
       sample_fps: 1.0
       batch_size: 8
+      cache_dir: ~/path/to/model/hub
 ```

@@ -61,6 +61,7 @@ Any HuggingFace [`image-text-to-text`](https://huggingface.co/models?pipeline_ta
         input_ext: .jpg
         output_ext: .txt  # or .md, .json
         params:
+          allow-fetch: True #if model is not already downloaded
           # output_format: text       # (default) plain text
           # output_format: markdown   # formatted markdown/LaTeX
           # output_format: json       # structured JSON with pages
@@ -125,6 +126,7 @@ Any HuggingFace [`image-text-to-text`](https://huggingface.co/models?pipeline_ta
         output_ext: .md
         params:
           output_format: markdown
+          allow_fetch: True
     ```
 
 === "Input"
@@ -199,6 +201,8 @@ Any HuggingFace [`image-text-to-text`](https://huggingface.co/models?pipeline_ta
         module: tigerflow_ml.text.ocr.local
         input_ext: .pdf
         output_ext: .txt
+        params:
+          allow_fetch: True
     ```
 
 === "Input"
@@ -262,4 +266,6 @@ tasks:
       gpus: 1
       memory: 16G
       time: 04:00:00
+    params:
+      cache_dir: ~/path/to/model/hub/
 ```

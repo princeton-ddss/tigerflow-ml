@@ -60,6 +60,7 @@ Any HuggingFace [`automatic-speech-recognition`](https://huggingface.co/models?p
         input_ext: .mp3
         output_ext: .txt  # or .srt, .json
         params:
+          allow_fetch: True
           # output_format: text   # (default) plain text
           # output_format: srt    # SRT subtitles (requires return_timestamps)
           # output_format: json   # raw Whisper output with timestamps
@@ -130,6 +131,7 @@ tasks:
     output_ext: .txt
     params:
       language: en
+      allow_fetch: True
 ```
 
 ### Run on HPC with Slurm
@@ -150,4 +152,6 @@ tasks:
       gpus: 1
       memory: 16G
       time: 04:00:00
+    params:
+      cache_dir: ~/path/to/model/hub/
 ```
