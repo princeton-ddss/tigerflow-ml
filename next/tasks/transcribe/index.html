@@ -877,6 +877,11 @@
 <td><code>false</code></td>
 <td>Return word/segment timestamps (required for SRT)</td>
 </tr>
+<tr>
+<td><code>--allow-fetch</code></td>
+<td><code>--no-allow-fetch</code></td>
+<td>Allow downloads from HuggingFace Hub (network access required)</td>
+</tr>
 </tbody>
 </table>
 <h2 id="supported-input-formats">Supported Input Formats<a class="headerlink" href="#supported-input-formats" title="Permanent link">&para;</a></h2>
@@ -950,6 +955,7 @@ nearly as accurate as <code>large-v3</code> at roughly 3x the speed.</p>
 <span class="w">    </span><span class="nt">input_ext</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">.mp3</span>
 <span class="w">    </span><span class="nt">output_ext</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">.txt</span><span class="w">  </span><span class="c1"># or .srt, .json</span>
 <span class="w">    </span><span class="nt">params</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">allow_fetch</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">True</span>
 <span class="w">      </span><span class="c1"># output_format: text   # (default) plain text</span>
 <span class="w">      </span><span class="c1"># output_format: srt    # SRT subtitles (requires return_timestamps)</span>
 <span class="w">      </span><span class="c1"># output_format: json   # raw Whisper output with timestamps</span>
@@ -1012,6 +1018,7 @@ language is known:</p>
 <span class="w">    </span><span class="nt">output_ext</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">.txt</span>
 <span class="w">    </span><span class="nt">params</span><span class="p">:</span>
 <span class="w">      </span><span class="nt">language</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">en</span>
+<span class="w">      </span><span class="nt">allow_fetch</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">True</span>
 </code></pre></div>
 <h3 id="run-on-hpc-with-slurm">Run on HPC with Slurm<a class="headerlink" href="#run-on-hpc-with-slurm" title="Permanent link">&para;</a></h3>
 <p>For bulk transcription of large audio collections, use the Slurm variant to distribute
@@ -1028,6 +1035,8 @@ work across compute nodes:</p>
 <span class="w">      </span><span class="nt">gpus</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1</span>
 <span class="w">      </span><span class="nt">memory</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">16G</span>
 <span class="w">      </span><span class="nt">time</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">04:00:00</span>
+<span class="w">    </span><span class="nt">params</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">cache_dir</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">~/path/to/model/hub/</span>
 </code></pre></div>
 
 

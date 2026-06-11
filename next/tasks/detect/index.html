@@ -947,6 +947,11 @@
 <td><code>1.0</code></td>
 <td>Frames per second to sample from video (0 = every frame)</td>
 </tr>
+<tr>
+<td><code>--allow-fetch</code></td>
+<td><code>--no-allow-fetch</code></td>
+<td>Allow downloads from HuggingFace Hub (network access required)</td>
+</tr>
 </tbody>
 </table>
 <h2 id="supported-input-formats">Supported Input Formats<a class="headerlink" href="#supported-input-formats" title="Permanent link">&para;</a></h2>
@@ -1046,6 +1051,8 @@
 <span class="w">    </span><span class="nt">module</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">tigerflow_ml.image.detect.local</span>
 <span class="w">    </span><span class="nt">input_ext</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">.jpg</span>
 <span class="w">    </span><span class="nt">output_ext</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">.json</span>
+<span class="w">    </span><span class="nt">params</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">allow-fetch</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">True</span>
 </code></pre></div>
 </div>
 <div class="tabbed-block">
@@ -1084,6 +1091,7 @@ objects matching the provided text descriptions.</p>
 <span class="w">      </span><span class="nt">model</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">IDEA-Research/grounding-dino-base</span>
 <span class="w">      </span><span class="nt">labels</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;solar</span><span class="nv"> </span><span class="s">panel,wind</span><span class="nv"> </span><span class="s">turbine,power</span><span class="nv"> </span><span class="s">line&quot;</span>
 <span class="w">      </span><span class="nt">threshold</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.2</span>
+<span class="w">      </span><span class="nt">allow-fetch</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">True</span>
 </code></pre></div>
 </div>
 <div class="tabbed-block">
@@ -1121,6 +1129,7 @@ runs detection on each frame.</p>
 <span class="w">    </span><span class="nt">params</span><span class="p">:</span>
 <span class="w">      </span><span class="nt">sample_fps</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2.0</span>
 <span class="w">      </span><span class="nt">batch_size</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">8</span>
+<span class="w">      </span><span class="nt">allow-fetch</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">True</span>
 </code></pre></div>
 </div>
 <div class="tabbed-block">
@@ -1169,6 +1178,7 @@ distribute work across compute nodes:</p>
 <span class="w">    </span><span class="nt">params</span><span class="p">:</span>
 <span class="w">      </span><span class="nt">sample_fps</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1.0</span>
 <span class="w">      </span><span class="nt">batch_size</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">8</span>
+<span class="w">      </span><span class="nt">cache_dir</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">~/path/to/model/hub</span>
 </code></pre></div>
 
 
