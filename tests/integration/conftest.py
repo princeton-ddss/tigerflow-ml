@@ -141,15 +141,16 @@ def make_context(config):
     def _make(params_cls, task_name: str, **overrides):
         from tigerflow.utils import SetupContext
 
-        params = params_cls()
         ctx = SetupContext()
 
-        # Apply param defaults (class-level annotations, not in __dict__).
-        # Walk MRO to pick up inherited fields from HFParams.
-        for cls in params_cls.__mro__:
+        # Apply param defaults. Walk MRO base-first so derived-class defaults
+        # overwrite base-class ones. Fields with no class-level default
+        # (required params) are skipped here and must come from config or
+        # overrides below.
+        for cls in reversed(params_cls.__mro__):
             for key in getattr(cls, "__annotations__", {}):
-                if not hasattr(ctx, key):
-                    setattr(ctx, key, getattr(params, key))
+                if hasattr(cls, key):
+                    setattr(ctx, key, getattr(cls, key))
 
         # Apply global config
         if config.get("cache_dir"):
@@ -163,6 +164,21 @@ def make_context(config):
         # Apply explicit overrides
         for key, value in overrides.items():
             setattr(ctx, key, value)
+
+        # Validate every declared field is now set
+        missing = sorted(
+            {
+                key
+                for cls in params_cls.__mro__
+                for key in getattr(cls, "__annotations__", {})
+                if not hasattr(ctx, key)
+            }
+        )
+        if missing:
+            raise ValueError(
+                f"Missing required params for task '{task_name}': {missing}. "
+                f"Supply via config (tasks.{task_name}) or **overrides."
+            )
 
         return ctx
 
