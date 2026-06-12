@@ -36,11 +36,6 @@ class _DetectBase:
     """Detect objects in images and videos using HuggingFace detection models."""
 
     class Params(HFParams):
-        model: Annotated[
-            str,
-            typer.Option(help="HuggingFace model repo ID"),
-        ] = "PekingU/rtdetr_r50vd"
-
         labels: Annotated[
             str,
             typer.Option(

@@ -28,11 +28,6 @@ class _TranscribeBase:
     """Transcribe audio to text using Hugging Face Whisper models."""
 
     class Params(HFParams):
-        model: Annotated[
-            str,
-            typer.Option(help="HuggingFace model repo ID"),
-        ] = "openai/whisper-large-v3"
-
         language: Annotated[
             str,
             typer.Option(
