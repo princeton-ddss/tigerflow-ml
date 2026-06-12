@@ -2,14 +2,16 @@
 
 Running
 -------
-Integration tests are gated by the TIGERFLOW_ML_TEST_DIR environment variable.
-Without it, they are skipped automatically. To run them::
+Integration tests are gated by the ``TIGERFLOW_ML_INTEGRATION_TESTS``
+environment variable. Without it, the entire suite is skipped. To run::
 
-    TIGERFLOW_ML_TEST_DIR=/path/to/test/data uv run pytest tests
+    TIGERFLOW_ML_INTEGRATION_TESTS=1 uv run pytest tests
 
 Test data directory
 -------------------
-TIGERFLOW_ML_TEST_DIR should point to a directory with sample files for each task::
+By default the suite reads from the committed fixtures at
+``tests/integration/fixtures/``. To point at a different (e.g. larger)
+fixture set on a particular machine, set ``TIGERFLOW_ML_TEST_DIR``::
 
     $TIGERFLOW_ML_TEST_DIR/
     ├── config.json    # optional, overrides default_config.json
@@ -24,6 +26,16 @@ Default model and device settings are in ``default_config.json``. To override
 per-machine, place a ``config.json`` in the test data directory. Keys are merged
 recursively, so you only need to specify what differs.
 
+Snapshots
+---------
+Tests compare task outputs against committed snapshots in
+``tests/integration/fixtures/snapshots/``. To regenerate snapshots after an
+intentional behavior change, run with ``--update-snapshots``::
+
+    TIGERFLOW_ML_INTEGRATION_TESTS=1 uv run pytest tests --update-snapshots
+
+The updated snapshot files should be reviewed and committed.
+
 Models should be downloaded or cached before running. On HPC, set ``cache_dir``
 in your config or export ``HF_HOME`` / ``HUGGINGFACE_HUB_CACHE`` to point at a
 shared or scratch location.
@@ -36,8 +48,11 @@ from pathlib import Path
 
 import pytest
 
+_RUN_VAR = "TIGERFLOW_ML_INTEGRATION_TESTS"
 _TEST_DIR_VAR = "TIGERFLOW_ML_TEST_DIR"
 _DEFAULT_CONFIG = Path(__file__).parent / "default_config.json"
+_DEFAULT_FIXTURES = Path(__file__).parent / "fixtures"
+_DEFAULT_SNAPSHOTS = _DEFAULT_FIXTURES / "snapshots"
 
 
 def _load_config(test_dir: Path) -> dict:
@@ -63,15 +78,63 @@ def _deep_merge(base: dict, overrides: dict) -> None:
             base[key] = value
 
 
+def assert_or_update_snapshot(
+    actual: str, name: str, snapshot_dir: Path, update: bool
+) -> None:
+    """Compare ``actual`` against the snapshot at ``snapshot_dir/name``.
+
+    When ``update`` is True, writes ``actual`` to the snapshot path
+    instead of asserting. The snapshot file is created if missing.
+    """
+    snapshot_file = snapshot_dir / name
+    if update:
+        snapshot_file.parent.mkdir(parents=True, exist_ok=True)
+        snapshot_file.write_text(actual, encoding="utf-8")
+        return
+    if not snapshot_file.exists():
+        raise AssertionError(
+            f"No snapshot at {snapshot_file}. "
+            f"Run with --update-snapshots to create."
+        )
+    expected = snapshot_file.read_text(encoding="utf-8")
+    assert actual == expected, f"Snapshot mismatch for {name}"
+
+
+def pytest_addoption(parser):
+    parser.addoption(
+        "--update-snapshots",
+        action="store_true",
+        default=False,
+        help="Write task outputs to fixtures/snapshots/ instead of asserting"
+        " against them.",
+    )
+
+
+@pytest.fixture(scope="session")
+def update_snapshots(request):
+    return request.config.getoption("--update-snapshots")
+
+
+@pytest.fixture(scope="session")
+def snapshot_dir():
+    """Directory for committed snapshot outputs."""
+    return _DEFAULT_SNAPSHOTS
+
+
 @pytest.fixture(scope="session")
 def test_dir():
-    """Root test data directory from environment."""
+    """Root test data directory.
+
+    Defaults to the committed ``tests/integration/fixtures/`` directory.
+    Set ``TIGERFLOW_ML_TEST_DIR`` to point at extended fixtures on a
+    machine with larger samples.
+    """
+    if not os.environ.get(_RUN_VAR):
+        pytest.skip(f"{_RUN_VAR} not set")
     value = os.environ.get(_TEST_DIR_VAR)
-    if not value:
-        pytest.skip(f"{_TEST_DIR_VAR} not set")
-    path = Path(value)
+    path = Path(value) if value else _DEFAULT_FIXTURES
     if not path.is_dir():
-        pytest.skip(f"{_TEST_DIR_VAR}={value} is not a directory")
+        pytest.skip(f"Test data directory not found: {path}")
     return path
 
 
