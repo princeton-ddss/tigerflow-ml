@@ -17,6 +17,7 @@ Transcribe audio to text using HuggingFace Whisper models.
 | `--stride-length-s`   | `5.0`                     | Overlap between chunks in seconds                             |
 | `--return-timestamps` | `false`                   | Return word/segment timestamps (required for SRT)             |
 | `--allow-fetch`       | `--no-allow-fetch`        | Allow downloads from HuggingFace Hub (network access required) |
+| `--seed`              | `42`                      | Random seed for reproducibility                               |
 
 ## Supported Input Formats
 

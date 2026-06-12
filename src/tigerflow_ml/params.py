@@ -36,6 +36,10 @@ class HFParams:
         ),
     ] = False
 
+    seed: Annotated[
+        int, typer.Option(help="The seed to set for more reproducible behavior")
+    ] = 42
+
 
 class VLLMParams:
     """Common parameters for all vLLM tasks"""

@@ -78,7 +78,9 @@ class _TranscribeBase:
     @staticmethod
     def setup(context: SetupContext):
         import torch
-        from transformers import AutoFeatureExtractor, pipeline
+        from transformers import AutoFeatureExtractor, pipeline, set_seed
+
+        set_seed(context.seed)
 
         logger.info("Setting up transcription pipeline...")
         logger.info("Model: {}", context.model)
