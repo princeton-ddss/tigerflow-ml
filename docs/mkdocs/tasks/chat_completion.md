@@ -119,21 +119,21 @@ Any HuggingFace model that is compatible with vLLM's `LLM.chat()`.
             output_ext: .txt
             max_workers: 1
             worker_resources:
-            cpus: 1
-            gpus: 1
-            memory: 10G
-            time: 00:10:00
-            sbatch_options:
-                - "--constraint=gpu80"
+                cpus: 1
+                gpus: 1
+                memory: 10G
+                time: 00:10:00
+                sbatch_options:
+                    - "--constraint=gpu80"
             setup_commands:
-            - source ~/github/tigerflow-ml/.venv/bin/activate
-            - export VLLM_USE_FLASHINFER_SAMPLER=0
+                - source ~/github/tigerflow-ml/.venv/bin/activate
+                - export VLLM_USE_FLASHINFER_SAMPLER=0
             params:
-            model: Qwen/Qwen2.5-VL-7B-Instruct
-            cache-dir: ~/github/tigerflow-ml/.hf/hub/
-            prompt: 'Caption this image'
-            max-image-pixels: 500
-            chat-kwargs: {"use_tqdm":True}
+                model: Qwen/Qwen2.5-VL-7B-Instruct
+                cache-dir: ~/github/tigerflow-ml/.hf/hub/
+                prompt: 'Caption this image'
+                max-image-pixels: 500
+                chat-kwargs: {"use_tqdm":True}
     ```
 
 === "Input (.jpeg)"
