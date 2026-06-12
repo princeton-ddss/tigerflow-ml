@@ -45,10 +45,6 @@ class _OCRBase:
             ),
         ] = 0.0
 
-        seed: Annotated[
-            int, typer.Option(help="The seed to set for more reproducible behavior")
-        ] = 42
-
     @staticmethod
     def setup(context: SetupContext):
         import torch
