@@ -6,7 +6,7 @@
       "device": "auto"
     },
     "translate": {
-      "model": "google/madlad400-3b-mt",
+      "model": "google/gemma-3-1b-it",
       "device": "auto",
       "chunk_size": 100
     },
