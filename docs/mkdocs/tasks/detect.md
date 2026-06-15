@@ -9,7 +9,7 @@ Supports both fixed-class models (e.g. RT-DETR) and open-vocabulary models
 
 | Parameter      | Default                | Description                                                            |
 |----------------|------------------------|------------------------------------------------------------------------|
-| `--model`      | `PekingU/rtdetr_r50vd` | HuggingFace model repo ID                                              |
+| `--model`      |                        | HuggingFace model repo ID                                              |
 | `--revision`   | `main`                 | Model revision (branch, tag, or commit hash)                           |
 | `--cache-dir`  |                        | HuggingFace cache directory for model files                            |
 | `--device`     | `auto`                 | Device to use (`cuda`, `cpu`, or `auto`)                               |
@@ -68,7 +68,7 @@ These models detect a fixed set of object categories without needing `--labels`.
 
 | Model | Params | COCO AP | License |
 |-------|--------|---------|---------|
-| [`PekingU/rtdetr_r50vd`](https://huggingface.co/PekingU/rtdetr_r50vd) (default) | 42M | 53.1 | Apache 2.0 |
+| [`PekingU/rtdetr_r50vd`](https://huggingface.co/PekingU/rtdetr_r50vd) | 42M | 53.1 | Apache 2.0 |
 | [`facebook/detr-resnet-50`](https://huggingface.co/facebook/detr-resnet-50) | 41M | 42.0 | Apache 2.0 |
 
 ### Zero-shot (open vocabulary)
@@ -85,7 +85,7 @@ These models detect any object described by text. Requires `--labels`.
 
 ### Detect objects in images
 
-Uses the default RT-DETR model which recognizes 80 common object categories (COCO classes).
+Uses the PekingU/rtdetr_r50vd model which recognizes 80 common object categories (COCO classes).
 
 === "Config"
 
@@ -97,6 +97,7 @@ Uses the default RT-DETR model which recognizes 80 common object categories (COC
         input_ext: .jpg
         output_ext: .json
         params:
+          model: PekingU/rtdetr_r50vd
           allow-fetch: True
     ```
 
@@ -179,6 +180,7 @@ runs detection on each frame.
         input_ext: .mp4
         output_ext: .json
         params:
+          model: PekingU/rtdetr_r50vd
           sample_fps: 2.0
           batch_size: 8
           allow-fetch: True
@@ -233,6 +235,7 @@ tasks:
       memory: 16G
       time: 04:00:00
     params:
+      model: PekingU/rtdetr_r50vd
       sample_fps: 1.0
       batch_size: 8
       cache_dir: ~/path/to/model/hub

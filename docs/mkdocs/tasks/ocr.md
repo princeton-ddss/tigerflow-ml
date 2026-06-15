@@ -6,7 +6,7 @@ Extract text from images and PDFs using HuggingFace image-text-to-text models.
 
 | Parameter         | Default                       | Description                                    |
 |-------------------|-------------------------------|------------------------------------------------|
-| `--model`         | `stepfun-ai/GOT-OCR-2.0-hf`  | HuggingFace model repo ID                      |
+| `--model`         |                               | HuggingFace model repo ID                      |
 | `--revision`      | `main`                        | Model revision (branch, tag, or commit hash)   |
 | `--cache-dir`     |                               | HuggingFace cache directory for model files    |
 | `--device`        | `auto`                        | Device to use (`cuda`, `cpu`, or `auto`)       |
@@ -32,7 +32,7 @@ Any HuggingFace [`image-text-to-text`](https://huggingface.co/models?pipeline_ta
 
 | Model | Params | Description | License |
 |-------|--------|-------------|---------|
-| [`stepfun-ai/GOT-OCR-2.0-hf`](https://huggingface.co/stepfun-ai/GOT-OCR-2.0-hf) (default) | 600M | Full-page OCR with format preservation | Apache 2.0 |
+| [`stepfun-ai/GOT-OCR-2.0-hf`](https://huggingface.co/stepfun-ai/GOT-OCR-2.0-hf) | 600M | Full-page OCR with format preservation | Apache 2.0 |
 | [`rednote-hilab/dots.ocr`](https://huggingface.co/rednote-hilab/dots.ocr) | 3B | Multilingual document parsing (100+ languages) with layout detection | MIT |
 | [`zai-org/GLM-4.1V-9B-Thinking`](https://huggingface.co/zai-org/GLM-4.1V-9B-Thinking) | 10B | Bilingual (English/Chinese) VLM with reasoning, up to 4K image resolution | MIT |
 | [`Qwen/Qwen2.5-VL-7B-Instruct`](https://huggingface.co/Qwen/Qwen2.5-VL-7B-Instruct) | 7B | General-purpose VLM with strong OCR and multilingual support | Apache 2.0 |
@@ -51,6 +51,7 @@ Any HuggingFace [`image-text-to-text`](https://huggingface.co/models?pipeline_ta
         module: tigerflow_ml.text.ocr.local
         input_ext: .jpg
         params:
+          model: stepfun-ai/GOT-OCR-2.0-hf
           allow-fetch: True #if model is not already downloaded
     ```
 
@@ -112,6 +113,7 @@ Any HuggingFace [`image-text-to-text`](https://huggingface.co/models?pipeline_ta
         input_ext: .png
         output_ext: .txt
         params:
+          model: stepfun-ai/GOT-OCR-2.0-hf
           allow_fetch: True
     ```
 
@@ -188,6 +190,7 @@ Any HuggingFace [`image-text-to-text`](https://huggingface.co/models?pipeline_ta
         input_ext: .pdf
         output_ext: .txt
         params:
+          model: stepfun-ai/GOT-OCR-2.0-hf
           allow_fetch: True
     ```
 
@@ -253,5 +256,6 @@ tasks:
       memory: 16G
       time: 04:00:00
     params:
+      model: stepfun-ai/GOT-OCR-2.0-hf
       cache_dir: ~/path/to/model/hub/
 ```

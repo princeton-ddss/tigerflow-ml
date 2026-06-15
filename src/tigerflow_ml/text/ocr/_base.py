@@ -20,11 +20,6 @@ class _OCRBase:
     """Extract text from images using image-text-to-text models."""
 
     class Params(HFParams):
-        model: Annotated[
-            str,
-            typer.Option(help="HuggingFace model repo ID"),
-        ] = "stepfun-ai/GOT-OCR-2.0-hf"
-
         max_length: Annotated[
             int,
             typer.Option(help="Maximum number of tokens to generate per image"),

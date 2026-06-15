@@ -6,7 +6,7 @@ Transcribe audio to text using HuggingFace Whisper models.
 
 | Parameter             | Default                   | Description                                                   |
 |-----------------------|---------------------------|---------------------------------------------------------------|
-| `--model`             | `openai/whisper-large-v3` | HuggingFace model repo ID                                    |
+| `--model`             |                           | HuggingFace model repo ID                                    |
 | `--revision`          | `main`                    | Model revision (branch, tag, or commit hash)                  |
 | `--cache-dir`         |                           | HuggingFace cache directory for model files                   |
 | `--device`            | `auto`                    | Device to use (`cuda`, `cpu`, or `auto`)                      |
@@ -33,7 +33,7 @@ Any HuggingFace [`automatic-speech-recognition`](https://huggingface.co/models?p
 
 | Model | Params | Speed | License |
 |-------|--------|-------|---------|
-| [`openai/whisper-large-v3`](https://huggingface.co/openai/whisper-large-v3) (default) | 1.5B | 1x | Apache 2.0 |
+| [`openai/whisper-large-v3`](https://huggingface.co/openai/whisper-large-v3) | 1.5B | 1x | Apache 2.0 |
 | [`openai/whisper-large-v3-turbo`](https://huggingface.co/openai/whisper-large-v3-turbo) | 809M | 3x | MIT |
 | [`openai/whisper-medium`](https://huggingface.co/openai/whisper-medium) | 769M | 4x | MIT |
 | [`openai/whisper-small`](https://huggingface.co/openai/whisper-small) | 244M | 9x | MIT |
@@ -59,6 +59,7 @@ Any HuggingFace [`automatic-speech-recognition`](https://huggingface.co/models?p
         input_ext: .mp3
         output_ext: .txt  # or .srt, .json
         params:
+          model: openai/whisper-large-v3
           allow_fetch: True
           # output_format: text   # (default) plain text
           # output_format: srt    # SRT subtitles (requires return_timestamps)
@@ -129,6 +130,7 @@ tasks:
     input_ext: .mp3
     output_ext: .txt
     params:
+      model: openai/whisper-large-v3
       language: en
       allow_fetch: True
 ```
@@ -152,5 +154,6 @@ tasks:
       memory: 16G
       time: 04:00:00
     params:
+      model: openai/whisper-large-v3
       cache_dir: ~/path/to/model/hub/
 ```
