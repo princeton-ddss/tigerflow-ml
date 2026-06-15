@@ -9,11 +9,18 @@ from tigerflow_ml.text.translate._base import _TranslateBase
 from .conftest import assert_or_update_snapshot
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="module")
 def default_context(make_context):
+    import gc
+
+    import torch
+
     ctx = make_context(_TranslateBase.Params, "translate")
     _TranslateBase.setup(ctx)
-    return ctx
+    yield ctx
+    del ctx.translator
+    gc.collect()
+    torch.cuda.empty_cache()
 
 
 def test_setup(default_context):

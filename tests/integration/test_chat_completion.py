@@ -12,11 +12,18 @@ def chat_dir(test_dir):
     return test_dir / "chat-completion"
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="module")
 def default_context(make_context):
+    import gc
+
+    import torch
+
     ctx = make_context(_ChatCompletionBase.Params, "chat-completion")
     _ChatCompletionBase.setup(ctx)
-    return ctx
+    yield ctx
+    del ctx.LLM
+    gc.collect()
+    torch.cuda.empty_cache()
 
 
 def test_setup(default_context):
