@@ -5,7 +5,7 @@ import copy
 import pytest
 
 from tigerflow_ml.text.translate._base import _TranslateBase
-from tigerflow_ml.text.translate.utils import AlreadyInTargetLanguageError
+from tigerflow_ml.text.translate.errors import AlreadyInTargetLanguageError
 
 from .conftest import assert_or_update_snapshot
 
