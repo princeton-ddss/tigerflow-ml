@@ -1,5 +1,4 @@
 {
-  "cache_dir": null,
   "tasks": {
     "ocr": {
       "model": "stepfun-ai/GOT-OCR-2.0-hf",
@@ -7,8 +6,7 @@
     },
     "translate": {
       "model": "google/gemma-3-1b-it",
-      "device": "auto",
-      "chunk_size": 100
+      "device": "auto"
     },
     "transcribe": {
       "model": "openai/whisper-large-v3",
