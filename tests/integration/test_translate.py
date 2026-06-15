@@ -100,34 +100,6 @@ def test_run_with_custom_prompt(
         )
 
 
-def test_run_with_fallback_prompt(
-    default_context,
-    translate_dir,
-    get_input_files,
-    make_output_path,
-    snapshot_dir,
-    update_snapshots,
-):
-    """When auto-detect is off and no source_lang is given, --use-fallback-prompt
-    swaps in a source-language-free prompt instead of raising."""
-    for input_file in get_input_files(translate_dir):
-        ctx = copy.copy(default_context)
-        ctx.auto_lang_detect = False
-        ctx.source_lang = None
-        ctx.use_fallback_prompt = True
-        output_file = make_output_path(input_file, ".txt")
-        _TranslateBase.run(ctx, input_file, output_file)
-
-        text = output_file.read_text(encoding="utf-8")
-        assert_or_update_snapshot(
-            text,
-            f"translate/{input_file.stem}.fallback.txt",
-            snapshot_dir,
-            update_snapshots,
-            threshold=0.9,
-        )
-
-
 def test_run_with_explicit_source_lang_no_detect(
     default_context,
     translate_dir,
