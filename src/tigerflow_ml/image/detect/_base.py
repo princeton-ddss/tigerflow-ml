@@ -71,7 +71,9 @@ class _DetectBase:
     @staticmethod
     def setup(context: SetupContext):
         import torch
-        from transformers import AutoConfig, pipeline
+        from transformers import AutoConfig, pipeline, set_seed
+
+        set_seed(context.seed)
 
         logger.info("Setting up detection model...")
         logger.info("Model: {}", context.model)

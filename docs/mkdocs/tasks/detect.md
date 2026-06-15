@@ -18,6 +18,7 @@ Supports both fixed-class models (e.g. RT-DETR) and open-vocabulary models
 | `--batch-size` | `4`                    | Number of video frames to process in parallel on GPU                   |
 | `--sample-fps` | `1.0`                  | Frames per second to sample from video (0 = every frame)               |
 | `--allow-fetch` | `--no-allow-fetch`    | Allow downloads from HuggingFace Hub (network access required)         |
+| `--seed`       | `42`                   | Random seed for reproducibility                                        |
 
 
 ## Supported Input Formats
