@@ -38,6 +38,7 @@ def test_run(
             f"translate/{input_file.stem}.txt",
             snapshot_dir,
             update_snapshots,
+            threshold=0.9,
         )
 
 
@@ -61,6 +62,7 @@ def test_run_with_custom_prompt_no_lang(
             f"translate/{input_file.stem}.no-lang.txt",
             snapshot_dir,
             update_snapshots,
+            threshold=0.9,
         )
 
 
@@ -86,4 +88,5 @@ def test_run_with_custom_prompt(
             f"translate/{input_file.stem}.custom.txt",
             snapshot_dir,
             update_snapshots,
+            threshold=0.9,
         )

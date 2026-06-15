@@ -79,12 +79,21 @@ def _deep_merge(base: dict, overrides: dict) -> None:
 
 
 def assert_or_update_snapshot(
-    actual: str, name: str, snapshot_dir: Path, update: bool
+    actual: str,
+    name: str,
+    snapshot_dir: Path,
+    update: bool,
+    threshold: float | None = None,
 ) -> None:
     """Compare ``actual`` against the snapshot at ``snapshot_dir/name``.
 
     When ``update`` is True, writes ``actual`` to the snapshot path
     instead of asserting. The snapshot file is created if missing.
+
+    When ``threshold`` is None (default), asserts byte-equality.
+    When ``threshold`` is a float in [0, 1], asserts character-level
+    similarity (``difflib.SequenceMatcher.ratio()``) is at least the
+    threshold — useful for nondeterministic LLM outputs.
     """
     snapshot_file = snapshot_dir / name
     if update:
@@ -97,7 +106,16 @@ def assert_or_update_snapshot(
             f"Run with --update-snapshots to create."
         )
     expected = snapshot_file.read_text(encoding="utf-8")
-    assert actual == expected, f"Snapshot mismatch for {name}"
+    if threshold is None:
+        assert actual == expected, f"Snapshot mismatch for {name}"
+    else:
+        from difflib import SequenceMatcher
+
+        ratio = SequenceMatcher(None, expected, actual).ratio()
+        assert ratio >= threshold, (
+            f"Snapshot similarity {ratio:.3f} below threshold {threshold} "
+            f"for {name}"
+        )
 
 
 def pytest_addoption(parser):

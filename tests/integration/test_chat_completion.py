@@ -41,4 +41,5 @@ def test_run(
             f"chat-completion/{input_file.stem}.txt",
             snapshot_dir,
             update_snapshots,
+            threshold=0.9,
         )
