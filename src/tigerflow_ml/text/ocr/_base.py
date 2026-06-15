@@ -5,13 +5,17 @@ Supports VLMs compatible with the image-text-to-text pipeline.
 """
 
 from pathlib import Path
-from typing import Annotated
+from typing import TYPE_CHECKING, Annotated, Any
 
 import typer
 from tigerflow.logconfig import logger
 from tigerflow.utils import SetupContext
 
-from tigerflow_ml.params import HFParams
+from tigerflow_ml.params import VLLMParams
+from tigerflow_ml.utils import parse_kwargs
+
+if TYPE_CHECKING:
+    from PIL import Image
 
 _DEFAULT_PROMPT = "Extract all text from this image."
 
@@ -19,8 +23,9 @@ _DEFAULT_PROMPT = "Extract all text from this image."
 class _OCRBase:
     """Extract text from images using image-text-to-text models."""
 
-    class Params(HFParams):
-        max_length: Annotated[
+    class Params(VLLMParams):
+        # overrides default
+        max_tokens: Annotated[
             int,
             typer.Option(help="Maximum number of tokens to generate per image"),
         ] = 4096
@@ -43,25 +48,18 @@ class _OCRBase:
     @staticmethod
     def setup(context: SetupContext):
         import torch
-        from transformers import pipeline, set_seed
-
-        set_seed(context.seed)
+        from huggingface_hub import snapshot_download
+        from vllm import LLM, SamplingParams  # type: ignore
 
         logger.info("Setting up OCR model...")
-        logger.info("Model: {}", context.model)
-
-        device = context.device
-        if device == "auto":
-            device = "cuda" if torch.cuda.is_available() else "cpu"
+        logger.info(f"   Model: {context.model}")
 
         try:
-            context.pipeline = pipeline(
-                "image-text-to-text",
-                model=context.model,
-                revision=context.revision,
-                device=device,
+            resolved_model = snapshot_download(
+                repo_id=context.model,
+                cache_dir=context.cache_dir,
                 local_files_only=not context.allow_fetch,
-                model_kwargs={"cache_dir": context.cache_dir or None},
+                revision=context.revision,
             )
         except OSError as e:
             if not context.allow_fetch:
@@ -70,42 +68,85 @@ class _OCRBase:
                     "Run with --allow_fetch or download manually."
                 ) from e
             raise
-        logger.info("OCR ready on device: {}", device)
+
+        tp = torch.cuda.device_count() or 1
+
+        user_llm_kwargs = parse_kwargs(context.llm_kwargs)
+        llm_kwargs: dict[str, Any] = {
+            "tensor_parallel_size": tp,
+            "max_model_len": context.max_model_len,
+        }
+        llm_kwargs.update(user_llm_kwargs)
+        logger.info(f"   llm_kwargs={llm_kwargs}")
+
+        context.LLM = LLM(model=resolved_model, **llm_kwargs)
+
+        user_sampling_kwargs = parse_kwargs(context.sampling_kwargs)
+        sampling_kwargs: dict[str, Any] = {
+            "temperature": context.temperature,
+            "seed": context.seed,
+            "max_tokens": context.max_tokens,
+        }
+        sampling_kwargs.update(user_sampling_kwargs)
+        logger.info(f"   sampling_kwargs={sampling_kwargs}")
+
+        context.sampling_params = SamplingParams(**sampling_kwargs)
+
+        user_chat_kwargs = parse_kwargs(context.chat_kwargs)
+        context.chat_kwargs = {
+            "sampling_params": context.sampling_params,
+            "use_tqdm": False,
+        }
+        context.chat_kwargs.update(user_chat_kwargs)
+        logger.info(f"   chat_kwargs={context.chat_kwargs}")
+
+        logger.info("Setup complete!")
 
     @staticmethod
     def run(context: SetupContext, input_file: Path, output_file: Path):
-        logger.info("Processing: {}", input_file)
         images = _load_images(input_file)
-        logger.info("Loaded {} image(s)", len(images))
+        logger.info(f"Loaded {len(images)} image(s)")
 
-        prompt = context.prompt
-
-        pages = []
+        messages = []
         for i, image in enumerate(images):
-            messages = [
-                {
-                    "role": "user",
-                    "content": [
-                        {"type": "image", "image": image},
-                        {"type": "text", "text": prompt},
-                    ],
-                }
-            ]
-            gen_kwargs: dict = {"max_new_tokens": context.max_length}
-            if context.temperature > 0:
-                gen_kwargs["temperature"] = context.temperature
-                gen_kwargs["do_sample"] = True
-            result = context.pipeline(text=messages, **gen_kwargs)
-            text = result[0]["generated_text"][-1]["content"]
-            pages.append(text)
-            logger.info("Page {}: {} chars", i + 1, len(text))
+            message = _format_message(
+                image=image,
+                prompt=context.prompt,
+                system_message=context.system_message,
+            )
+            messages.append(message)
 
-        output_text = "\f".join(pages)
+            output = context.LLM.chat(messages, **context.chat_kwargs)
+            results = [o.outputs[0].text for o in output]
+            for page, result in enumerate(results, start=1):
+                if result.finish_reason == "length":
+                    if page > 1:
+                        msg = (
+                            f"  Output truncated at {context.max_tokens} tokens (page"
+                            f"{page}) — increase --max-tokens and/or --max_model_len "
+                            "for a complete result"
+                        )
+                    else:
+                        msg = (
+                            f"  Output truncated at {context.max_tokens} tokens — "
+                            "increase --max-tokens and/or --max_model_len for a "
+                            "complete result"
+                        )
+                    logger.warning(msg)
+                elif result.finish_reason != "stop":
+                    if page > 1:
+                        msg = (
+                            "Unexpected finish reason on page "
+                            f"{page}: {result.finish_reason!r}"
+                        )
+                    else:
+                        msg = f"Unexpected finish reason: {result.finish_reason!r}"
+                    raise RuntimeError(msg)
 
-        with open(output_file, "w", encoding="utf-8") as f:
-            f.write(output_text)
+            output_text = "\f".join(results)
 
-        logger.info("Done")
+            with open(output_file, "w", encoding="utf-8") as f:
+                f.write(output_text)
 
 
 def _load_images(path: Path) -> list:
@@ -127,3 +168,29 @@ def _load_images(path: Path) -> list:
     if image.mode != "RGB":
         image = image.convert("RGB")
     return [image]
+
+
+def _format_message(
+    image: "Image.Image", prompt: str, system_message: str | None = None
+) -> list:
+    if system_message:
+        return [
+            {"role": "system", "content": system_message},
+            {
+                "role": "user",
+                "content": [
+                    {"type": "image", "image": image},
+                    {"type": "text", "text": prompt},
+                ],
+            },
+        ]
+
+    return [
+        {
+            "role": "user",
+            "content": [
+                {"type": "image", "image": image},
+                {"type": "text", "text": prompt},
+            ],
+        }
+    ]
