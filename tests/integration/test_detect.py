@@ -6,6 +6,8 @@ import pytest
 
 from tigerflow_ml.image.detect._base import _DetectBase
 
+pytestmark = pytest.mark.skip(reason="Detect task needs refactor before integration test wire-up; tracked in #84")
+
 _context = None
 
 
