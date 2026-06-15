@@ -829,7 +829,7 @@
 <tbody>
 <tr>
 <td><code>--model</code></td>
-<td><code>openai/whisper-large-v3</code></td>
+<td></td>
 <td>HuggingFace model repo ID</td>
 </tr>
 <tr>
@@ -882,6 +882,11 @@
 <td><code>--no-allow-fetch</code></td>
 <td>Allow downloads from HuggingFace Hub (network access required)</td>
 </tr>
+<tr>
+<td><code>--seed</code></td>
+<td><code>42</code></td>
+<td>Random seed for reproducibility</td>
+</tr>
 </tbody>
 </table>
 <h2 id="supported-input-formats">Supported Input Formats<a class="headerlink" href="#supported-input-formats" title="Permanent link">&para;</a></h2>
@@ -901,7 +906,7 @@
 </thead>
 <tbody>
 <tr>
-<td><a href="https://huggingface.co/openai/whisper-large-v3"><code>openai/whisper-large-v3</code></a> (default)</td>
+<td><a href="https://huggingface.co/openai/whisper-large-v3"><code>openai/whisper-large-v3</code></a></td>
 <td>1.5B</td>
 <td>1x</td>
 <td>Apache 2.0</td>
@@ -955,6 +960,7 @@ nearly as accurate as <code>large-v3</code> at roughly 3x the speed.</p>
 <span class="w">    </span><span class="nt">input_ext</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">.mp3</span>
 <span class="w">    </span><span class="nt">output_ext</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">.txt</span><span class="w">  </span><span class="c1"># or .srt, .json</span>
 <span class="w">    </span><span class="nt">params</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">model</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">openai/whisper-large-v3</span>
 <span class="w">      </span><span class="nt">allow_fetch</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">True</span>
 <span class="w">      </span><span class="c1"># output_format: text   # (default) plain text</span>
 <span class="w">      </span><span class="c1"># output_format: srt    # SRT subtitles (requires return_timestamps)</span>
@@ -1017,6 +1023,7 @@ language is known:</p>
 <span class="w">    </span><span class="nt">input_ext</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">.mp3</span>
 <span class="w">    </span><span class="nt">output_ext</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">.txt</span>
 <span class="w">    </span><span class="nt">params</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">model</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">openai/whisper-large-v3</span>
 <span class="w">      </span><span class="nt">language</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">en</span>
 <span class="w">      </span><span class="nt">allow_fetch</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">True</span>
 </code></pre></div>
@@ -1036,6 +1043,7 @@ work across compute nodes:</p>
 <span class="w">      </span><span class="nt">memory</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">16G</span>
 <span class="w">      </span><span class="nt">time</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">04:00:00</span>
 <span class="w">    </span><span class="nt">params</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">model</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">openai/whisper-large-v3</span>
 <span class="w">      </span><span class="nt">cache_dir</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">~/path/to/model/hub/</span>
 </code></pre></div>
 

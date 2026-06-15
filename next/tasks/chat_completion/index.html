@@ -959,21 +959,21 @@
 <span class="w">        </span><span class="l l-Scalar l-Scalar-Plain">output_ext</span><span class="p p-Indicator">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">.txt</span>
 <span class="w">        </span><span class="l l-Scalar l-Scalar-Plain">max_workers</span><span class="p p-Indicator">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1</span>
 <span class="w">        </span><span class="l l-Scalar l-Scalar-Plain">worker_resources</span><span class="p p-Indicator">:</span>
-<span class="w">        </span><span class="nt">cpus</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1</span>
-<span class="w">        </span><span class="nt">gpus</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1</span>
-<span class="w">        </span><span class="nt">memory</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">10G</span>
-<span class="w">        </span><span class="nt">time</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">00:10:00</span>
-<span class="w">        </span><span class="nt">sbatch_options</span><span class="p">:</span>
-<span class="w">            </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;--constraint=gpu80&quot;</span>
-<span class="w">        </span><span class="nt">setup_commands</span><span class="p">:</span>
-<span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">source ~/github/tigerflow-ml/.venv/bin/activate</span>
-<span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">export VLLM_USE_FLASHINFER_SAMPLER=0</span>
+<span class="w">            </span><span class="nt">cpus</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1</span>
+<span class="w">            </span><span class="nt">gpus</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1</span>
+<span class="w">            </span><span class="nt">memory</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">10G</span>
+<span class="w">            </span><span class="nt">time</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">00:10:00</span>
+<span class="w">            </span><span class="nt">sbatch_options</span><span class="p">:</span>
+<span class="w">                </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;--constraint=gpu80&quot;</span>
+<span class="w">      </span><span class="w w-Error">  </span><span class="nt">setup_commands</span><span class="p">:</span>
+<span class="w">            </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">source ~/github/tigerflow-ml/.venv/bin/activate</span>
+<span class="w">            </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">export VLLM_USE_FLASHINFER_SAMPLER=0</span>
 <span class="w">        </span><span class="nt">params</span><span class="p">:</span>
-<span class="w">        </span><span class="nt">model</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Qwen/Qwen2.5-VL-7B-Instruct</span>
-<span class="w">        </span><span class="nt">cache-dir</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">~/github/tigerflow-ml/.hf/hub/</span>
-<span class="w">        </span><span class="nt">prompt</span><span class="p">:</span><span class="w"> </span><span class="s">&#39;Caption</span><span class="nv"> </span><span class="s">this</span><span class="nv"> </span><span class="s">image&#39;</span>
-<span class="w">        </span><span class="nt">max-image-pixels</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">500</span>
-<span class="w">        </span><span class="nt">chat-kwargs</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="s">&quot;use_tqdm&quot;</span><span class="p p-Indicator">:</span><span class="nv">True</span><span class="p p-Indicator">}</span>
+<span class="w">            </span><span class="nt">model</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Qwen/Qwen2.5-VL-7B-Instruct</span>
+<span class="w">            </span><span class="nt">cache-dir</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">~/github/tigerflow-ml/.hf/hub/</span>
+<span class="w">            </span><span class="nt">prompt</span><span class="p">:</span><span class="w"> </span><span class="s">&#39;Caption</span><span class="nv"> </span><span class="s">this</span><span class="nv"> </span><span class="s">image&#39;</span>
+<span class="w">            </span><span class="nt">max-image-pixels</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">500</span>
+<span class="w">            </span><span class="nt">chat-kwargs</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="s">&quot;use_tqdm&quot;</span><span class="p p-Indicator">:</span><span class="nv">True</span><span class="p p-Indicator">}</span>
 </code></pre></div>
 </div>
 <div class="tabbed-block">
