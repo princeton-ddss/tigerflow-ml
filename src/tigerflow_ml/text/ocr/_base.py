@@ -35,16 +35,6 @@ class _OCRBase:
             typer.Option(help="Prompt for image-text-to-text models"),
         ] = _DEFAULT_PROMPT
 
-        temperature: Annotated[
-            float,
-            typer.Option(
-                help="The model temperature. "
-                "Lower values make models more deterministic",
-                min=0.0,
-                max=2.0,
-            ),
-        ] = 0.0
-
     @staticmethod
     def setup(context: SetupContext):
         import torch
@@ -74,8 +64,10 @@ class _OCRBase:
         user_llm_kwargs = parse_kwargs(context.llm_kwargs)
         llm_kwargs: dict[str, Any] = {
             "tensor_parallel_size": tp,
-            "max_model_len": context.max_model_len,
+            "use_tqdm_on_load": False,
         }
+        if context.max_model_len is not None:
+            llm_kwargs["max_model_len"] = context.max_model_len
         llm_kwargs.update(user_llm_kwargs)
         logger.info(f"   llm_kwargs={llm_kwargs}")
 
@@ -116,37 +108,37 @@ class _OCRBase:
             )
             messages.append(message)
 
-            output = context.LLM.chat(messages, **context.chat_kwargs)
-            results = [o.outputs[0].text for o in output]
-            for page, result in enumerate(results, start=1):
-                if result.finish_reason == "length":
-                    if page > 1:
-                        msg = (
-                            f"  Output truncated at {context.max_tokens} tokens (page"
-                            f"{page}) — increase --max-tokens and/or --max_model_len "
-                            "for a complete result"
-                        )
-                    else:
-                        msg = (
-                            f"  Output truncated at {context.max_tokens} tokens — "
-                            "increase --max-tokens and/or --max_model_len for a "
-                            "complete result"
-                        )
-                    logger.warning(msg)
-                elif result.finish_reason != "stop":
-                    if page > 1:
-                        msg = (
-                            "Unexpected finish reason on page "
-                            f"{page}: {result.finish_reason!r}"
-                        )
-                    else:
-                        msg = f"Unexpected finish reason: {result.finish_reason!r}"
-                    raise RuntimeError(msg)
+        output = context.LLM.chat(messages, **context.chat_kwargs)
+        completions = [o.outputs[0] for o in output]
+        for page, completion in enumerate(completions, start=1):
+            if completion.finish_reason == "length":
+                if page > 1:
+                    msg = (
+                        f"  Output truncated at {context.max_tokens} tokens (page"
+                        f"{page}) — increase --max-tokens and/or --max_model_len "
+                        "for a complete result"
+                    )
+                else:
+                    msg = (
+                        f"  Output truncated at {context.max_tokens} tokens — "
+                        "increase --max-tokens and/or --max_model_len for a "
+                        "complete result"
+                    )
+                logger.warning(msg)
+            elif completion.finish_reason != "stop":
+                if page > 1:
+                    msg = (
+                        "Unexpected finish reason on page "
+                        f"{page}: {completion.finish_reason!r}"
+                    )
+                else:
+                    msg = f"Unexpected finish reason: {completion.finish_reason!r}"
+                raise RuntimeError(msg)
 
-            output_text = "\f".join(results)
+        output_text = "\f".join(c.text for c in completions)
 
-            with open(output_file, "w", encoding="utf-8") as f:
-                f.write(output_text)
+        with open(output_file, "w", encoding="utf-8") as f:
+            f.write(output_text)
 
 
 def _load_images(path: Path) -> list:
@@ -179,7 +171,7 @@ def _format_message(
             {
                 "role": "user",
                 "content": [
-                    {"type": "image", "image": image},
+                    {"type": "image_pil", "image_pil": image},
                     {"type": "text", "text": prompt},
                 ],
             },
@@ -189,7 +181,7 @@ def _format_message(
         {
             "role": "user",
             "content": [
-                {"type": "image", "image": image},
+                {"type": "image_pil", "image_pil": image},
                 {"type": "text", "text": prompt},
             ],
         }
