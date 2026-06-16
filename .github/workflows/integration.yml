@@ -5,6 +5,21 @@ name: Integration
 # Triggers are intentionally limited to push-to-main and manual dispatch.
 # This is a public repo, so fork-PR triggers would execute untrusted code
 # on the H100 node — never add `pull_request` here.
+#
+# Runner setup (one-time, on the H100 node):
+#   1. Register the GitHub Actions runner against
+#      princeton-ddss/tigerflow-ml with labels `self-hosted, 2xH100`.
+#   2. Set these env vars in the runner's environment (systemd drop-in
+#      or equivalent — process env, not shell rc):
+#        HF_HOME=/scratch/.../huggingface     # model weights cache
+#        UV_CACHE_DIR=/scratch/.../uv         # uv's package cache
+#      Both default to ~/.cache/* otherwise, which exceeds home quota
+#      on the cluster.
+#   3. Restart the runner so the env takes effect.
+#
+# Verifying changes to this workflow:
+#   Trigger via `workflow_dispatch` from the Actions tab before relying
+#   on push-to-main, since the workflow only runs on main.
 on:
   push:
     branches:
