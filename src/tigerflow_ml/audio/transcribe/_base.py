@@ -152,8 +152,6 @@ class _TranscribeBase:
             pipeline_kwargs["generate_kwargs"] = generate_kwargs
         result = context.pipeline(str(input_file), **pipeline_kwargs)
 
-        logger.info(f"FULL RESULT: {result}")
-
         if context.output_format == OutputFormat.JSON:
             output_text = json.dumps(result, indent=2)
         elif context.output_format == OutputFormat.SRT:
