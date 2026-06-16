@@ -1,0 +1,3 @@
+1
+00:00:00,000 --> 00:00:02,480
+The quick brown fox jumps over the lazy dog.
