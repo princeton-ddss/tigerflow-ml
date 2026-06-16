@@ -102,8 +102,7 @@ def assert_or_update_snapshot(
         return
     if not snapshot_file.exists():
         raise AssertionError(
-            f"No snapshot at {snapshot_file}. "
-            f"Run with --update-snapshots to create."
+            f"No snapshot at {snapshot_file}. Run with --update-snapshots to create."
         )
     expected = snapshot_file.read_text(encoding="utf-8")
     if threshold is None:
@@ -113,8 +112,7 @@ def assert_or_update_snapshot(
 
         ratio = SequenceMatcher(None, expected, actual).ratio()
         assert ratio >= threshold, (
-            f"Snapshot similarity {ratio:.3f} below threshold {threshold} "
-            f"for {name}"
+            f"Snapshot similarity {ratio:.3f} below threshold {threshold} for {name}"
         )
 
 
