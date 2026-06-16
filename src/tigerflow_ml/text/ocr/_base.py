@@ -5,13 +5,17 @@ Supports VLMs compatible with the image-text-to-text pipeline.
 """
 
 from pathlib import Path
-from typing import Annotated
+from typing import TYPE_CHECKING, Annotated
 
 import typer
 from tigerflow.logconfig import logger
 from tigerflow.utils import SetupContext
 
 from tigerflow_ml.params import HFParams
+from tigerflow_ml.utils import load_images
+
+if TYPE_CHECKING:
+    pass
 
 _DEFAULT_PROMPT = "Extract all text from this image."
 
@@ -74,9 +78,8 @@ class _OCRBase:
 
     @staticmethod
     def run(context: SetupContext, input_file: Path, output_file: Path):
-        logger.info("Processing: {}", input_file)
-        images = _load_images(input_file)
-        logger.info("Loaded {} image(s)", len(images))
+        images = load_images(input_file)
+        logger.info(f"Loaded {len(images)} image(s)")
 
         prompt = context.prompt
 
@@ -106,24 +109,3 @@ class _OCRBase:
             f.write(output_text)
 
         logger.info("Done")
-
-
-def _load_images(path: Path) -> list:
-    """Load images from a file. Supports image files and PDFs."""
-    from PIL import Image
-
-    if path.suffix.lower() == ".pdf":
-        import pymupdf
-
-        images = []
-        with pymupdf.open(path) as doc:
-            for page in doc:
-                pix = page.get_pixmap()
-                image = Image.frombytes("RGB", (pix.width, pix.height), pix.samples)
-                images.append(image)
-        return images
-
-    image = Image.open(path)
-    if image.mode != "RGB":
-        image = image.convert("RGB")
-    return [image]
