@@ -1,0 +1,47 @@
+name: Integration
+
+# Real-model integration tests run on a self-hosted H100 runner.
+#
+# Triggers are intentionally limited to push-to-main and manual dispatch.
+# This is a public repo, so fork-PR triggers would execute untrusted code
+# on the H100 node — never add `pull_request` here.
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - "docs/**"
+      - "*.md"
+      - LICENSE
+  workflow_dispatch:
+
+concurrency:
+  group: integration-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  UV_VERSION: "0.7.15"
+
+jobs:
+  integration:
+    runs-on: [self-hosted, 2xH100]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Belt and suspenders: never check out a non-main ref on the
+          # self-hosted runner, even if the trigger somehow changes.
+          ref: main
+
+      - name: Install uv and set up Python
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: ${{ env.UV_VERSION }}
+          python-version-file: ".python-version"
+
+      - name: Install dependencies
+        run: uv sync --locked --group test --extra vllm
+
+      - name: Run integration tests
+        env:
+          TIGERFLOW_ML_INTEGRATION_TESTS: "1"
+        run: uv run pytest tests/integration/
