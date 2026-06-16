@@ -24,7 +24,7 @@ env:
 
 jobs:
   integration:
-    runs-on: [self-hosted, H100]
+    runs-on: [self-hosted, 2xH100]
     steps:
       - uses: actions/checkout@v4
         with:
