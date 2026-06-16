@@ -292,6 +292,11 @@ def process_batch(
     attention_mask = inputs.attention_mask.to(device)
 
     generate_kwargs: dict[str, Any] = {"return_timestamps": True, "task": "transcribe"}
+    if not language:
+        # Detect from the first window so all windows decode consistently.
+        with torch.no_grad():
+            lang_token = whisper.detect_language(input_features)[0]
+        language = processor.decode([lang_token]).strip("<|>") or None
     if language:
         generate_kwargs["language"] = language
 
@@ -302,19 +307,52 @@ def process_batch(
             **generate_kwargs,
         )
 
-    if not language:
-        # Token at position 1 is the language token: <|en|> -> "en".
-        language = processor.decode(predicted_ids[0, 1])[2:-2]
+    # generate() may return a GenerateOutput wrapper or a bare tensor, and the
+    # tensor is (batch, seq) for short-form or (batch, num_segments, seq) when
+    # the model routes into long-form. Normalize to a list of 1-D id sequences,
+    # one per input window, concatenating any per-window segments.
+    if hasattr(predicted_ids, "sequences"):
+        predicted_ids = predicted_ids.sequences
+    sequences = _flatten_sequences(predicted_ids)
 
-    decoded = processor.batch_decode(
-        predicted_ids, skip_special_tokens=True, decode_with_timestamps=True
-    )
+    # Decode per window. batch_decode(..., decode_with_timestamps=True) is
+    # broken in transformers 5.x (it mishandles the batch dimension), so decode
+    # each sequence individually.
+    decoded = [
+        processor.decode(seq, skip_special_tokens=True, decode_with_timestamps=True)
+        for seq in sequences
+    ]
 
     windows = [
         Transcription.from_string(string, language=language, offset=offset)
         for string, offset in zip(decoded, offsets)
     ]
     return windows, language
+
+
+def _flatten_sequences(predicted_ids: Any) -> list[list[int]]:
+    """Normalize generate() output to one 1-D id sequence per input window.
+
+    ``generate()`` returns ``(batch, seq)`` for short-form decoding and
+    ``(batch, num_segments, seq)`` when a window routes into long-form. In the
+    3-D case the per-window segments are concatenated into a single sequence so
+    each window yields exactly one decoded string.
+
+    Args:
+        predicted_ids: A 2-D or 3-D tensor (or nested list) of token ids.
+
+    Returns:
+        A list with one flat list of token ids per window.
+    """
+    ids = predicted_ids.tolist() if hasattr(predicted_ids, "tolist") else predicted_ids
+    sequences: list[list[int]] = []
+    for item in ids:
+        if item and isinstance(item[0], list):
+            # 3-D: concatenate this window's segments.
+            sequences.append([token for segment in item for token in segment])
+        else:
+            sequences.append(item)
+    return sequences
 
 
 def load_audio(input_file: Path) -> np.ndarray:

@@ -9,6 +9,7 @@ from tigerflow_ml.audio.transcribe.transcriber import (
     WINDOW_S,
     BatchIterator,
     Transcription,
+    _flatten_sequences,
     load_audio,
     merge_overlapping,
 )
@@ -25,6 +26,23 @@ class TestLoadAudio:
         assert array.ndim == 1
         # ~2.5s fixture at 16kHz.
         assert abs(len(array) / SAMPLING_RATE - 2.5) < 0.2
+
+
+class TestFlattenSequences:
+    def test_2d_list(self):
+        assert _flatten_sequences([[1, 2, 3], [4, 5]]) == [[1, 2, 3], [4, 5]]
+
+    def test_3d_concatenates_segments_per_window(self):
+        # (batch=2, segments, seq): each window's segments are concatenated.
+        ids = [[[1, 2], [3, 4]], [[5, 6, 7]]]
+        assert _flatten_sequences(ids) == [[1, 2, 3, 4], [5, 6, 7]]
+
+    def test_tensor_like_via_tolist(self):
+        class FakeTensor:
+            def tolist(self):
+                return [[9, 8, 7]]
+
+        assert _flatten_sequences(FakeTensor()) == [[9, 8, 7]]
 
 
 class TestFromString:
