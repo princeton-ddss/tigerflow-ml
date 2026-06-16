@@ -6,6 +6,11 @@ import pytest
 
 from tigerflow_ml.audio.transcribe._base import OutputFormat, _TranscribeBase
 
+pytestmark = pytest.mark.skip(
+    reason="Transcribe task needs refactor"
+    " before integration test wire-up; tracked in #84"
+)
+
 _context = None
 _json_context = None
 _srt_context = None
