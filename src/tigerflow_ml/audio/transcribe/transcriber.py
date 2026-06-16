@@ -317,6 +317,30 @@ def process_batch(
     return windows, language
 
 
+def load_audio(input_file: Path) -> np.ndarray:
+    """Load an audio file as a 16kHz mono float32 array.
+
+    Decodes with ``soundfile``, averages channels to mono, and resamples to
+    16kHz with ``soxr`` if needed.
+
+    Args:
+        input_file: Path to the audio file.
+
+    Returns:
+        A 1-D float32 array of samples at 16kHz.
+    """
+    import numpy as np
+    import soundfile as sf
+    import soxr
+
+    array, sr = sf.read(str(input_file), dtype="float32", always_2d=False)
+    if array.ndim > 1:
+        array = array.mean(axis=1)
+    if sr != SAMPLING_RATE:
+        array = soxr.resample(array, sr, SAMPLING_RATE)
+    return np.ascontiguousarray(array, dtype=np.float32)
+
+
 def transcribe_audio(
     input_file: Path,
     whisper: WhisperForConditionalGeneration,
@@ -344,12 +368,7 @@ def transcribe_audio(
     Returns:
         The merged ``Transcription``.
     """
-    from datasets import Audio
-
-    decoded = Audio(sampling_rate=SAMPLING_RATE).decode_example(
-        {"path": str(input_file), "bytes": None}
-    )
-    array = decoded["array"]
+    array = load_audio(input_file)
     duration = len(array) / SAMPLING_RATE
     logger.info(f"Audio duration: {duration:.1f}s")
 

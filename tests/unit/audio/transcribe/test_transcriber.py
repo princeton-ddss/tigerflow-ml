@@ -1,13 +1,30 @@
 """Unit tests for the Whisper transcription engine (no model downloads)."""
 
+from pathlib import Path
+
 import numpy as np
 
 from tigerflow_ml.audio.transcribe.transcriber import (
+    SAMPLING_RATE,
     WINDOW_S,
     BatchIterator,
     Transcription,
+    load_audio,
     merge_overlapping,
 )
+
+_FIXTURE = (
+    Path(__file__).parents[3] / "integration" / "fixtures" / "transcribe" / "sample.wav"
+)
+
+
+class TestLoadAudio:
+    def test_returns_mono_float32_at_16khz(self):
+        array = load_audio(_FIXTURE)
+        assert array.dtype == np.float32
+        assert array.ndim == 1
+        # ~2.5s fixture at 16kHz.
+        assert abs(len(array) / SAMPLING_RATE - 2.5) < 0.2
 
 
 class TestFromString:
