@@ -35,6 +35,8 @@ dependencies = [
     "langdetect>=1.0.9",
     "protobuf",
     "accelerate>=1.13.0",
+    "datasets>=3.0",
+    "pydantic>=2.0",
 ]
 
 [project.optional-dependencies]
