@@ -4,7 +4,9 @@ import pytest
 
 from tigerflow_ml.text.ocr._base import _OCRBase
 
-pytestmark = pytest.mark.skip(reason="OCR task needs refactor before integration test wire-up; tracked in #84")
+pytestmark = pytest.mark.skip(
+    reason="OCR task needs refactor before integration test wire-up; tracked in #84"
+)
 
 _context = None
 _json_context = None
