@@ -32,11 +32,16 @@ jobs:
           # self-hosted runner, even if the trigger somehow changes.
           ref: main
 
+      - name: Propagate runner env to GitHub Actions
+        run: |
+          echo "UV_CACHE_DIR=$UV_CACHE_DIR" >> "$GITHUB_ENV"
+
       - name: Install uv and set up Python
         uses: astral-sh/setup-uv@v5
         with:
           version: ${{ env.UV_VERSION }}
           python-version-file: ".python-version"
+          cache-local-path: ${{ env.UV_CACHE_DIR }}
 
       - name: Install dependencies
         run: uv sync --locked --group test --extra vllm
