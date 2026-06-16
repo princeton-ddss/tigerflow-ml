@@ -58,13 +58,21 @@ def test_run_text(
         )
 
 
-def test_run_json(default_context, transcribe_dir, get_input_files, make_output_path):
+def test_run_json(
+    default_context,
+    transcribe_dir,
+    get_input_files,
+    make_output_path,
+    snapshot_dir,
+    update_snapshots,
+):
     default_context.output_format = OutputFormat.JSON
     for input_file in get_input_files(transcribe_dir):
         output_file = make_output_path(input_file, ".json")
         _TranscribeBase.run(default_context, input_file, output_file)
 
-        data = json.loads(output_file.read_text(encoding="utf-8"))
+        raw = output_file.read_text(encoding="utf-8")
+        data = json.loads(raw)
         # Schema parity with speech-recognition-inference.
         assert set(data) == {"language", "text", "chunks"}
         assert isinstance(data["text"], str) and data["text"].strip()
@@ -76,8 +84,25 @@ def test_run_json(default_context, transcribe_dir, get_input_files, make_output_
             assert isinstance(start, (int, float))
             assert isinstance(end, (int, float))
 
+        # Similarity-compared so minor timestamp jitter across model/version
+        # bumps doesn't fail, while content/segmentation regressions do.
+        assert_or_update_snapshot(
+            raw,
+            f"transcribe/{input_file.stem}.json",
+            snapshot_dir,
+            update_snapshots,
+            threshold=0.9,
+        )
 
-def test_run_srt(default_context, transcribe_dir, get_input_files, make_output_path):
+
+def test_run_srt(
+    default_context,
+    transcribe_dir,
+    get_input_files,
+    make_output_path,
+    snapshot_dir,
+    update_snapshots,
+):
     default_context.output_format = OutputFormat.SRT
     for input_file in get_input_files(transcribe_dir):
         output_file = make_output_path(input_file, ".srt")
@@ -88,3 +113,11 @@ def test_run_srt(default_context, transcribe_dir, get_input_files, make_output_p
         assert "-->" in text, f"No SRT timestamps in {input_file.name}"
         # First cue is numbered 1.
         assert text.lstrip().startswith("1\n")
+
+        assert_or_update_snapshot(
+            text,
+            f"transcribe/{input_file.stem}.srt",
+            snapshot_dir,
+            update_snapshots,
+            threshold=0.9,
+        )
