@@ -100,7 +100,7 @@ class _OCRBase:
         logger.info(f"Loaded {len(images)} image(s)")
 
         messages = []
-        for i, image in enumerate(images):
+        for image in images:
             message = _format_message(
                 image=image,
                 prompt=context.prompt,
