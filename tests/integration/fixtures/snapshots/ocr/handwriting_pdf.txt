@@ -1,124 +1,62 @@
+Form Number: CA530082
 Form 5500-EZ
-
-**Annual Return of A One-Participant (Owners/Partners and Their Spouses) Retirement Plan or A Foreign Plan**
-
-This form is required to be filed under section 6020(b)(1) of the Internal Revenue Code. Certain foreign retirement plans are also required to file this form (see instructions). Complete all entries in accordance with the instructions to the Form 5500-EZ. Go to www.irs.gov/Form5500EZ for instructions and the latest information.
-
-**Form Number:** CA 53 0082
-**OMB No. 1545-1610**
-**2023**
-**This Form is Open to Public Inspection.**
-
----
-
-### **Part I Annual Return Identification Information**
-
-For the calendar plan year 2023 or fiscal plan year beginning (MM/DD/YYYY) **01/02/2022** and ending **01/02/2023**
-
-A. This return is:
-(1) ☐ the first return filed for the plan
-(2) ☐ an amended return
-(3) ☐ the final return filed for the plan
-(4) ☐ a short plan year return (less than 12 months)
-
-B. Check box if filing under:
-☐ Form 5558
-☐ automatic extension
-☐ special extension (enter description)
-
-C. If this return is for a foreign plan, check this box (see instructions). ☐
-
-D. If this return is for the IRS Late Filer Penalty Relief Program, check this box. (Must be filed on a paper Form with the IRS. See instructions). ☐
-
-E. If this is a retroactively adopted plan permitted by SECURE Act section 201, check here. ☐
-
----
-
-### **Part II Basic Plan Information – enter all requested information.**
-
-1a. Name of plan
-**Annual Return Plan**
-
-1b. Three-digit plan number (PN)
-**586**
-
-1c. Date plan first became effective (MM/DD/YYYY)
-**02/05/2022**
-
-2a. Employer's name
-**Acme Corp Software**
-
+Annual Return of A One-Participant (Owners/Partners and Their Spouses) Retirement Plan or A Foreign Plan
+This form is required to be filed under section 6058(b) of the Internal Revenue Code. Certain foreign plans may be required to be filed under section 6058(c) of the Internal Revenue Code. Complete all entries in accordance with the instructions for the Form 5500-EZ. Go to www.irs.gov/Form5500EZ for instructions and the latest information.
+OMB No. 1545-1610
+2023
+This Form is Open to Public Inspection.
+Part I Annual Return Identification Information
+For the calendar plan year 2023 or fiscal plan year beginning (MM/DD/YYYY) 01/01/2023 ending (MM/DD/YYYY) 01/02/2023
+A This return is:
+(1) the first return filed for the plan
+(3) the final return filed for the plan
+B Check box if filing under Form 5558 an amended return
+(2) an automatic extension
+(4) a short plan year return (less than 12 months)
+C If this return is for a foreign plan, check this box (see instructions)
+D If this return is for the IRS Late Filer Penalty Relief Program, check this box
+E If this is a retroactively adopted plan permitted by SECURE Act section 201, check here
+Part II Basic Plan Information -- enter all requested information.
+1a Name of plan
+Annual Return Plan
+1b Three-digit plan number (PN) 586
+1c Date plan first became effective (MM/DD/YYYY) 02/05/2022
+2a Employer's name Acme Corp Software
 Trade name of business (if different from name of employer)
-
-2b. Employer Identification Number (EIN)
-**735268329**
-(Do not enter your Social Security Number)
-
-2c. Employer's telephone number
-**011-536259**
-
-2d. Business code (see instructions)
-
-Mailing address (room, apt., suite no. and street, or P.O. box)
-**235, PARK STREET AVENUE, FL**
-
-City or town, state or province, country, and ZIP or foreign postal code (if foreign, see instructions)
-**FL 63052**
-
-3a. Plan administrator's name (if same as employer, enter "Same")
-
+2b Employer Identification Number (EIN) 735268329
 In care of name
-
+2c Employer's telephone number 0113536259
+2d Business code (see instructions)
+3a Plan administrator's name (if same as employer, enter "Same")
+3b Administrator's EIN 532678
+In care of name
+3c Administrator's telephone number
 Mailing address (room, apt., suite no. and street, or P.O. box)
-
+235, Park Street Avenue, FL
 City or town, state or province, country, and ZIP or foreign postal code (if foreign, see instructions)
-
-4. If the employer's name, the employer's EIN, and/or the plan name has changed since the last return filed for this plan, enter the employer's name and EIN, the plan name, and the plan number for the last return in the appropriate space provided
-
-a. Employer's name
-
-4b. EIN
-**5732900**
-
-4c. Plan name
-
-4d. PN
-
+FL 63052
+4 If the employer's name, the employer's EIN, and/or the plan name has changed since the last return filed for this plan, enter the employer's name and EIN, the plan name, and the plan number for the last return in the appropriate space provided
+4a Employer's name
+4b EIN 5732900
+4c Plan name
+4d PN
 5a(1) Total number of participants at the beginning of the plan year
-**10**
-
 5a(2) Total number of active participants at the beginning of the plan year
-**8**
-
-b(1) Total number of participants at the end of the plan year
-**5**
-
-b(2) Total number of active participants at the end of the plan year
-**5**
-
-○ Number of participants who terminated employment during the plan year with accrued benefits that were less than 100% vested
-**2**
-
----
-
-### **Part III Financial Information**
-
-6a. Total plan assets
-(1) Beginning of year
-**$5000**
-(2) End of year
-**$6000**
-
-6b. Total plan liabilities
-(1) Beginning of year
-**$4000**
-(2) End of year
-**$5000**
-
-6c. Net plan assets (subtract line 6b from 6a)
-
----
-
+5a(3) Total number of participants at the end of the plan year
+5a(4) Total number of active participants at the end of the plan year
+5b(1) 10
+5b(2) 8
+5b(3) 5
+5b(4) 2
+5c Number of participants who terminated employment during the plan year with accrued benefits that were less than 100% vested
+5c
+Part III Financial Information
+6a Total plan assets
+6a
+6b Total plan liabilities
+6b
+6c Net plan assets (subtract line 6b from 6a)
+6c
 For Privacy Act and Paperwork Reduction Act Notice, see the Instructions for Form 5500-EZ.
 Catalog Number 63263R
 Form 5500-EZ (2023)

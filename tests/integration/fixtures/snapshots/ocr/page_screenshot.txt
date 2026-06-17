@@ -4,25 +4,25 @@ Table [1] summarizes performance across the four benchmark tasks. I compare agai
 
 Table 1: Accuracy across benchmark tasks (40% test split, top-1 matching). Exact match, fastLink, and EnsembleLink require no labels; fuzzylink uses LLM-assisted active learning. Blocking column indicates whether hierarchical blocking was applied (with blocking variable in parentheses).
 
-| Task               | Method          | Blocking         | Accuracy |
-|--------------------|-----------------|------------------|----------|
-| City Matching      | Exact match     | —                | 0.000    |
-|                    | fastLink        | —                | 0.713    |
-|                    | fuzzylink       | —                | 0.717    |
-|                    | EnsembleLink    | None             | 0.901    |
-|                    | EnsembleLink    | State (Fuzzy)    | 0.900    |
-| Candidate-Voter    | Exact match     | —                | 0.000    |
-|                    | fastLink        | —                | 0.230    |
-|                    | fuzzylink       | —                | 0.965    |
-|                    | EnsembleLink    | —                | 0.990    |
-|                    | EnsembleLink    | Last name (Fuzzy)| 0.960    |
-| Organization       | Exact match     | —                | 0.000    |
-|                    | fastLink        | —                | 0.282    |
-|                    | fuzzylink       | —                | 0.922    |
-|                    | EnsembleLink    | None             | 0.961    |
-| Multilingual Parties | Exact match   | —                | 0.102    |
-|                    | fastLink        | —                | 0.096    |
-|                    | fuzzylink       | —                | 0.391    |
-|                    | EnsembleLink    | —                | 0.843    |
-|                    | EnsembleLink    | Country (Fuzzy)  | 0.926    |
-|                    | EnsembleLink + LLM | —            | 0.894    |
+| Task | Method | Blocking | Accuracy |
+|------|--------|----------|----------|
+| City Matching | Exact match | — | 0.000 |
+|      | fastLink | — | 0.713 |
+|      | fuzzylink | — | 0.717 |
+|      | EnsembleLink | None | 0.901 |
+|      | EnsembleLink | State (Fuzzy) | 0.900 |
+| Candidate-Voter | Exact match | — | 0.000 |
+|      | fastLink | — | 0.230 |
+|      | fuzzylink | — | 0.965 |
+|      | EnsembleLink | — | 0.990 |
+|      | EnsembleLink | Last name (Fuzzy) | 0.960 |
+| Organization | Exact match | — | 0.000 |
+|      | fastLink | — | 0.282 |
+|      | fuzzylink | — | 0.922 |
+|      | EnsembleLink | None | 0.961 |
+| Multilingual Parties | Exact match | — | 0.102 |
+|      | fastLink | — | 0.096 |
+|      | fuzzylink | — | 0.391 |
+|      | EnsembleLink | — | 0.843 |
+|      | EnsembleLink | Country (Fuzzy) | 0.926 |
+|      | EnsembleLink + LLM | — | 0.894 |

@@ -1,7 +1,7 @@
 {
   "tasks": {
     "ocr": {
-      "model": "Qwen/Qwen2.5-VL-32B-Instruct",
+      "model": "Qwen/Qwen2.5-VL-3B-Instruct",
       "prompt": "Extract all text from this image in plain text format."
     },
     "translate": {
