@@ -537,8 +537,11 @@ def transcribe_audio_native(
             **generate_kwargs,
         )
 
+    # return_segments gives one list of segments per input; we pass a single
+    # file, so index 0. It can be empty for silent/undecodable audio.
+    segments = output["segments"][0] if output["segments"] else []
     chunks: list[TranscriptChunk] = []
-    for seg in output["segments"][0]:
+    for seg in segments:
         text = processor.decode(seg["tokens"], skip_special_tokens=True)
         start = float(seg["start"])
         end = float(seg["end"])

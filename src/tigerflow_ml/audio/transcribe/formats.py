@@ -79,13 +79,14 @@ def to_raw(result: TranscriptionResult) -> str:
           ]
         }
 
-    A segment is marked ``overlap: true`` when its start falls inside the
-    region shared with the next window (i.e. it has a redundant counterpart in
-    that window). Consumers can drop ``overlap`` segments for a quick transcript
-    or reconcile them for an exact one. Segments are listed window by window,
-    in time order.
+    A segment is marked ``overlap: true`` when it extends into the region
+    shared with the next window (its end is past where the next window begins),
+    i.e. it likely has a redundant counterpart in that window. Consumers can
+    drop ``overlap`` segments for a quick transcript or reconcile them for an
+    exact one. Segments are listed window by window, in time order.
     """
-    # The start of each window's shared region with the next window.
+    # The start time of the next window, against which a segment counts as
+    # overlapping if it extends past it. The last window has no successor.
     next_offsets = [w.offset for w in result.windows[1:]] + [float("inf")]
 
     segments = []
