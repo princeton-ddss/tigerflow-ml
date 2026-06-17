@@ -4,32 +4,66 @@ Transcribe audio to text using HuggingFace Whisper models.
 
 ## Parameters
 
-| Parameter             | Default                   | Description                                                   |
-|-----------------------|---------------------------|---------------------------------------------------------------|
-| `--model`             |                           | HuggingFace model repo ID                                    |
-| `--revision`          | `main`                    | Model revision (branch, tag, or commit hash)                  |
-| `--cache-dir`         |                           | HuggingFace cache directory for model files                   |
-| `--device`            | `auto`                    | Device to use (`cuda`, `cpu`, or `auto`)                      |
-| `--language`          |                           | Source language code (e.g. `en`, `de`). Empty for auto-detect |
-| `--output-format`     | `text`                    | Output format: `text`, `srt`, or `json`                       |
-| `--batch-size`        | `16`                      | Batch size for processing audio chunks                        |
-| `--chunk-length-s`    | `30.0`                    | Length of audio chunks in seconds                             |
-| `--stride-length-s`   | `5.0`                     | Overlap between chunks in seconds                             |
-| `--return-timestamps` | `false`                   | Return word/segment timestamps (required for SRT)             |
-| `--allow-fetch`       | `--no-allow-fetch`        | Allow downloads from HuggingFace Hub (network access required) |
-| `--seed`              | `42`                      | Random seed for reproducibility                               |
+| Parameter         | Default            | Description                                                                                   |
+|-------------------|--------------------|-----------------------------------------------------------------------------------------------|
+| `--model`         |                    | HuggingFace model repo ID (a Whisper checkpoint)                                              |
+| `--revision`      | `main`             | Model revision (branch, tag, or commit hash)                                                  |
+| `--cache-dir`     |                    | HuggingFace cache directory for model files                                                   |
+| `--device`        | `auto`             | Device to use (`cuda`, `cpu`, or `auto`)                                                      |
+| `--language`      |                    | Source language code (e.g. `en`, `de`). Empty lets the model detect it per file               |
+| `--output-format` | `text`             | Output format: `text`, `srt`, `json` (all merged), or `raw` (un-merged, overlap-annotated)    |
+| `--windowing`     | `batched`          | Decode strategy: `batched` (fast, overlapping windows) or `native` (seam-free, slower)        |
+| `--batch-size`    | `16`               | Number of 30s windows decoded per GPU batch (batched mode)                                     |
+| `--overlap-s`     | `5.0`              | Overlap (seconds) between consecutive 30s windows (batched mode)                              |
+| `--allow-fetch`   | `--no-allow-fetch` | Allow downloads from HuggingFace Hub (network access required)                                 |
+| `--seed`          | `42`               | Random seed for reproducibility                                                               |
+
+## How it works
+
+Each audio file is loaded and resampled to 16kHz mono, then transcribed with
+`WhisperForConditionalGeneration`. Two decode strategies are available via
+`--windowing`:
+
+- **`batched`** (default) — the audio is cut into overlapping 30s windows
+  (`--overlap-s`) that decode in parallel on the GPU, then stitched into one
+  transcript. Fast. The overlap lets a word straddling a 30s boundary be
+  captured by a window; stitching is **loss-averse** — it never drops a span,
+  at the cost of occasionally repeating a few words at a seam.
+- **`native`** — the whole file is handed to Whisper's sequential long-form
+  algorithm, which advances each 30s context to the model's own last emitted
+  timestamp, so boundaries fall between segments rather than mid-word. No
+  seams, no merge, cleanest transcript — but it decodes sequentially and so is
+  much slower than `batched`.
+
+If you need an exact, duplicate-free transcript from the fast path, use
+`--output-format raw` and reconcile the overlaps downstream (see below).
 
 ## Supported Input Formats
 
-Audio files supported by the Whisper pipeline (WAV, MP3, FLAC, OGG, etc.).
+Common audio (and video) formats — WAV, MP3, FLAC, OGG, M4A, etc. (decoded via
+`soundfile`/libsndfile).
 
 ## Output Format
 
-Depends on `--output-format`: plain text (default), SRT subtitles, or JSON with timestamps. See [examples](#transcribe-audio-to-text) below.
+Depends on `--output-format`:
+
+- **`text`** — plain transcript text.
+- **`srt`** — SubRip subtitles.
+- **`json`** — merged transcript matching the
+  [speech-recognition-inference](https://github.com/princeton-ddss/speech-recognition-inference)
+  service schema: `{language, text, chunks: [{text, timestamp}]}`.
+- **`raw`** — every window's segments, un-merged, each tagged with its `window`
+  index and an `overlap` flag marking segments that fall in a region shared
+  with the next window. Because overlapping windows are decoded independently
+  they agree semantically but not token-for-token, so `raw` defers
+  reconciliation to you (or an LLM). Drop `overlap` segments for a quick
+  transcript, or reconcile both copies for an exact one.
 
 ## Models
 
-Any HuggingFace [`automatic-speech-recognition`](https://huggingface.co/models?pipeline_tag=automatic-speech-recognition) model is supported. The [OpenAI Whisper](https://huggingface.co/collections/openai/whisper-release-6501bba2cf999715571c6057) family is recommended.
+Whisper checkpoints are supported. The
+[OpenAI Whisper](https://huggingface.co/collections/openai/whisper-release-6501bba2cf999715571c6057)
+family is recommended.
 
 | Model | Params | Speed | License |
 |-------|--------|-------|---------|
@@ -62,9 +96,9 @@ Any HuggingFace [`automatic-speech-recognition`](https://huggingface.co/models?p
           model: openai/whisper-large-v3
           allow_fetch: True
           # output_format: text   # (default) plain text
-          # output_format: srt    # SRT subtitles (requires return_timestamps)
-          # output_format: json   # raw Whisper output with timestamps
-          # return_timestamps: true
+          # output_format: srt    # SRT subtitles
+          # output_format: json   # {language, text, chunks} with timestamps
+          # output_format: raw    # un-merged, overlap-annotated segments
     ```
 
 === "Input"
@@ -99,6 +133,7 @@ Any HuggingFace [`automatic-speech-recognition`](https://huggingface.co/models?p
 
     ```json title="lecture.json"
     {
+      "language": "en",
       "text": "Welcome to today's lecture on distributed computing...",
       "chunks": [
         {
@@ -113,9 +148,41 @@ Any HuggingFace [`automatic-speech-recognition`](https://huggingface.co/models?p
     }
     ```
 
-!!! note
+### Cleanest transcript (slower)
 
-    SRT and JSON output require `return_timestamps: true`.
+When transcript quality matters more than speed, use `--windowing native`. It
+avoids window seams entirely and produces no boundary duplication, at the cost
+of sequential (slower) decoding.
+
+```yaml title="config.yaml"
+tasks:
+  - name: transcribe
+    kind: local
+    module: tigerflow_ml.audio.transcribe.local
+    input_ext: .mp3
+    output_ext: .txt
+    params:
+      model: openai/whisper-large-v3
+      windowing: native
+      allow_fetch: True
+```
+
+### Exact reconciliation with `raw`
+
+The `raw` format emits every window's segments with overlap annotations so you
+can reconcile boundaries exactly — for example by feeding the overlapping
+segments to an LLM.
+
+```json title="recording.json (raw)"
+{
+  "language": "en",
+  "overlap_s": 5.0,
+  "segments": [
+    {"text": " ...the urban accent in Sligo", "timestamp": [57.7, 59.5], "window": 1, "overlap": true},
+    {"text": " which is, let's say the town...", "timestamp": [59.0, 65.7], "window": 2, "overlap": false}
+  ]
+}
+```
 
 ### Transcribe with language hint
 
