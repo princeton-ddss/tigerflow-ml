@@ -4,27 +4,49 @@ import pytest
 
 from tigerflow_ml.text.ocr._base import _OCRBase
 
-pytestmark = pytest.mark.skip(
-    reason="OCR task needs refactor before integration test wire-up; tracked in #84"
-)
-
-_context = None
-_json_context = None
+from .conftest import assert_or_update_snapshot
 
 
-@pytest.mark.dependency()
-def test_setup(make_context):
-    global _context
-    _context = make_context(_OCRBase.Params, "ocr")
-    _OCRBase.setup(_context)
+@pytest.fixture(scope="session")
+def ocr_dir(test_dir):
+    return test_dir / "ocr"
 
 
-@pytest.mark.dependency(depends=["test_setup"])
-def test_run(ocr_dir, get_input_files, make_output_path):
+@pytest.fixture(scope="module")
+def default_context(make_context):
+    import gc
+
+    import torch
+
+    ctx = make_context(_OCRBase.Params, "ocr")
+    _OCRBase.setup(ctx)
+    yield ctx
+    del ctx.LLM
+    gc.collect()
+    torch.cuda.empty_cache()
+
+
+def test_setup(default_context):
+    assert default_context.model is not None
+
+
+def test_run(
+    default_context,
+    ocr_dir,
+    get_input_files,
+    make_output_path,
+    snapshot_dir,
+    update_snapshots,
+):
     for input_file in get_input_files(ocr_dir):
         output_file = make_output_path(input_file, ".txt")
-        _OCRBase.run(_context, input_file, output_file)
+        _OCRBase.run(default_context, input_file, output_file)
 
-        assert output_file.exists(), f"No output for {input_file.name}"
         text = output_file.read_text(encoding="utf-8")
-        assert len(text.strip()) > 0, f"Empty output for {input_file.name}"
+        assert_or_update_snapshot(
+            text,
+            f"ocr/{input_file.stem}.txt",
+            snapshot_dir,
+            update_snapshots,
+            threshold=0.9,
+        )
