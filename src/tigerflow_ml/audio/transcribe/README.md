@@ -43,6 +43,23 @@ so batch output and the live API share one schema. The JSON format is exactly:
 > The upstream service uses non-overlapping windows and can lose boundary
 > words; this task does not.
 
+### Decode strategy (`--windowing`)
+
+| Mode               | Speed                | Output                                   |
+| ------------------ | -------------------- | ---------------------------------------- |
+| `batched` (default) | Fast (GPU-batched)   | Lossless; some duplication at seams       |
+| `native`           | Slow (sequential)    | Cleanest; no seams, no duplication        |
+
+`batched` cuts the audio into overlapping 30s windows decoded in parallel, then
+stitches them. `native` hands the whole file to Whisper's built-in long-form
+algorithm, which advances each 30s context to the model's own last emitted
+timestamp — so window boundaries fall between segments, never mid-word, and
+there is nothing to merge. It produces the cleanest transcript but decodes
+sequentially (no GPU batching within a file), so it is much slower. Use it when
+you want the best single-file transcript and can wait; `--overlap-s`,
+`--batch-size`, and the `raw` format's overlap annotations do not apply (native
+output is always a single, seam-free window).
+
 ### The `raw` format
 
 `--output-format raw` skips merging entirely and emits every window's segments
@@ -119,8 +136,9 @@ python -m tigerflow_ml.audio.transcribe.local \
 | `--model`         | required | A Whisper checkpoint repo ID                             |
 | `--language`      | `""`     | Source language code; empty auto-detects per file        |
 | `--output-format` | `text`   | `text`, `srt`, `json` (merged), or `raw` (un-merged)     |
-| `--batch-size`    | `16`     | 30s windows decoded per GPU batch                        |
-| `--overlap-s`     | `5.0`    | Overlap (seconds) between windows, de-duplicated on merge |
+| `--batch-size`    | `16`     | 30s windows decoded per GPU batch (batched mode)         |
+| `--overlap-s`     | `5.0`    | Overlap (seconds) between windows (batched mode)          |
+| `--windowing`     | `batched`| `batched` (fast) or `native` (seam-free, slow)           |
 
 Common HuggingFace options (`--revision`, `--cache-dir`, `--device`,
 `--allow-fetch`, `--seed`) are also available; see `--help`.

@@ -1,12 +1,16 @@
 """
 Transcribe audio to text using Hugging Face Whisper models.
 
-Audio is decoded in overlapping 30s windows with ``WhisperForConditional
-Generation`` and stitched into a single transcription, matching the contract
-of the ``princeton-ddss/speech-recognition-inference`` service. Output can be
-plain text, SRT subtitles, or JSON.
+By default, audio is decoded in overlapping 30s windows with
+``WhisperForConditionalGeneration`` (batched on the GPU) and stitched into a
+single transcription, matching the contract of the
+``princeton-ddss/speech-recognition-inference`` service. ``--windowing native``
+instead uses Whisper's sequential long-form algorithm for the cleanest,
+seam-free transcript at the cost of speed. Output can be plain text, SRT
+subtitles, JSON, or raw (un-merged) segments.
 """
 
+from enum import Enum
 from pathlib import Path
 from typing import Annotated
 
@@ -17,9 +21,16 @@ from tigerflow.utils import SetupContext
 from tigerflow_ml.params import HFParams
 
 from .formats import OutputFormat, serialize
-from .transcriber import load_whisper, transcribe_audio
+from .transcriber import load_whisper, transcribe_audio, transcribe_audio_native
 
-__all__ = ["OutputFormat", "_TranscribeBase"]
+__all__ = ["OutputFormat", "Windowing", "_TranscribeBase"]
+
+
+class Windowing(str, Enum):
+    """Decode strategy for long audio."""
+
+    BATCHED = "batched"
+    NATIVE = "native"
 
 
 class _TranscribeBase:
@@ -57,11 +68,22 @@ class _TranscribeBase:
             typer.Option(
                 help="Overlap in seconds between consecutive 30s windows. "
                 "Overlap is de-duplicated when stitching, recovering words "
-                "that straddle a window boundary.",
+                "that straddle a window boundary. Unused when --windowing is "
+                "'native'.",
                 min=0.0,
                 max=15.0,
             ),
         ] = 5.0
+
+        windowing: Annotated[
+            Windowing,
+            typer.Option(
+                help="Decode strategy. 'batched' cuts audio into overlapping "
+                "30s windows decoded in parallel (fast). 'native' uses "
+                "Whisper's sequential long-form algorithm: no seams and the "
+                "cleanest transcript, but much slower."
+            ),
+        ] = Windowing.BATCHED
 
     @staticmethod
     def setup(context: SetupContext):
@@ -81,15 +103,24 @@ class _TranscribeBase:
     def run(context: SetupContext, input_file: Path, output_file: Path):
         logger.info(f"Transcribing: {input_file}")
 
-        result = transcribe_audio(
-            input_file,
-            context.whisper,
-            context.processor,
-            context.device,
-            language=context.language or None,
-            batch_size=context.batch_size,
-            overlap_s=context.overlap_s,
-        )
+        if context.windowing == Windowing.NATIVE:
+            result = transcribe_audio_native(
+                input_file,
+                context.whisper,
+                context.processor,
+                context.device,
+                language=context.language or None,
+            )
+        else:
+            result = transcribe_audio(
+                input_file,
+                context.whisper,
+                context.processor,
+                context.device,
+                language=context.language or None,
+                batch_size=context.batch_size,
+                overlap_s=context.overlap_s,
+            )
 
         output_text = serialize(result, context.output_format)
 

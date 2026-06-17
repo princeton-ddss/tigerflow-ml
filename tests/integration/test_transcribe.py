@@ -8,7 +8,11 @@ import json
 
 import pytest
 
-from tigerflow_ml.audio.transcribe._base import OutputFormat, _TranscribeBase
+from tigerflow_ml.audio.transcribe._base import (
+    OutputFormat,
+    Windowing,
+    _TranscribeBase,
+)
 
 from .conftest import assert_or_update_snapshot
 
@@ -139,3 +143,19 @@ def test_run_raw(default_context, transcribe_dir, get_input_files, make_output_p
             start, end = seg["timestamp"]
             assert isinstance(start, (int, float))
             assert isinstance(end, (int, float))
+
+
+def test_run_native(default_context, transcribe_dir, get_input_files, make_output_path):
+    default_context.output_format = OutputFormat.JSON
+    default_context.windowing = Windowing.NATIVE
+    try:
+        for input_file in get_input_files(transcribe_dir):
+            output_file = make_output_path(input_file, ".native.json")
+            _TranscribeBase.run(default_context, input_file, output_file)
+
+            data = json.loads(output_file.read_text(encoding="utf-8"))
+            assert set(data) == {"language", "text", "chunks"}
+            assert data["text"].strip()
+            assert data["chunks"]
+    finally:
+        default_context.windowing = Windowing.BATCHED

@@ -39,7 +39,9 @@ def main() -> None:
 
     array = load_audio(Path(args.audio))
     stride = WINDOW_S - args.overlap_s
-    iterator = BatchIterator(array, batch_size=args.batch_size, overlap_s=args.overlap_s)
+    iterator = BatchIterator(
+        array, batch_size=args.batch_size, overlap_s=args.overlap_s
+    )
 
     language = args.language or None
     window_idx = 0
@@ -50,7 +52,9 @@ def main() -> None:
         )
         for w_offset, window in zip(offsets, windows):
             span_end = w_offset + WINDOW_S
-            print(f"\n=== window {window_idx} : [{w_offset:.1f}s .. {span_end:.1f}s] ===")
+            print(
+                f"\n=== window {window_idx} : [{w_offset:.1f}s .. {span_end:.1f}s] ==="
+            )
             for c in window.chunks:
                 start, end = c.timestamp
                 print(f"  [{start:7.2f} .. {end:7.2f}]  {c.text!r}")
