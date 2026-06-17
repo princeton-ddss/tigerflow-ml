@@ -34,10 +34,40 @@ so batch output and the live API share one schema. The JSON format is exactly:
 > the mechanism is different.
 
 > **Note on window boundaries.** Consecutive windows overlap by `--overlap-s`
-> seconds (default 5s) and the overlap is de-duplicated when stitching, so a
-> word straddling a 30s boundary is recovered from whichever window decoded it
-> more interior. The upstream service uses non-overlapping windows and can lose
-> such words; this task does not.
+> seconds (default 5s) so a word straddling a 30s boundary is captured by at
+> least one window. The merged formats (`text`/`srt`/`json`) stitch the windows
+> **loss-aversely**: a span is never dropped, even if that means a few words
+> repeat at a seam. If you need an exact, duplicate-free transcript, use the
+> `raw` format and reconcile the overlaps yourself (or with an LLM).
+>
+> The upstream service uses non-overlapping windows and can lose boundary
+> words; this task does not.
+
+### The `raw` format
+
+`--output-format raw` skips merging entirely and emits every window's segments
+with overlap annotations:
+
+```json
+{
+  "language": "en",
+  "overlap_s": 5.0,
+  "segments": [
+    {"text": " ...", "timestamp": [97.0, 102.5], "window": 3, "overlap": false},
+    {"text": " ...", "timestamp": [102.5, 105.0], "window": 3, "overlap": true},
+    {"text": " ...", "timestamp": [100.0, 105.4], "window": 4, "overlap": true},
+    {"text": " ...", "timestamp": [105.4, 110.9], "window": 4, "overlap": false}
+  ]
+}
+```
+
+Segments with `"overlap": true` fall in a region shared with the next window
+and have a redundant counterpart there. Because each window is decoded
+independently, the two copies agree semantically but not token-for-token (ASR
+segment boundaries are not synchronized across windows), which is exactly why
+this is hard to merge perfectly and why `raw` defers the decision to you. Drop
+the `overlap` segments for a quick transcript, or feed both copies to an LLM to
+produce an exact reconciliation.
 
 ### Setup (login node)
 
@@ -88,7 +118,7 @@ python -m tigerflow_ml.audio.transcribe.local \
 | ----------------- | -------- | -------------------------------------------------------- |
 | `--model`         | required | A Whisper checkpoint repo ID                             |
 | `--language`      | `""`     | Source language code; empty auto-detects per file        |
-| `--output-format` | `text`   | `text`, `srt`, or `json`                                 |
+| `--output-format` | `text`   | `text`, `srt`, `json` (merged), or `raw` (un-merged)     |
 | `--batch-size`    | `16`     | 30s windows decoded per GPU batch                        |
 | `--overlap-s`     | `5.0`    | Overlap (seconds) between windows, de-duplicated on merge |
 

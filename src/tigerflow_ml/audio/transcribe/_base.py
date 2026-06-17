@@ -36,7 +36,11 @@ class _TranscribeBase:
 
         output_format: Annotated[
             OutputFormat,
-            typer.Option(help="Output format: 'text', 'srt', or 'json'"),
+            typer.Option(
+                help="Output format: 'text', 'srt', 'json' (all merged), or "
+                "'raw' (un-merged per-window segments with overlap annotations, "
+                "for exact reconciliation downstream)"
+            ),
         ] = OutputFormat.TEXT
 
         batch_size: Annotated[
@@ -77,7 +81,7 @@ class _TranscribeBase:
     def run(context: SetupContext, input_file: Path, output_file: Path):
         logger.info(f"Transcribing: {input_file}")
 
-        transcription = transcribe_audio(
+        result = transcribe_audio(
             input_file,
             context.whisper,
             context.processor,
@@ -87,7 +91,7 @@ class _TranscribeBase:
             overlap_s=context.overlap_s,
         )
 
-        output_text = serialize(transcription, context.output_format)
+        output_text = serialize(result, context.output_format)
 
         with open(output_file, "w", encoding="utf-8") as f:
             f.write(output_text)

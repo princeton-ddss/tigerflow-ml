@@ -7,13 +7,13 @@ transcription here produces the same ``Transcription`` contract as the live
 service. Audio is cut into fixed 30s windows that decode independently (and so
 batch on the GPU), and per-window timestamps are shifted into absolute time.
 
-Unlike the service, windows overlap by ``overlap_s`` seconds and are stitched
-with :func:`merge_overlapping`, which de-duplicates segments in the shared
-region. The service uses hard, abutting 30s cuts, so a word straddling a 30s
-boundary is split across two windows and tends to be dropped or duplicated;
-the overlap + merge here recovers those boundary words while keeping windows
-independent (and therefore batchable). A residual seam artifact is still
-possible for a word longer than the overlap, but that is rare in speech.
+Unlike the service, windows overlap by ``overlap_s`` seconds, so a word
+straddling a 30s boundary is captured by at least one window. (The service uses
+hard, abutting cuts and can lose such words.) The engine returns the raw
+per-window transcriptions; merging is deferred to the output layer so the
+``raw`` format can expose every window's segments. The merged formats stitch
+loss-aversely via :func:`merge_overlapping` -- never dropping a span, at the
+cost of occasionally repeating a few words at a seam.
 """
 
 from __future__ import annotations
@@ -110,23 +110,62 @@ class Transcription(BaseModel):
         return self
 
 
+class Window(BaseModel):
+    """One decoded 30s window, tagged with its position in the file.
+
+    Args:
+        index: Zero-based window index.
+        offset: Absolute start time (seconds) of the window in the file.
+        transcription: The window's decoded transcription (absolute timestamps).
+    """
+
+    index: int
+    offset: float
+    transcription: Transcription
+
+
+class TranscriptionResult(BaseModel):
+    """Raw, un-merged engine output: every window plus the geometry needed to
+    reconcile their overlaps downstream.
+
+    The engine intentionally does not merge. Merged output formats call
+    :func:`merge_overlapping` on ``windows``; the ``raw`` format emits the
+    windows as-is so a consumer (or an LLM) can reconcile overlaps itself.
+
+    Args:
+        language: Detected or forced decode language.
+        windows: Per-window transcriptions, in order.
+        overlap_s: Seconds of overlap between consecutive windows.
+    """
+
+    language: str | None = None
+    windows: list[Window]
+    overlap_s: float
+
+
 def merge_overlapping(
     windows: list[Transcription],
     language: str | None,
-    overlap_s: float,
 ) -> Transcription:
-    """Stitch per-window transcriptions, de-duplicating the overlap region.
+    """Stitch per-window transcriptions into one, loss-aversely.
 
-    Windows ``N`` and ``N+1`` share an ``overlap_s``-second region. A segment
-    in that region is decoded by both windows; we keep window ``N``'s segments
-    up to the seam midpoint and window ``N+1``'s segments from the midpoint on.
-    Preferring whichever window the segment is more interior to favors the
-    cleaner (non-truncated) copy of a boundary word.
+    Consecutive windows overlap, so a segment near a window boundary may be
+    decoded by both. A fixed seam-cut risks orphaning a segment that straddles
+    the cut when the two windows disagree on where to split (ASR segment
+    boundaries are not synchronized across windows). To never drop recovered
+    speech, this keeps all of window ``N``'s chunks and appends a chunk from
+    window ``N+1`` only when it extends past the running cursor (the end of the
+    last kept chunk). A chunk fully behind the cursor is already covered and is
+    skipped; a chunk that straddles the cursor is kept, which can repeat a few
+    words at the seam.
+
+    The bias is deliberate: a duplicated word at a seam is cosmetic, a dropped
+    one is a real error. Consumers needing an exact, duplicate-free transcript
+    should use the ``raw`` output format and reconcile overlaps themselves.
 
     Args:
         windows: Per-window transcriptions, in order, with absolute timestamps.
         language: Language to record on the merged transcription.
-        overlap_s: Seconds of overlap between consecutive windows.
 
     Returns:
         A single merged ``Transcription``.
@@ -134,20 +173,16 @@ def merge_overlapping(
     if not windows:
         return Transcription(language=language, text="", chunks=[])
 
-    stride = WINDOW_S - overlap_s
     chunks: list[TranscriptChunk] = list(windows[0].chunks)
+    cursor = chunks[-1].timestamp[1] if chunks else 0.0
 
-    for k, window in enumerate(windows[1:]):
-        # Window k spans [k*stride, k*stride + WINDOW_S]; window k+1 starts at
-        # (k+1)*stride. Their overlap is [(k+1)*stride, k*stride + WINDOW_S];
-        # the seam is its midpoint. Keep already-collected segments before the
-        # seam and this window's segments from the seam on, so boundary words
-        # are taken from whichever window decoded them more interior.
-        overlap_start = (k + 1) * stride
-        overlap_end = k * stride + WINDOW_S
-        seam = (overlap_start + overlap_end) / 2
-        chunks = [c for c in chunks if c.timestamp[0] < seam]
-        chunks.extend(c for c in window.chunks if c.timestamp[0] >= seam)
+    for window in windows[1:]:
+        for c in window.chunks:
+            # Keep any chunk that extends coverage past what we already have;
+            # skip chunks wholly behind the cursor (already transcribed).
+            if c.timestamp[1] > cursor:
+                chunks.append(c)
+                cursor = c.timestamp[1]
 
     text = "".join(c.text or "" for c in chunks)
     return Transcription(language=language, text=text, chunks=chunks)
@@ -387,12 +422,13 @@ def transcribe_audio(
     language: str | None,
     batch_size: int,
     overlap_s: float,
-) -> Transcription:
-    """Transcribe an audio file end to end.
+) -> TranscriptionResult:
+    """Transcribe an audio file into raw, un-merged windows.
 
-    Loads and resamples the file to 16kHz mono, decodes it in overlapping 30s
-    windows (batched on the GPU), and merges the windows into one
-    ``Transcription`` with de-duplicated boundary segments.
+    Loads and resamples the file to 16kHz mono and decodes it in overlapping
+    30s windows (batched on the GPU). Merging is intentionally deferred to the
+    output layer so the ``raw`` format can expose every window's segments; the
+    merged formats call :func:`merge_overlapping` themselves.
 
     Args:
         input_file: Path to the audio (or video) file.
@@ -404,7 +440,7 @@ def transcribe_audio(
         overlap_s: Seconds of overlap between consecutive windows.
 
     Returns:
-        The merged ``Transcription``.
+        A ``TranscriptionResult`` holding the per-window transcriptions.
     """
     array = load_audio(input_file)
     duration = len(array) / SAMPLING_RATE
@@ -413,7 +449,7 @@ def transcribe_audio(
     stride = WINDOW_S - overlap_s
     iterator = BatchIterator(array, batch_size=batch_size, overlap_s=overlap_s)
 
-    windows: list[Transcription] = []
+    windows: list[Window] = []
     detected = language
     window_idx = 0
     for batch in iterator:
@@ -421,8 +457,11 @@ def transcribe_audio(
         batch_windows, detected = process_batch(
             batch, whisper, processor, device, detected, offsets
         )
-        windows.extend(batch_windows)
-        window_idx += len(batch)
+        for offset, transcription in zip(offsets, batch_windows):
+            windows.append(
+                Window(index=window_idx, offset=offset, transcription=transcription)
+            )
+            window_idx += 1
         logger.info(f"Processed {window_idx} window(s)")
 
-    return merge_overlapping(windows, language=detected, overlap_s=overlap_s)
+    return TranscriptionResult(language=detected, windows=windows, overlap_s=overlap_s)

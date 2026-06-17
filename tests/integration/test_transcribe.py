@@ -121,3 +121,21 @@ def test_run_srt(
             update_snapshots,
             threshold=0.9,
         )
+
+
+def test_run_raw(default_context, transcribe_dir, get_input_files, make_output_path):
+    default_context.output_format = OutputFormat.RAW
+    for input_file in get_input_files(transcribe_dir):
+        output_file = make_output_path(input_file, ".raw.json")
+        _TranscribeBase.run(default_context, input_file, output_file)
+
+        data = json.loads(output_file.read_text(encoding="utf-8"))
+        assert set(data) == {"language", "overlap_s", "segments"}
+        assert isinstance(data["segments"], list) and data["segments"]
+        for seg in data["segments"]:
+            assert set(seg) == {"text", "timestamp", "window", "overlap"}
+            assert isinstance(seg["window"], int)
+            assert isinstance(seg["overlap"], bool)
+            start, end = seg["timestamp"]
+            assert isinstance(start, (int, float))
+            assert isinstance(end, (int, float))

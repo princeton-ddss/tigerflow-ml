@@ -80,7 +80,7 @@ class TestAdjustTimestamps:
 
 class TestMergeOverlapping:
     def test_empty(self):
-        t = merge_overlapping([], language="en", overlap_s=5.0)
+        t = merge_overlapping([], language="en")
         assert t.text == ""
         assert t.chunks == []
 
@@ -90,54 +90,61 @@ class TestMergeOverlapping:
             text="hello",
             chunks=[{"text": "hello", "timestamp": (0.0, 2.0)}],
         )
-        t = merge_overlapping([w], language="en", overlap_s=5.0)
+        t = merge_overlapping([w], language="en")
         assert t.text == "hello"
         assert len(t.chunks) == 1
 
-    def test_dedupes_boundary_segment_keeping_interior_copy(self):
-        # Two windows, stride 25s, overlap 5s. Overlap region [25, 30],
-        # seam = 27.5. The boundary word "b" is decoded by both windows:
-        # as window 0's truncated tail (" b-trunc", at the very edge) and as
-        # window 1's clean interior copy (" b"). The merge must keep exactly
-        # one copy, and it must be window 1's interior copy. Distinct text on
-        # each copy lets the assertion prove *which* one survived, not merely
-        # that dedup happened.
+    def test_skips_chunks_already_covered(self):
+        # Window 1's first chunk is fully behind the cursor (the end of
+        # window 0's last kept chunk), so it's already transcribed and skipped.
         w0 = Transcription(
             language="en",
-            text=" a b-trunc",
+            text=" a b",
             chunks=[
-                {"text": " a", "timestamp": (10.0, 11.0)},
-                {"text": " b-trunc", "timestamp": (29.0, 29.8)},  # > seam, dropped
+                {"text": " a", "timestamp": (10.0, 12.0)},
+                {"text": " b", "timestamp": (26.0, 29.0)},  # cursor -> 29.0
             ],
         )
         w1 = Transcription(
             language="en",
             text=" b c",
             chunks=[
-                {"text": " b", "timestamp": (29.0, 29.8)},  # interior copy, kept
-                {"text": " c", "timestamp": (40.0, 41.0)},
+                {"text": " b", "timestamp": (26.0, 28.5)},  # end 28.5 <= 29 -> skip
+                {"text": " c", "timestamp": (29.0, 31.0)},  # end 31 > 29 -> keep
             ],
         )
-        t = merge_overlapping([w0, w1], language="en", overlap_s=5.0)
-        texts = [c.text for c in t.chunks]
-        assert texts == [" a", " b", " c"], texts
-        assert t.text == " a b c"
+        t = merge_overlapping([w0, w1], language="en")
+        assert [c.text for c in t.chunks] == [" a", " b", " c"]
 
-    def test_keeps_pre_seam_from_earlier_window(self):
-        # A segment before the seam stays with window 0; one after goes to
-        # window 1. Distinct text proves the split happened at the seam.
+    def test_loss_averse_recovers_straddling_span(self):
+        # The ireland1 #regression: a clause is decoded by both windows, where
+        # window 0 ends mid-clause and only window 1's straddling chunk carries
+        # the tail. A seam-cut would orphan it; the loss-averse rule keeps any
+        # chunk that extends past the cursor, so the tail survives (with some
+        # duplication, which is acceptable for the merged formats).
         w0 = Transcription(
             language="en",
-            text=" early0",
-            chunks=[{"text": " early0", "timestamp": (26.0, 27.0)}],  # < seam 27.5
+            text=" they act as a",
+            chunks=[
+                {"text": " they act as a", "timestamp": (97.0, 102.5)},
+            ],  # cursor -> 102.5
         )
         w1 = Transcription(
             language="en",
-            text=" late1",
-            chunks=[{"text": " late1", "timestamp": (28.0, 29.0)}],  # > seam
+            text=" they act as a prism, division of white light",
+            chunks=[
+                # straddles the cursor: end 105.3 > 102.5 -> kept (carries tail)
+                {
+                    "text": " they act as a prism, division of",
+                    "timestamp": (100.0, 105.3),
+                },
+                {"text": " white light", "timestamp": (105.3, 108.0)},
+            ],
         )
-        t = merge_overlapping([w0, w1], language="en", overlap_s=5.0)
-        assert [c.text for c in t.chunks] == [" early0", " late1"]
+        t = merge_overlapping([w0, w1], language="en")
+        # The "division of" tail must be present (never dropped).
+        assert "division of" in t.text
+        assert "white light" in t.text
 
 
 class TestBatchIterator:
