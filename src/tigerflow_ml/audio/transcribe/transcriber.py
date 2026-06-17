@@ -287,7 +287,8 @@ def load_whisper(
             ) from e
         raise
 
-    whisper.eval()
+    # from_pretrained() returns the model already in inference mode and all
+    # generation runs under torch.no_grad(), so switching modes is redundant.
     logger.info("Model ready")
     return whisper, processor, device
 
@@ -465,3 +466,89 @@ def transcribe_audio(
         logger.info(f"Processed {window_idx} window(s)")
 
     return TranscriptionResult(language=detected, windows=windows, overlap_s=overlap_s)
+
+
+def transcribe_audio_native(
+    input_file: Path,
+    whisper: WhisperForConditionalGeneration,
+    processor: WhisperProcessor,
+    device: str,
+    language: str | None,
+) -> TranscriptionResult:
+    """Transcribe an audio file with Whisper's native long-form algorithm.
+
+    Instead of cutting the audio into fixed windows, the whole file is handed
+    to ``generate()``, which decodes sequentially: each 30s context advances to
+    the model's own last emitted timestamp, so chunk boundaries land between
+    segments rather than mid-word. This avoids seams entirely (no overlap, no
+    merge) and yields the cleanest transcript, but it is sequential and so much
+    slower than the batched-window path.
+
+    The result has a single window (index 0, offset 0) with no overlap, so the
+    output formats treat it as already-merged.
+
+    Args:
+        input_file: Path to the audio (or video) file.
+        whisper: The Whisper model.
+        processor: The Whisper processor.
+        device: Resolved device string.
+        language: Forced decode language, or None to auto-detect.
+
+    Returns:
+        A ``TranscriptionResult`` with one window holding all segments.
+    """
+    import torch
+
+    array = load_audio(input_file)
+    duration = len(array) / SAMPLING_RATE
+    logger.info(f"Audio duration: {duration:.1f}s (native long-form)")
+
+    # truncation=False keeps the full audio; max_length pads up to one 30s
+    # frame so short clips still satisfy the encoder's fixed 3000-frame input.
+    inputs = processor(
+        array,
+        sampling_rate=SAMPLING_RATE,
+        return_tensors="pt",
+        truncation=False,
+        padding="max_length",
+        return_attention_mask=True,
+    )
+    input_features = inputs.input_features.to(device, dtype=whisper.dtype)
+    attention_mask = inputs.attention_mask.to(device)
+
+    generate_kwargs: dict[str, Any] = {
+        "return_timestamps": True,
+        "return_segments": True,
+        "task": "transcribe",
+    }
+    if not language:
+        with torch.no_grad():
+            lang_token = whisper.detect_language(input_features)[0]
+        language = processor.decode([lang_token]).strip("<|>") or None
+    if language:
+        generate_kwargs["language"] = language
+
+    with torch.no_grad():
+        # With return_segments=True this is a dict {"sequences", "segments"},
+        # not the tensor the stubs narrow to; treat as Any for indexing.
+        output: Any = whisper.generate(
+            input_features=input_features,
+            attention_mask=attention_mask,
+            **generate_kwargs,
+        )
+
+    chunks: list[TranscriptChunk] = []
+    for seg in output["segments"][0]:
+        text = processor.decode(seg["tokens"], skip_special_tokens=True)
+        start = float(seg["start"])
+        end = float(seg["end"])
+        chunks.append(TranscriptChunk(text=text, timestamp=(start, end)))
+    logger.info(f"Decoded {len(chunks)} segment(s)")
+
+    transcription = Transcription(
+        language=language,
+        text="".join(c.text or "" for c in chunks),
+        chunks=chunks,
+    )
+    window = Window(index=0, offset=0.0, transcription=transcription)
+    return TranscriptionResult(language=language, windows=[window], overlap_s=0.0)
