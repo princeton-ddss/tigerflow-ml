@@ -90,6 +90,9 @@ def read_text_file_strict(path: Path) -> str:
     return content
 
 
+_IMG_EXTENSIONS = [".jpg", ".jpeg", ".png", ".tiff", ".tif", ".bmp", ".pdf"]
+
+
 def load_images(path: Path, max_images: int | None = None) -> list["Image.Image"]:
     """Load images from a file. Supports image files and PDFs.
 
@@ -105,6 +108,12 @@ def load_images(path: Path, max_images: int | None = None) -> list["Image.Image"
         ValueError: If max_images is less than 1
     """
     from PIL import Image
+
+    if path.suffix.lower() not in _IMG_EXTENSIONS:
+        raise ValueError(
+            f"{path.suffix} is not a valid file type -- please choose "
+            f"one of: {_IMG_EXTENSIONS}"
+        )
 
     if max_images is not None and max_images < 1:
         raise ValueError(f"max_images must be greater than 0. Received {max_images}")
