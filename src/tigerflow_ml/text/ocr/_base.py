@@ -145,7 +145,12 @@ class _OCRBase:
                 else:
                     msg = f"Unexpected finish reason: {completion.finish_reason!r}"
                 raise RuntimeError(msg)
-            # maybe should also warn when empty
+            if not completion.text.strip():  # empty model output
+                if page > 1:
+                    msg = f"  Model output empty on page {page}"
+                else:
+                    msg = "  Model output empty"
+                logger.warning(msg)
             _validate_output_format(completion.text, output_format)
 
         output_text = _format_output(
