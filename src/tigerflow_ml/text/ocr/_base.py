@@ -5,11 +5,13 @@ Supports VLMs compatible with the image-text-to-text pipeline.
 """
 
 import json
+from collections.abc import Iterable
 from enum import Enum
 from pathlib import Path
 from typing import TYPE_CHECKING, Annotated, Any
 
 import typer
+from markdown_it import MarkdownIt
 from tigerflow.logconfig import logger
 from tigerflow.utils import SetupContext
 
@@ -148,9 +150,11 @@ class _OCRBase:
                 else:
                     msg = f"Unexpected finish reason: {completion.finish_reason!r}"
                 raise RuntimeError(msg)
-            _validate_output(completion.text, context.format)
+            _validate_output_format(completion.text, context.format)
 
-        output_text = "\f".join(c.text for c in completions)
+        output_text = _format_output(
+            outputs=(c.text for c in completions), output_format=context.format
+        )
 
         with open(output_file, "w", encoding="utf-8") as f:
             f.write(output_text)
@@ -182,19 +186,42 @@ def _format_message(
     ]
 
 
-def _validate_output(output: str, output_format: OutputFormat):
+def _validate_output_format(output: str, output_format: OutputFormat) -> None:
     """Raise error if model output doesn't match specified output format"""
     if output_format == OutputFormat.TEXT:
+        # no validation required
         return
     elif output_format == OutputFormat.MARKDOWN:
-        pass
+        # accepts plain text with no formatting
+        try:
+            MarkdownIt().parse(output)
+        except Exception as e:
+            raise RuntimeError(  # including {output} may be too long
+                f"Model did not return valid markdown output. Returned: {output}"
+                f" Try refining your prompt or use a different --format"
+            ) from e
     elif output_format == OutputFormat.JSON:
+        # will likely fail if completion.finish_reason == "length"
         try:
             json.loads(output)
         except json.JSONDecodeError as e:
             raise RuntimeError(  # including {output} may be too long
                 f"Model did not return a valid json output. Returned: {output}."
-                f"Try refining your prompt or use a different --format"
+                f" Try refining your prompt or use a different --format"
             ) from e
+    else:
+        raise ValueError(f" Unsupported output format: {output_format}")
 
-    raise ValueError(f" Unsupported output format: {output_format}")
+
+def _format_output(outputs: Iterable[str], output_format: OutputFormat) -> str:
+    """Format the final output based on specified output_format. MD and TXT
+    are joined with \f and JSON is loaded and dumped as a list"""
+    if output_format == OutputFormat.JSON:
+        output_text = json.dumps(
+            [json.loads(o) for o in outputs],
+            indent=2,
+            ensure_ascii=False,
+        )
+    else:
+        output_text = "\f".join(outputs)
+    return output_text

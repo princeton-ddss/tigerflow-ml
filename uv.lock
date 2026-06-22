@@ -4712,6 +4712,7 @@ source = { editable = "." }
 dependencies = [
     { name = "accelerate" },
     { name = "langdetect" },
+    { name = "markdown-it-py" },
     { name = "opencv-python-headless" },
     { name = "pillow" },
     { name = "protobuf" },
@@ -4757,6 +4758,7 @@ test = [
 requires-dist = [
     { name = "accelerate", specifier = ">=1.13.0" },
     { name = "langdetect", specifier = ">=1.0.9" },
+    { name = "markdown-it-py", specifier = ">=4.2.0" },
     { name = "opencv-python-headless" },
     { name = "pillow" },
     { name = "protobuf" },
