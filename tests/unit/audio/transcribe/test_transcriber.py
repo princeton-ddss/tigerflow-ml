@@ -3,6 +3,7 @@
 from pathlib import Path
 
 import numpy as np
+import pytest
 
 from tigerflow_ml.audio.transcribe.transcriber import (
     SAMPLING_RATE,
@@ -11,12 +12,36 @@ from tigerflow_ml.audio.transcribe.transcriber import (
     Transcription,
     _flatten_sequences,
     load_audio,
+    load_whisper,
     merge_overlapping,
 )
 
 _FIXTURE = (
     Path(__file__).parents[3] / "integration" / "fixtures" / "transcribe" / "sample.wav"
 )
+
+
+class TestLoadWhisperErrors:
+    def test_missing_model_offline_raises_runtime_error(self):
+        # allow_fetch=False on an uncached model hits the OSError -> RuntimeError
+        # "not found in cache" path without touching the network.
+        with pytest.raises(RuntimeError, match="not found in cache"):
+            load_whisper(
+                "tigerflow-ml/definitely-not-a-real-model",
+                revision="main",
+                cache_dir=None,
+                allow_fetch=False,
+                device="cpu",
+                seed=42,
+            )
+
+
+class TestLoadAudioErrors:
+    def test_unreadable_file_raises(self, tmp_path):
+        bad = tmp_path / "not-audio.wav"
+        bad.write_bytes(b"this is not a wav file")
+        with pytest.raises(Exception):
+            load_audio(bad)
 
 
 class TestLoadAudio:

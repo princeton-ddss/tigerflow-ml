@@ -1,8 +1,13 @@
 # Audio Transcription
 
-Transcribe audio (and video) files to text, SRT subtitles, or JSON using any
+Transcribe audio files to text, SRT subtitles, or JSON using any
 [Whisper](https://huggingface.co/openai/whisper-large-v3) checkpoint on
 HuggingFace.
+
+Input is decoded with [`soundfile`](https://python-soundfile.readthedocs.io/)
+(libsndfile), so the supported formats are WAV, FLAC, OGG/Vorbis, MP3, AIFF,
+and the others libsndfile handles. M4A/AAC and video containers (MP4, MOV)
+are **not** supported — extract the audio to a supported format first.
 
 ## How it works
 
@@ -57,13 +62,20 @@ timestamp — so window boundaries fall between segments, never mid-word, and
 there is nothing to merge. It produces the cleanest transcript but decodes
 sequentially (no GPU batching within a file), so it is much slower. Use it when
 you want the best single-file transcript and can wait; `--overlap-s`,
-`--batch-size`, and the `raw` format's overlap annotations do not apply (native
-output is always a single, seam-free window).
+`--batch-size`, and `--raw` do not apply (native output is always a single,
+seam-free window).
 
-### The `raw` format
+## Output format
 
-`--output-format raw` skips merging entirely and emits every window's segments
-with overlap annotations:
+The format follows the **output file extension** (`--output-ext`): `.srt` →
+subtitles, `.json` → JSON, anything else → plain text. JSON matches the service
+schema `{language, text, chunks}`.
+
+### The `--raw` flag
+
+For `.json` output, `--raw` skips merging entirely and emits every window's
+segments with overlap annotations instead of the merged transcript (it is
+ignored, with a warning, for non-`.json` output):
 
 ```json
 {
@@ -126,8 +138,10 @@ For local development, use the `local` variant:
 python -m tigerflow_ml.audio.transcribe.local \
   --input-dir ./audio/ --input-ext .mp3 \
   --output-dir ./transcripts/ --output-ext .srt \
-  --model openai/whisper-large-v3 --output-format srt
+  --model openai/whisper-large-v3
 ```
+
+Here the `.srt` output extension produces SRT subtitles.
 
 ## Options
 
@@ -135,10 +149,13 @@ python -m tigerflow_ml.audio.transcribe.local \
 | ----------------- | -------- | -------------------------------------------------------- |
 | `--model`         | required | A Whisper checkpoint repo ID                             |
 | `--language`      | `""`     | Source language code; empty auto-detects per file        |
-| `--output-format` | `text`   | `text`, `srt`, `json` (merged), or `raw` (un-merged)     |
+| `--raw`           | `false`  | For `.json` output: emit un-merged per-window segments    |
 | `--batch-size`    | `16`     | 30s windows decoded per GPU batch (batched mode)         |
 | `--overlap-s`     | `5.0`    | Overlap (seconds) between windows (batched mode)          |
 | `--windowing`     | `batched`| `batched` (fast) or `native` (seam-free, slow)           |
+
+The output format is chosen from `--output-ext`: `.srt` for subtitles, `.json`
+for JSON, any other extension for plain text.
 
 Common HuggingFace options (`--revision`, `--cache-dir`, `--device`,
 `--allow-fetch`, `--seed`) are also available; see `--help`.

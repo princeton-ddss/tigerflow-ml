@@ -1,10 +1,6 @@
 """Smoke tests: verify default parameter values for each task."""
 
-from tigerflow_ml.audio.transcribe._base import (
-    OutputFormat,
-    Windowing,
-    _TranscribeBase,
-)
+from tigerflow_ml.audio.transcribe._base import Windowing, _TranscribeBase
 from tigerflow_ml.image.detect._base import _DetectBase
 from tigerflow_ml.params import HFParams, VLLMParams
 from tigerflow_ml.text.ocr._base import _DEFAULT_PROMPT, _OCRBase
@@ -21,7 +17,7 @@ def test_transcribe_defaults():
     assert p.batch_size == 16
     assert p.overlap_s == 5.0
     assert p.language == ""
-    assert p.output_format == OutputFormat.TEXT
+    assert p.raw is False
     assert p.windowing == Windowing.BATCHED
 
 

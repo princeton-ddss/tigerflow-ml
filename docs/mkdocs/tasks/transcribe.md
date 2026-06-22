@@ -11,7 +11,7 @@ Transcribe audio to text using HuggingFace Whisper models.
 | `--cache-dir`     |                    | HuggingFace cache directory for model files                                                   |
 | `--device`        | `auto`             | Device to use (`cuda`, `cpu`, or `auto`)                                                      |
 | `--language`      |                    | Source language code (e.g. `en`, `de`). Empty lets the model detect it per file               |
-| `--output-format` | `text`             | Output format: `text`, `srt`, `json` (all merged), or `raw` (un-merged, overlap-annotated)    |
+| `--raw`           | `false`            | For `.json` output: emit un-merged per-window segments with overlap annotations               |
 | `--windowing`     | `batched`          | Decode strategy: `batched` (fast, overlapping windows) or `native` (seam-free, slower)        |
 | `--batch-size`    | `16`               | Number of 30s windows decoded per GPU batch (batched mode)                                     |
 | `--overlap-s`     | `5.0`              | Overlap (seconds) between consecutive 30s windows (batched mode)                              |
@@ -35,29 +35,34 @@ Each audio file is loaded and resampled to 16kHz mono, then transcribed with
   seams, no merge, cleanest transcript — but it decodes sequentially and so is
   much slower than `batched`.
 
-If you need an exact, duplicate-free transcript from the fast path, use
-`--output-format raw` and reconcile the overlaps downstream (see below).
+If you need an exact, duplicate-free transcript from the fast path, write to a
+`.json` output and pass `--raw` to reconcile the overlaps downstream (see
+below).
 
 ## Supported Input Formats
 
-Common audio (and video) formats — WAV, MP3, FLAC, OGG, M4A, etc. (decoded via
-`soundfile`/libsndfile).
+Audio is decoded with [`soundfile`](https://python-soundfile.readthedocs.io/)
+(libsndfile): WAV, FLAC, OGG/Vorbis, MP3, AIFF, and the other formats
+libsndfile supports. M4A/AAC and video containers (MP4, MOV) are not supported —
+extract the audio to a supported format first.
 
 ## Output Format
 
-Depends on `--output-format`:
+The format is chosen from the output file extension set by `--output-ext`:
 
-- **`text`** — plain transcript text.
-- **`srt`** — SubRip subtitles.
-- **`json`** — merged transcript matching the
+- **`.txt`** (or any other extension) — plain transcript text.
+- **`.srt`** — SubRip subtitles.
+- **`.json`** — merged transcript matching the
   [speech-recognition-inference](https://github.com/princeton-ddss/speech-recognition-inference)
   service schema: `{language, text, chunks: [{text, timestamp}]}`.
-- **`raw`** — every window's segments, un-merged, each tagged with its `window`
-  index and an `overlap` flag marking segments that fall in a region shared
-  with the next window. Because overlapping windows are decoded independently
-  they agree semantically but not token-for-token, so `raw` defers
-  reconciliation to you (or an LLM). Drop `overlap` segments for a quick
-  transcript, or reconcile both copies for an exact one.
+
+For `.json` output, the `--raw` flag instead emits every window's segments,
+un-merged, each tagged with its `window` index and an `overlap` flag marking
+segments that fall in a region shared with the next window. Because overlapping
+windows are decoded independently they agree semantically but not
+token-for-token, so `raw` defers reconciliation to you (or an LLM): drop the
+`overlap` segments for a quick transcript, or reconcile both copies for an exact
+one.
 
 ## Models
 
@@ -91,14 +96,11 @@ family is recommended.
         kind: local
         module: tigerflow_ml.audio.transcribe.local
         input_ext: .mp3
-        output_ext: .txt  # or .srt, .json
+        output_ext: .txt  # .txt -> text, .srt -> subtitles, .json -> JSON
         params:
           model: openai/whisper-large-v3
           allow_fetch: True
-          # output_format: text   # (default) plain text
-          # output_format: srt    # SRT subtitles
-          # output_format: json   # {language, text, chunks} with timestamps
-          # output_format: raw    # un-merged, overlap-annotated segments
+          # raw: True   # with output_ext .json: un-merged, overlap-annotated segments
     ```
 
 === "Input"
@@ -167,11 +169,24 @@ tasks:
       allow_fetch: True
 ```
 
-### Exact reconciliation with `raw`
+### Exact reconciliation with `--raw`
 
-The `raw` format emits every window's segments with overlap annotations so you
-can reconcile boundaries exactly — for example by feeding the overlapping
-segments to an LLM.
+Writing to a `.json` output with `raw: True` emits every window's segments with
+overlap annotations, so you can reconcile boundaries exactly — for example by
+feeding the overlapping segments to an LLM.
+
+```yaml title="config.yaml"
+tasks:
+  - name: transcribe
+    kind: local
+    module: tigerflow_ml.audio.transcribe.local
+    input_ext: .mp3
+    output_ext: .json
+    params:
+      model: openai/whisper-large-v3
+      raw: True
+      allow_fetch: True
+```
 
 ```json title="recording.json (raw)"
 {

@@ -3,7 +3,6 @@
 import json
 
 from tigerflow_ml.audio.transcribe.formats import (
-    OutputFormat,
     _format_timestamp,
     serialize,
     to_json,
@@ -151,9 +150,35 @@ class TestRaw:
         assert [s["text"] for s in data["segments"]] == [" word", " word"]
 
 
-def test_serialize_dispatch():
-    t = _make([(" hi", (0.0, 1.0))])
-    assert serialize(t, OutputFormat.TEXT) == to_text(t)
-    assert serialize(t, OutputFormat.JSON) == to_json(t)
-    assert serialize(t, OutputFormat.SRT) == to_srt(t)
-    assert serialize(t, OutputFormat.RAW) == to_raw(t)
+class TestSerializeDispatch:
+    def test_suffix_selects_format(self):
+        t = _make([(" hi", (0.0, 1.0))])
+        assert serialize(t, ".txt") == to_text(t)
+        assert serialize(t, ".srt") == to_srt(t)
+        assert serialize(t, ".json") == to_json(t)
+
+    def test_suffix_is_case_insensitive(self):
+        t = _make([(" hi", (0.0, 1.0))])
+        assert serialize(t, ".JSON") == to_json(t)
+
+    def test_unknown_suffix_defaults_to_text(self):
+        t = _make([(" hi", (0.0, 1.0))])
+        assert serialize(t, ".vtt") == to_text(t)
+
+    def test_raw_applies_only_to_json(self):
+        t = _make([(" hi", (0.0, 1.0))])
+        assert serialize(t, ".json", raw=True) == to_raw(t)
+
+    def test_raw_ignored_for_non_json_with_warning(self):
+        from tigerflow.logconfig import logger
+
+        messages: list[str] = []
+        sink_id = logger.add(messages.append, level="WARNING")
+        try:
+            t = _make([(" hi", (0.0, 1.0))])
+            out = serialize(t, ".txt", raw=True)
+        finally:
+            logger.remove(sink_id)
+
+        assert out == to_text(t)  # falls back to the suffix's normal format
+        assert any("raw only applies to .json" in m.lower() for m in messages)

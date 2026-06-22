@@ -8,11 +8,7 @@ import json
 
 import pytest
 
-from tigerflow_ml.audio.transcribe._base import (
-    OutputFormat,
-    Windowing,
-    _TranscribeBase,
-)
+from tigerflow_ml.audio.transcribe._base import Windowing, _TranscribeBase
 
 from .conftest import assert_or_update_snapshot
 
@@ -46,7 +42,6 @@ def test_run_text(
     snapshot_dir,
     update_snapshots,
 ):
-    default_context.output_format = OutputFormat.TEXT
     for input_file in get_input_files(transcribe_dir):
         output_file = make_output_path(input_file, ".txt")
         _TranscribeBase.run(default_context, input_file, output_file)
@@ -70,7 +65,6 @@ def test_run_json(
     snapshot_dir,
     update_snapshots,
 ):
-    default_context.output_format = OutputFormat.JSON
     for input_file in get_input_files(transcribe_dir):
         output_file = make_output_path(input_file, ".json")
         _TranscribeBase.run(default_context, input_file, output_file)
@@ -107,7 +101,6 @@ def test_run_srt(
     snapshot_dir,
     update_snapshots,
 ):
-    default_context.output_format = OutputFormat.SRT
     for input_file in get_input_files(transcribe_dir):
         output_file = make_output_path(input_file, ".srt")
         _TranscribeBase.run(default_context, input_file, output_file)
@@ -128,29 +121,31 @@ def test_run_srt(
 
 
 def test_run_raw(default_context, transcribe_dir, get_input_files, make_output_path):
-    default_context.output_format = OutputFormat.RAW
-    for input_file in get_input_files(transcribe_dir):
-        output_file = make_output_path(input_file, ".raw.json")
-        _TranscribeBase.run(default_context, input_file, output_file)
+    default_context.raw = True
+    try:
+        for input_file in get_input_files(transcribe_dir):
+            output_file = make_output_path(input_file, ".json", prefix="raw")
+            _TranscribeBase.run(default_context, input_file, output_file)
 
-        data = json.loads(output_file.read_text(encoding="utf-8"))
-        assert set(data) == {"language", "overlap_s", "segments"}
-        assert isinstance(data["segments"], list) and data["segments"]
-        for seg in data["segments"]:
-            assert set(seg) == {"text", "timestamp", "window", "overlap"}
-            assert isinstance(seg["window"], int)
-            assert isinstance(seg["overlap"], bool)
-            start, end = seg["timestamp"]
-            assert isinstance(start, (int, float))
-            assert isinstance(end, (int, float))
+            data = json.loads(output_file.read_text(encoding="utf-8"))
+            assert set(data) == {"language", "overlap_s", "segments"}
+            assert isinstance(data["segments"], list) and data["segments"]
+            for seg in data["segments"]:
+                assert set(seg) == {"text", "timestamp", "window", "overlap"}
+                assert isinstance(seg["window"], int)
+                assert isinstance(seg["overlap"], bool)
+                start, end = seg["timestamp"]
+                assert isinstance(start, (int, float))
+                assert isinstance(end, (int, float))
+    finally:
+        default_context.raw = False
 
 
 def test_run_native(default_context, transcribe_dir, get_input_files, make_output_path):
-    default_context.output_format = OutputFormat.JSON
     default_context.windowing = Windowing.NATIVE
     try:
         for input_file in get_input_files(transcribe_dir):
-            output_file = make_output_path(input_file, ".native.json")
+            output_file = make_output_path(input_file, ".json", prefix="native")
             _TranscribeBase.run(default_context, input_file, output_file)
 
             data = json.loads(output_file.read_text(encoding="utf-8"))

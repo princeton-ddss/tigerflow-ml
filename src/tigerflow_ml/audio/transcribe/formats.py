@@ -1,26 +1,20 @@
-"""Serialize a :class:`TranscriptionResult` to text, SRT, JSON, or raw.
+"""Serialize a :class:`TranscriptionResult` to text, SRT, or JSON.
 
-The text/SRT/JSON formats merge the overlapping windows into one clean
-transcript (loss-aversely; see :func:`~.transcriber.merge_overlapping`). The
-``raw`` format does no merging: it emits every window's segments with overlap
-annotations so a consumer (or an LLM) can reconcile them.
+The output format is chosen from the output file's extension (``.srt`` ->
+subtitles, ``.json`` -> JSON, anything else -> plain text). The text/SRT/JSON
+formats merge the overlapping windows into one clean transcript (loss-aversely;
+see :func:`~.transcriber.merge_overlapping`). For ``.json`` output, the ``raw``
+flag instead emits every window's segments un-merged, with overlap annotations,
+so a consumer (or an LLM) can reconcile them.
 """
 
 from __future__ import annotations
 
 import json
-from enum import Enum
+
+from tigerflow.logconfig import logger
 
 from .transcriber import Transcription, TranscriptionResult, merge_overlapping
-
-
-class OutputFormat(str, Enum):
-    """Output format for audio transcription."""
-
-    TEXT = "text"
-    SRT = "srt"
-    JSON = "json"
-    RAW = "raw"
 
 
 def _merged(result: TranscriptionResult) -> Transcription:
@@ -110,14 +104,30 @@ def to_raw(result: TranscriptionResult) -> str:
     return json.dumps(payload, indent=2)
 
 
-def serialize(result: TranscriptionResult, output_format: OutputFormat) -> str:
-    """Dispatch to the serializer for ``output_format``."""
-    if output_format == OutputFormat.JSON:
-        return to_json(result)
-    if output_format == OutputFormat.SRT:
+def serialize(result: TranscriptionResult, suffix: str, raw: bool = False) -> str:
+    """Serialize a result, picking the format from the output file ``suffix``.
+
+    ``.srt`` -> subtitles, ``.json`` -> JSON, anything else -> plain text. For
+    ``.json`` output, ``raw`` emits un-merged per-window segments instead of the
+    merged transcript; ``raw`` is ignored (with a warning) for other suffixes.
+
+    Args:
+        result: The transcription result.
+        suffix: The output file's extension, e.g. ``".json"`` (case-insensitive).
+        raw: Emit un-merged segments; only meaningful for ``.json`` output.
+
+    Returns:
+        The serialized output text.
+    """
+    suffix = suffix.lower()
+    if suffix == ".json":
+        return to_raw(result) if raw else to_json(result)
+    if raw:
+        logger.warning(
+            f"--raw only applies to .json output; ignoring for '{suffix}' output"
+        )
+    if suffix == ".srt":
         return to_srt(result)
-    if output_format == OutputFormat.RAW:
-        return to_raw(result)
     return to_text(result)
 
 

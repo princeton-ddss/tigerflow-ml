@@ -6,8 +6,9 @@ By default, audio is decoded in overlapping 30s windows with
 single transcription, matching the contract of the
 ``princeton-ddss/speech-recognition-inference`` service. ``--windowing native``
 instead uses Whisper's sequential long-form algorithm for the cleanest,
-seam-free transcript at the cost of speed. Output can be plain text, SRT
-subtitles, JSON, or raw (un-merged) segments.
+seam-free transcript at the cost of speed. The output format follows the output
+file extension (``.srt``, ``.json``, else plain text); for ``.json``, ``--raw``
+emits un-merged per-window segments instead of the merged transcript.
 """
 
 from enum import Enum
@@ -20,10 +21,10 @@ from tigerflow.utils import SetupContext
 
 from tigerflow_ml.params import HFParams
 
-from .formats import OutputFormat, serialize
+from .formats import serialize
 from .transcriber import load_whisper, transcribe_audio, transcribe_audio_native
 
-__all__ = ["OutputFormat", "Windowing", "_TranscribeBase"]
+__all__ = ["Windowing", "_TranscribeBase"]
 
 
 class Windowing(str, Enum):
@@ -45,14 +46,15 @@ class _TranscribeBase:
             ),
         ] = ""
 
-        output_format: Annotated[
-            OutputFormat,
+        raw: Annotated[
+            bool,
             typer.Option(
-                help="Output format: 'text', 'srt', 'json' (all merged), or "
-                "'raw' (un-merged per-window segments with overlap annotations, "
-                "for exact reconciliation downstream)"
+                help="For .json output only: emit un-merged per-window segments "
+                "with overlap annotations (for exact reconciliation downstream) "
+                "instead of the merged transcript. Ignored for other output "
+                "extensions."
             ),
-        ] = OutputFormat.TEXT
+        ] = False
 
         batch_size: Annotated[
             int,
@@ -122,7 +124,7 @@ class _TranscribeBase:
                 overlap_s=context.overlap_s,
             )
 
-        output_text = serialize(result, context.output_format)
+        output_text = serialize(result, output_file.suffix, raw=context.raw)
 
         with open(output_file, "w", encoding="utf-8") as f:
             f.write(output_text)
