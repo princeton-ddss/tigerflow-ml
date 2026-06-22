@@ -45,12 +45,6 @@ class _OCRBase:
             typer.Option(help="Maximum number of tokens to generate per image"),
         ] = 4096
 
-        # could also infer from output_file extension
-        format: Annotated[
-            OutputFormat,
-            typer.Option(help="Validates output format: 'text', 'markdown', or 'json'"),
-        ] = OutputFormat.TEXT
-
     @staticmethod
     def setup(context: SetupContext):
         import torch
@@ -114,6 +108,7 @@ class _OCRBase:
     def run(context: SetupContext, input_file: Path, output_file: Path):
         images = load_images(input_file)
         logger.info(f"Loaded {len(images)} image(s)")
+        output_format = _determine_output_format(output_file)
 
         messages = []
         for image in images:
@@ -150,10 +145,11 @@ class _OCRBase:
                 else:
                     msg = f"Unexpected finish reason: {completion.finish_reason!r}"
                 raise RuntimeError(msg)
-            _validate_output_format(completion.text, context.format)
+            # maybe should also warn when empty
+            _validate_output_format(completion.text, output_format)
 
         output_text = _format_output(
-            outputs=(c.text for c in completions), output_format=context.format
+            outputs=(c.text for c in completions), output_format=output_format
         )
 
         with open(output_file, "w", encoding="utf-8") as f:
@@ -186,6 +182,21 @@ def _format_message(
     ]
 
 
+def _determine_output_format(path: Path) -> OutputFormat:
+    if path.suffix.lower() in [".txt", ".text"]:
+        format = OutputFormat.TEXT
+    elif path.suffix.lower() in [".json"]:
+        format = OutputFormat.JSON
+    elif path.suffix.lower() in [".md", ".markdown", ".mdown", ".mkd"]:
+        format = OutputFormat.MARKDOWN
+    else:
+        raise ValueError(
+            f"{path.suffix.lower()} is not currently a supported output."
+            " Please save to a text, json, or markdown file, or raise an issue."
+        )
+    return format
+
+
 def _validate_output_format(output: str, output_format: OutputFormat) -> None:
     """Raise error if model output doesn't match specified output format"""
     if output_format == OutputFormat.TEXT:
@@ -196,18 +207,17 @@ def _validate_output_format(output: str, output_format: OutputFormat) -> None:
         try:
             MarkdownIt().parse(output)
         except Exception as e:
-            raise RuntimeError(  # including {output} may be too long
-                f"Model did not return valid markdown output. Returned: {output}"
-                f" Try refining your prompt or use a different --format"
+            raise RuntimeError(
+                "Model did not return valid markdown output."
+                " Try refining your prompt or save to a different format"
             ) from e
     elif output_format == OutputFormat.JSON:
-        # will likely fail if completion.finish_reason == "length"
         try:
             json.loads(output)
         except json.JSONDecodeError as e:
-            raise RuntimeError(  # including {output} may be too long
-                f"Model did not return a valid json output. Returned: {output}."
-                f" Try refining your prompt or use a different --format"
+            raise RuntimeError(
+                "Model did not return a valid json output."
+                " Try refining your prompt or save to a different format"
             ) from e
     else:
         raise ValueError(f" Unsupported output format: {output_format}")
