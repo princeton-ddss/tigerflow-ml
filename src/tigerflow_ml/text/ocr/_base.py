@@ -4,6 +4,8 @@ Perform OCR on images using Hugging Face image-text-to-text models.
 Supports VLMs compatible with the image-text-to-text pipeline.
 """
 
+import json
+from enum import Enum
 from pathlib import Path
 from typing import TYPE_CHECKING, Annotated, Any
 
@@ -18,6 +20,14 @@ if TYPE_CHECKING:
     from PIL import Image
 
 
+class OutputFormat(str, Enum):
+    """Output format for OCR results."""
+
+    TEXT = "text"
+    MARKDOWN = "markdown"
+    JSON = "json"
+
+
 class _OCRBase:
     """Extract text from images using image-text-to-text models."""
 
@@ -26,17 +36,24 @@ class _OCRBase:
             str,
             typer.Option(help="Prompt for image-text-to-text models"),
         ]
+
         # overrides default
         max_tokens: Annotated[
             int,
             typer.Option(help="Maximum number of tokens to generate per image"),
         ] = 4096
 
+        # could also infer from output_file extension
+        format: Annotated[
+            OutputFormat,
+            typer.Option(help="Validates output format: 'text', 'markdown', or 'json'"),
+        ] = OutputFormat.TEXT
+
     @staticmethod
     def setup(context: SetupContext):
         import torch
         from huggingface_hub import snapshot_download
-        from vllm import LLM, SamplingParams  # type: ignore
+        from vllm import LLM, SamplingParams  # type: ignore[import-unresolved]
 
         logger.info("Setting up OCR model...")
         logger.info(f"   Model: {context.model}")
@@ -131,6 +148,7 @@ class _OCRBase:
                 else:
                     msg = f"Unexpected finish reason: {completion.finish_reason!r}"
                 raise RuntimeError(msg)
+            _validate_output(completion.text, context.format)
 
         output_text = "\f".join(c.text for c in completions)
 
@@ -162,3 +180,21 @@ def _format_message(
             ],
         }
     ]
+
+
+def _validate_output(output: str, output_format: OutputFormat):
+    """Raise error if model output doesn't match specified output format"""
+    if output_format == OutputFormat.TEXT:
+        return
+    elif output_format == OutputFormat.MARKDOWN:
+        pass
+    elif output_format == OutputFormat.JSON:
+        try:
+            json.loads(output)
+        except json.JSONDecodeError as e:
+            raise RuntimeError(  # including {output} may be too long
+                f"Model did not return a valid json output. Returned: {output}."
+                f"Try refining your prompt or use a different --format"
+            ) from e
+
+    raise ValueError(f" Unsupported output format: {output_format}")
