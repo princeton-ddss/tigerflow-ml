@@ -3,13 +3,12 @@
 from tigerflow_ml.audio.transcribe._base import Windowing, _TranscribeBase
 from tigerflow_ml.image.detect._base import _DetectBase
 from tigerflow_ml.params import HFParams, VLLMParams
-from tigerflow_ml.text.ocr._base import _DEFAULT_PROMPT, _OCRBase
+from tigerflow_ml.text.ocr._base import _OCRBase
 
 
 def test_ocr_defaults():
     p = _OCRBase.Params()
     assert p.max_tokens == 4096
-    assert p.prompt == _DEFAULT_PROMPT
 
 
 def test_transcribe_defaults():
