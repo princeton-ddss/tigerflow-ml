@@ -865,34 +865,54 @@
 <td>HuggingFace cache directory for model files</td>
 </tr>
 <tr>
-<td><code>--device</code></td>
-<td><code>auto</code></td>
-<td>Device to use (<code>cuda</code>, <code>cpu</code>, or <code>auto</code>)</td>
+<td><code>--allow-fetch</code></td>
+<td><code>--no-allow-fetch</code></td>
+<td>Allow downloads from HuggingFace Hub (network access required)</td>
 </tr>
 <tr>
-<td><code>--max-length</code></td>
+<td><code>--system-message</code></td>
+<td></td>
+<td>System message for chat models</td>
+</tr>
+<tr>
+<td><code>--max-tokens</code></td>
 <td><code>4096</code></td>
 <td>Maximum number of tokens to generate per image</td>
+</tr>
+<tr>
+<td><code>--max-model-len</code></td>
+<td></td>
+<td>Maximum sequence length (input + output tokens) passed to vLLM. Set this for large-context models to avoid OOM.</td>
+</tr>
+<tr>
+<td><code>--temperature</code></td>
+<td><code>0</code></td>
+<td>The model temperature. Lower numbers make models more deterministic</td>
+</tr>
+<tr>
+<td><code>--seed</code></td>
+<td><code>42</code></td>
+<td>The seed to set for more reproducible behavior</td>
+</tr>
+<tr>
+<td><code>--llm-kwargs</code></td>
+<td><code>{}</code></td>
+<td>Additional kwargs for vLLM's LLM() constructor. Supplied values override task defaults.</td>
+</tr>
+<tr>
+<td><code>--sampling-kwargs</code></td>
+<td><code>{}</code></td>
+<td>Additional kwargs for vLLM's SamplingParams() constructor. Supplied values override task defaults.</td>
+</tr>
+<tr>
+<td><code>--chat-kwargs</code></td>
+<td><code>{}</code></td>
+<td>Additional kwargs for vLLM's LLM.chat(). Supplied values override task defaults.</td>
 </tr>
 <tr>
 <td><code>--prompt</code></td>
 <td><code>Extract all text from this image.</code></td>
 <td>Prompt for image-text-to-text models</td>
-</tr>
-<tr>
-<td><code>--temperature</code></td>
-<td><code>0.0</code></td>
-<td>Sampling temperature. Lower values make output more deterministic.</td>
-</tr>
-<tr>
-<td><code>--seed</code></td>
-<td><code>42</code></td>
-<td>Random seed for reproducibility</td>
-</tr>
-<tr>
-<td><code>--allow-fetch</code></td>
-<td><code>--no-allow-fetch</code></td>
-<td>Allow downloads from HuggingFace Hub (network access required)</td>
 </tr>
 </tbody>
 </table>
