@@ -12,6 +12,13 @@ ML tasks for [TigerFlow](https://github.com/princeton-ddss/tigerflow) — privat
 pip install tigerflow-ml
 ```
 
+If using a task that relies on `vllm` (chat completion, OCR, or translation), install with:
+
+```bash
+pip install tigerflow-ml[vllm]
+```
+
+
 ## Tasks
 
 | Task             | Description                           | Entry Point                       |

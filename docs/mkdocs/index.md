@@ -49,7 +49,7 @@ TigerFlow ML requires [TigerFlow](https://github.com/princeton-ddss/tigerflow) t
 pip install tigerflow tigerflow-ml
 ```
 
-If using a task that relies on `vllm` (chat completion or translation), install with:
+If using a task that relies on `vllm` (chat completion, OCR, or translation), install with:
 
 ```bash
 pip install tigerflow-ml[vllm]

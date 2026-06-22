@@ -5,17 +5,17 @@ Supports VLMs compatible with the image-text-to-text pipeline.
 """
 
 from pathlib import Path
-from typing import TYPE_CHECKING, Annotated
+from typing import TYPE_CHECKING, Annotated, Any
 
 import typer
 from tigerflow.logconfig import logger
 from tigerflow.utils import SetupContext
 
-from tigerflow_ml.params import HFParams
-from tigerflow_ml.utils import load_images
+from tigerflow_ml.params import VLLMParams
+from tigerflow_ml.utils import load_images, parse_kwargs
 
 if TYPE_CHECKING:
-    pass
+    from PIL import Image
 
 _DEFAULT_PROMPT = "Extract all text from this image."
 
@@ -23,8 +23,9 @@ _DEFAULT_PROMPT = "Extract all text from this image."
 class _OCRBase:
     """Extract text from images using image-text-to-text models."""
 
-    class Params(HFParams):
-        max_length: Annotated[
+    class Params(VLLMParams):
+        # overrides default
+        max_tokens: Annotated[
             int,
             typer.Option(help="Maximum number of tokens to generate per image"),
         ] = 4096
@@ -34,38 +35,21 @@ class _OCRBase:
             typer.Option(help="Prompt for image-text-to-text models"),
         ] = _DEFAULT_PROMPT
 
-        temperature: Annotated[
-            float,
-            typer.Option(
-                help="The model temperature. "
-                "Lower values make models more deterministic",
-                min=0.0,
-                max=2.0,
-            ),
-        ] = 0.0
-
     @staticmethod
     def setup(context: SetupContext):
         import torch
-        from transformers import pipeline, set_seed
-
-        set_seed(context.seed)
+        from huggingface_hub import snapshot_download
+        from vllm import LLM, SamplingParams  # type: ignore
 
         logger.info("Setting up OCR model...")
-        logger.info("Model: {}", context.model)
-
-        device = context.device
-        if device == "auto":
-            device = "cuda" if torch.cuda.is_available() else "cpu"
+        logger.info(f"   Model: {context.model}")
 
         try:
-            context.pipeline = pipeline(
-                "image-text-to-text",
-                model=context.model,
-                revision=context.revision,
-                device=device,
+            resolved_model = snapshot_download(
+                repo_id=context.model,
+                cache_dir=context.cache_dir,
                 local_files_only=not context.allow_fetch,
-                model_kwargs={"cache_dir": context.cache_dir or None},
+                revision=context.revision,
             )
         except OSError as e:
             if not context.allow_fetch:
@@ -74,38 +58,112 @@ class _OCRBase:
                     "Run with --allow_fetch or download manually."
                 ) from e
             raise
-        logger.info("OCR ready on device: {}", device)
+
+        tp = torch.cuda.device_count() or 1
+
+        user_llm_kwargs = parse_kwargs(context.llm_kwargs)
+        llm_kwargs: dict[str, Any] = {
+            "tensor_parallel_size": tp,
+            "use_tqdm_on_load": False,
+        }
+        if context.max_model_len is not None:
+            llm_kwargs["max_model_len"] = context.max_model_len
+        llm_kwargs.update(user_llm_kwargs)
+        logger.info(f"   llm_kwargs={llm_kwargs}")
+
+        context.LLM = LLM(model=resolved_model, **llm_kwargs)
+
+        user_sampling_kwargs = parse_kwargs(context.sampling_kwargs)
+        sampling_kwargs: dict[str, Any] = {
+            "temperature": context.temperature,
+            "seed": context.seed,
+            "max_tokens": context.max_tokens,
+        }
+        sampling_kwargs.update(user_sampling_kwargs)
+        logger.info(f"   sampling_kwargs={sampling_kwargs}")
+
+        context.sampling_params = SamplingParams(**sampling_kwargs)
+
+        user_chat_kwargs = parse_kwargs(context.chat_kwargs)
+        context.chat_kwargs = {
+            "sampling_params": context.sampling_params,
+            "use_tqdm": False,
+        }
+        context.chat_kwargs.update(user_chat_kwargs)
+        logger.info(f"   chat_kwargs={context.chat_kwargs}")
+
+        logger.info("Setup complete!")
 
     @staticmethod
     def run(context: SetupContext, input_file: Path, output_file: Path):
         images = load_images(input_file)
         logger.info(f"Loaded {len(images)} image(s)")
 
-        prompt = context.prompt
+        messages = []
+        for image in images:
+            message = _format_message(
+                image=image,
+                prompt=context.prompt,
+                system_message=context.system_message,
+            )
+            messages.append(message)
 
-        pages = []
-        for i, image in enumerate(images):
-            messages = [
-                {
-                    "role": "user",
-                    "content": [
-                        {"type": "image", "image": image},
-                        {"type": "text", "text": prompt},
-                    ],
-                }
-            ]
-            gen_kwargs: dict = {"max_new_tokens": context.max_length}
-            if context.temperature > 0:
-                gen_kwargs["temperature"] = context.temperature
-                gen_kwargs["do_sample"] = True
-            result = context.pipeline(text=messages, **gen_kwargs)
-            text = result[0]["generated_text"][-1]["content"]
-            pages.append(text)
-            logger.info("Page {}: {} chars", i + 1, len(text))
+        output = context.LLM.chat(messages, **context.chat_kwargs)
+        completions = [o.outputs[0] for o in output]
+        for page, completion in enumerate(completions, start=1):
+            if completion.finish_reason == "length":
+                if page > 1:
+                    msg = (
+                        f"  Output truncated at {context.max_tokens} tokens (page"
+                        f"{page}) — increase --max-tokens and/or --max_model_len "
+                        "for a complete result"
+                    )
+                else:
+                    msg = (
+                        f"  Output truncated at {context.max_tokens} tokens — "
+                        "increase --max-tokens and/or --max_model_len for a "
+                        "complete result"
+                    )
+                logger.warning(msg)
+            elif completion.finish_reason != "stop":
+                if page > 1:
+                    msg = (
+                        "Unexpected finish reason on page "
+                        f"{page}: {completion.finish_reason!r}"
+                    )
+                else:
+                    msg = f"Unexpected finish reason: {completion.finish_reason!r}"
+                raise RuntimeError(msg)
 
-        output_text = "\f".join(pages)
+        output_text = "\f".join(c.text for c in completions)
 
         with open(output_file, "w", encoding="utf-8") as f:
             f.write(output_text)
 
         logger.info("Done")
+
+
+def _format_message(
+    image: "Image.Image", prompt: str, system_message: str | None = None
+) -> list:
+    if system_message:
+        return [
+            {"role": "system", "content": system_message},
+            {
+                "role": "user",
+                "content": [
+                    {"type": "image_pil", "image_pil": image},
+                    {"type": "text", "text": prompt},
+                ],
+            },
+        ]
+
+    return [
+        {
+            "role": "user",
+            "content": [
+                {"type": "image_pil", "image_pil": image},
+                {"type": "text", "text": prompt},
+            ],
+        }
+    ]
