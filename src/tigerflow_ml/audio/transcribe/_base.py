@@ -41,7 +41,7 @@ class _TranscribeBase:
             str,
             typer.Option(
                 help="Source language code (e.g. 'en', 'de', 'fr'). "
-                "Leave empty to let the model detect it per file."
+                "Leave empty to let the model detect source language per file."
             ),
         ] = ""
 
@@ -68,7 +68,7 @@ class _TranscribeBase:
             typer.Option(
                 help="Overlap in seconds between consecutive 30s windows. "
                 "Overlap is de-duplicated when stitching, recovering words "
-                "that straddle a window boundary. Unused when --windowing is "
+                "that straddle a window boundary. Ignored when --windowing is "
                 "'native'.",
                 min=0.0,
                 max=15.0,
@@ -80,8 +80,8 @@ class _TranscribeBase:
             typer.Option(
                 help="Decode strategy. 'batched' cuts audio into overlapping "
                 "30s windows decoded in parallel (fast). 'native' uses "
-                "Whisper's sequential long-form algorithm: no seams and the "
-                "cleanest transcript, but much slower."
+                "Whisper's sequential long-form algorithm, which produces the "
+                "cleanest transcript, but is much slower."
             ),
         ] = Windowing.BATCHED
 
