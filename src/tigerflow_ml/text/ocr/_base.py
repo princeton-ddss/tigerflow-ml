@@ -17,23 +17,20 @@ from tigerflow_ml.utils import load_images, parse_kwargs
 if TYPE_CHECKING:
     from PIL import Image
 
-_DEFAULT_PROMPT = "Extract all text from this image."
-
 
 class _OCRBase:
     """Extract text from images using image-text-to-text models."""
 
     class Params(VLLMParams):
+        prompt: Annotated[
+            str,
+            typer.Option(help="Prompt for image-text-to-text models"),
+        ]
         # overrides default
         max_tokens: Annotated[
             int,
             typer.Option(help="Maximum number of tokens to generate per image"),
         ] = 4096
-
-        prompt: Annotated[
-            str,
-            typer.Option(help="Prompt for image-text-to-text models"),
-        ] = _DEFAULT_PROMPT
 
     @staticmethod
     def setup(context: SetupContext):
