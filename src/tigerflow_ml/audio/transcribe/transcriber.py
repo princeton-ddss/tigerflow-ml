@@ -57,7 +57,11 @@ class Transcription(BaseModel):
 
     @classmethod
     def from_string(
-        cls, string: str, language: str | None, offset: float = 0.0
+        cls,
+        string: str,
+        language: str | None,
+        offset: float = 0.0,
+        window_s: float = WINDOW_S,
     ) -> Transcription:
         """Build a transcription from one window's decoded string.
 
@@ -75,6 +79,10 @@ class Transcription(BaseModel):
             language: Decode language for this window.
             offset: Seconds to add to every timestamp so the window's
                 segments land in absolute file time.
+            window_s: Actual duration of this window in seconds. Used as the
+                end of any segment whose end timestamp must be synthesized
+                (the no-timestamp fallback and a truncated trailing segment),
+                so a short final window does not extend past the real audio.
 
         Returns:
             A ``Transcription`` for the window, with absolute timestamps.
@@ -87,9 +95,7 @@ class Transcription(BaseModel):
             return cls(
                 language=language,
                 text=cleaned,
-                chunks=[
-                    TranscriptChunk(text=cleaned, timestamp=(0.0, float(WINDOW_S)))
-                ],
+                chunks=[TranscriptChunk(text=cleaned, timestamp=(0.0, window_s))],
             ).adjust_timestamps(offset)
 
         chunks = [
@@ -104,10 +110,12 @@ class Transcription(BaseModel):
         # end so its text is not dropped. Whitespace-only tails are ignored.
         tail = re.match(r"<\|(\d+\.\d+)\|>([^<]+)$", string[matches[-1].end() :])
         if tail and tail.group(2).strip():
+            start = float(tail.group(1))
+            # Clamp the synthesized end to window_s, but never before the start
+            # (a short window could otherwise invert the timestamp).
             chunks.append(
                 TranscriptChunk(
-                    text=tail.group(2),
-                    timestamp=(float(tail.group(1)), float(WINDOW_S)),
+                    text=tail.group(2), timestamp=(start, max(start, window_s))
                 )
             )
 
@@ -386,9 +394,16 @@ def process_batch(
         for seq in sequences
     ]
 
+    # A final window can be shorter than 30s; pass its real duration so
+    # synthesized end timestamps don't extend past the actual audio.
     windows = [
-        Transcription.from_string(string, language=language, offset=offset)
-        for string, offset in zip(decoded, offsets)
+        Transcription.from_string(
+            string,
+            language=language,
+            offset=offset,
+            window_s=len(audio) / SAMPLING_RATE,
+        )
+        for string, offset, audio in zip(decoded, offsets, batch)
     ]
     return windows, language
 

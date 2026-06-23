@@ -115,6 +115,37 @@ class TestFromString:
         assert t.text == " Hello"
         assert len(t.chunks) == 1
 
+    def test_synthesized_end_clamped_to_short_window(self):
+        # A short final window: a synthesized end must not run past the real
+        # audio. Both the no-timestamp fallback and the truncated trailing
+        # segment end at window_s, not the full 30s.
+        no_ts = Transcription.from_string("bare text", language="en", window_s=7.0)
+        assert no_ts.chunks[0].timestamp == (0.0, 7.0)
+
+        tail = Transcription.from_string(
+            "<|0.00|> Hello<|2.50|><|2.50|> tail", language="en", window_s=7.0
+        )
+        assert tail.chunks[1].timestamp == (2.5, 7.0)
+
+    def test_short_window_clamp_respects_offset(self):
+        t = Transcription.from_string(
+            "<|0.00|> Hello<|2.50|><|2.50|> tail",
+            language="en",
+            offset=30.0,
+            window_s=7.0,
+        )
+        assert t.chunks[1].timestamp == (32.5, 37.0)
+
+    def test_trailing_open_end_never_before_start(self):
+        # Pathological: a tail starting past window_s must not invert into a
+        # negative-duration chunk; the end clamps up to the start.
+        t = Transcription.from_string(
+            "<|0.00|> Hello<|6.00|><|6.00|> tail", language="en", window_s=5.0
+        )
+        start, end = t.chunks[1].timestamp
+        assert start == 6.0
+        assert end >= start
+
 
 class TestAdjustTimestamps:
     def test_zero_offset_is_noop(self):
