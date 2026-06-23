@@ -11,6 +11,7 @@ For video input, frames are sampled at a configurable rate and processed in batc
 import json
 import math
 from collections.abc import Iterator
+from enum import Enum
 from pathlib import Path
 from typing import TYPE_CHECKING, Annotated, TypedDict
 
@@ -24,6 +25,15 @@ from tigerflow.utils import SetupContext
 from tigerflow_ml.params import HFParams
 
 _VIDEO_EXTENSIONS = {".mp4", ".avi", ".mov", ".mkv", ".webm", ".flv", ".wmv"}
+
+
+class Dtype(str, Enum):
+    """Model dtype for inference."""
+
+    AUTO = "auto"
+    FLOAT32 = "float32"
+    FLOAT16 = "float16"
+    BFLOAT16 = "bfloat16"
 
 
 class _FramedOutput(TypedDict):
@@ -64,6 +74,13 @@ class _DetectBase:
             ),
         ] = 1.0
 
+        dtype: Annotated[
+            Dtype,
+            typer.Option(
+                help="Model dtype. 'auto' uses float16 on cuda, float32 on cpu."
+            ),
+        ] = Dtype.AUTO
+
     @staticmethod
     def setup(context: SetupContext):
         import torch
@@ -80,6 +97,9 @@ class _DetectBase:
         device = context.device
         if device == "auto":
             device = "cuda" if torch.cuda.is_available() else "cpu"
+
+        torch_dtype = _resolve_dtype(context.dtype, device)
+        logger.info("Dtype: {}", torch_dtype)
 
         try:
             config = AutoConfig.from_pretrained(
@@ -118,6 +138,7 @@ class _DetectBase:
                 model=context.model,
                 revision=context.revision,
                 device=device,
+                torch_dtype=torch_dtype,
                 local_files_only=not context.allow_fetch,
                 model_kwargs={"cache_dir": context.cache_dir or None},
             )
@@ -152,6 +173,14 @@ class _DetectBase:
             json.dump(output, f, indent=2)
 
         logger.info("Done")
+
+
+def _resolve_dtype(dtype: "Dtype", device: str):
+    import torch
+
+    if dtype == Dtype.AUTO:
+        return torch.float16 if device == "cuda" else torch.float32
+    return getattr(torch, dtype.value)
 
 
 def _format_detections(results: list[dict]) -> list[dict]:
