@@ -29,7 +29,7 @@ def zero_shot_context(make_context):
         _DetectBase.Params,
         "detect",
         model="google/owlv2-base-patch16-ensemble",
-        labels="cat,dog,person,car,bird",
+        labels="whale,cat,dog,person,car,bird",
     )
     _DetectBase.setup(ctx)
     yield ctx
@@ -92,7 +92,14 @@ def test_run_video(
 def test_setup_zero_shot(zero_shot_context):
     assert zero_shot_context.pipeline is not None
     assert zero_shot_context.is_zero_shot is True
-    assert zero_shot_context.labels_list == ["cat", "dog", "person", "car", "bird"]
+    assert zero_shot_context.labels_list == [
+        "whale",
+        "cat",
+        "dog",
+        "person",
+        "car",
+        "bird",
+    ]
 
 
 def test_run_zero_shot_image(

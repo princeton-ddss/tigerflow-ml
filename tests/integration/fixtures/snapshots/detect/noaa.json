@@ -1,0 +1,238 @@
+[
+  {
+    "frame": 0,
+    "timestamp": 0.0,
+    "detections": [
+      {
+        "label": "person",
+        "score": 0.4612,
+        "box": {
+          "xmin": 54,
+          "ymin": 71,
+          "xmax": 237,
+          "ymax": 303
+        }
+      },
+      {
+        "label": "person",
+        "score": 0.4023,
+        "box": {
+          "xmin": 0,
+          "ymin": 71,
+          "xmax": 237,
+          "ymax": 359
+        }
+      },
+      {
+        "label": "sports ball",
+        "score": 0.3608,
+        "box": {
+          "xmin": 592,
+          "ymin": 310,
+          "xmax": 630,
+          "ymax": 343
+        }
+      },
+      {
+        "label": "sports ball",
+        "score": 0.3108,
+        "box": {
+          "xmin": 600,
+          "ymin": 315,
+          "xmax": 626,
+          "ymax": 342
+        }
+      }
+    ]
+  },
+  {
+    "frame": 29,
+    "timestamp": 0.979,
+    "detections": [
+      {
+        "label": "person",
+        "score": 0.5142,
+        "box": {
+          "xmin": 77,
+          "ymin": 52,
+          "xmax": 282,
+          "ymax": 358
+        }
+      },
+      {
+        "label": "sports ball",
+        "score": 0.4602,
+        "box": {
+          "xmin": 592,
+          "ymin": 309,
+          "xmax": 630,
+          "ymax": 343
+        }
+      },
+      {
+        "label": "person",
+        "score": 0.3667,
+        "box": {
+          "xmin": 10,
+          "ymin": 52,
+          "xmax": 280,
+          "ymax": 360
+        }
+      },
+      {
+        "label": "kite",
+        "score": 0.3176,
+        "box": {
+          "xmin": 592,
+          "ymin": 309,
+          "xmax": 630,
+          "ymax": 343
+        }
+      }
+    ]
+  },
+  {
+    "frame": 58,
+    "timestamp": 1.958,
+    "detections": [
+      {
+        "label": "person",
+        "score": 0.8232,
+        "box": {
+          "xmin": 1,
+          "ymin": 10,
+          "xmax": 236,
+          "ymax": 370
+        }
+      },
+      {
+        "label": "sports ball",
+        "score": 0.3884,
+        "box": {
+          "xmin": 593,
+          "ymin": 310,
+          "xmax": 628,
+          "ymax": 343
+        }
+      }
+    ]
+  },
+  {
+    "frame": 87,
+    "timestamp": 2.938,
+    "detections": [
+      {
+        "label": "bird",
+        "score": 0.5664,
+        "box": {
+          "xmin": 1,
+          "ymin": 130,
+          "xmax": 349,
+          "ymax": 360
+        }
+      },
+      {
+        "label": "bird",
+        "score": 0.3682,
+        "box": {
+          "xmin": 0,
+          "ymin": 0,
+          "xmax": 348,
+          "ymax": 360
+        }
+      },
+      {
+        "label": "person",
+        "score": 0.3489,
+        "box": {
+          "xmin": 0,
+          "ymin": 0,
+          "xmax": 348,
+          "ymax": 360
+        }
+      },
+      {
+        "label": "person",
+        "score": 0.3049,
+        "box": {
+          "xmin": 1,
+          "ymin": 130,
+          "xmax": 349,
+          "ymax": 360
+        }
+      }
+    ]
+  },
+  {
+    "frame": 116,
+    "timestamp": 3.917,
+    "detections": [
+      {
+        "label": "person",
+        "score": 0.8682,
+        "box": {
+          "xmin": 2,
+          "ymin": 0,
+          "xmax": 406,
+          "ymax": 359
+        }
+      },
+      {
+        "label": "sports ball",
+        "score": 0.3606,
+        "box": {
+          "xmin": 591,
+          "ymin": 309,
+          "xmax": 630,
+          "ymax": 343
+        }
+      },
+      {
+        "label": "kite",
+        "score": 0.3049,
+        "box": {
+          "xmin": 591,
+          "ymin": 309,
+          "xmax": 630,
+          "ymax": 343
+        }
+      }
+    ]
+  },
+  {
+    "frame": 145,
+    "timestamp": 4.896,
+    "detections": [
+      {
+        "label": "person",
+        "score": 0.6074,
+        "box": {
+          "xmin": 1,
+          "ymin": 30,
+          "xmax": 454,
+          "ymax": 360
+        }
+      },
+      {
+        "label": "kite",
+        "score": 0.6011,
+        "box": {
+          "xmin": 591,
+          "ymin": 309,
+          "xmax": 630,
+          "ymax": 342
+        }
+      },
+      {
+        "label": "kite",
+        "score": 0.3726,
+        "box": {
+          "xmin": 1,
+          "ymin": 30,
+          "xmax": 454,
+          "ymax": 360
+        }
+      }
+    ]
+  }
+]

@@ -1,0 +1,32 @@
+[
+  {
+    "label": "bird",
+    "score": 0.7109,
+    "box": {
+      "xmin": 95,
+      "ymin": 140,
+      "xmax": 672,
+      "ymax": 508
+    }
+  },
+  {
+    "label": "surfboard",
+    "score": 0.4429,
+    "box": {
+      "xmin": 569,
+      "ymin": 122,
+      "xmax": 817,
+      "ymax": 442
+    }
+  },
+  {
+    "label": "surfboard",
+    "score": 0.377,
+    "box": {
+      "xmin": 434,
+      "ymin": 407,
+      "xmax": 596,
+      "ymax": 508
+    }
+  }
+]

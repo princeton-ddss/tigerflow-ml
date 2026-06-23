@@ -95,6 +95,9 @@ select = ["E", "F", "I", "UP"]
 [tool.ty.src]
 include = ["src"]
 
+[tool.ty.rules]
+unused-type-ignore-comment = "ignore"
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 markers = [
