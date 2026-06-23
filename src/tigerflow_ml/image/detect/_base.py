@@ -216,14 +216,11 @@ def _format_detections(results: list[dict]) -> list[dict]:
     ]
 
 
-def _detect_batch(context: SetupContext, images: list) -> list[list[dict]]:
-    """Run detection on a batch of PIL images and return formatted results."""
+def _pipeline_kwargs(context: SetupContext) -> dict:
     kwargs = {"threshold": context.threshold}
     if context.is_zero_shot:
         kwargs["candidate_labels"] = context.labels_list
-
-    batch_results = context.pipeline(images, batch_size=len(images), **kwargs)
-    return [_format_detections(r) for r in batch_results]
+    return kwargs
 
 
 def _run_image(context: SetupContext, input_file: Path) -> list[dict]:
@@ -234,22 +231,89 @@ def _run_image(context: SetupContext, input_file: Path) -> list[dict]:
     if image.mode != "RGB":
         image = image.convert("RGB")
 
-    detections = _detect_batch(context, [image])[0]
+    results = context.pipeline(image, **_pipeline_kwargs(context))
+    detections = _format_detections(results)
     logger.info("Found {} detection(s)", len(detections))
     return detections
 
 
 def _run_video(context: SetupContext, input_file: Path) -> list[_FramedOutput]:
-    """Run detection on video frames sampled at the configured FPS."""
-    output: list[_FramedOutput] = []
-    total_frames = 0
+    """Run detection on video frames sampled at the configured FPS.
 
+    Fixed-class models bypass the HF pipeline to actually batch frames on
+    the GPU (the pipeline's batched postprocess is broken upstream: HF
+    transformers#31356). Zero-shot models stay on the pipeline at one
+    frame at a time — the pipeline runs one forward pass per candidate
+    label, so per-frame batching wouldn't help anyway.
+    """
+    if context.is_zero_shot:
+        if context.batch_size > 1:
+            logger.warning(
+                "--batch-size={} ignored for zero-shot models; frames are "
+                "processed one at a time.",
+                context.batch_size,
+            )
+        return _run_video_pipeline(context, input_file)
+    return _run_video_batched(context, input_file)
+
+
+def _run_video_pipeline(context: SetupContext, input_file: Path) -> list[_FramedOutput]:
+    output: list[_FramedOutput] = []
+    for frame_num, timestamp, image in _iter_frames(input_file, context.sample_fps):
+        results = context.pipeline(image, **_pipeline_kwargs(context))
+        output.append(
+            {
+                "frame": frame_num,
+                "timestamp": round(timestamp, 3),
+                "detections": _format_detections(results),
+            }
+        )
+        if len(output) % max(1, context.batch_size) == 0:
+            logger.info("Processed {} frame(s)", len(output))
+
+    total = sum(len(f["detections"]) for f in output)
+    logger.info("Found {} detection(s) across {} frame(s)", total, len(output))
+    return output
+
+
+def _run_video_batched(context: SetupContext, input_file: Path) -> list[_FramedOutput]:
+    import torch
+
+    image_processor = context.pipeline.image_processor
+    model = context.pipeline.model
+    device = model.device
+
+    output: list[_FramedOutput] = []
     for batch in _batched(
         _iter_frames(input_file, context.sample_fps), context.batch_size
     ):
         images = [img for _, _, img in batch]
-        batch_detections = _detect_batch(context, images)
-        for (frame_num, timestamp, _), detections in zip(batch, batch_detections):
+        target_sizes = torch.tensor(
+            [[img.height, img.width] for img in images], dtype=torch.int32
+        )
+
+        inputs = image_processor(images=images, return_tensors="pt").to(
+            device=device, dtype=model.dtype
+        )
+        with torch.inference_mode():
+            outputs = model(**inputs)
+
+        batch_results = image_processor.post_process_object_detection(
+            outputs, threshold=context.threshold, target_sizes=target_sizes
+        )
+
+        id2label = model.config.id2label
+        for (frame_num, timestamp, _), result in zip(batch, batch_results):
+            detections = [
+                {
+                    "label": id2label[label.item()],
+                    "score": round(score.item(), 4),
+                    "box": _box_to_dict(box),
+                }
+                for score, label, box in zip(
+                    result["scores"], result["labels"], result["boxes"]
+                )
+            ]
             output.append(
                 {
                     "frame": frame_num,
@@ -257,12 +321,21 @@ def _run_video(context: SetupContext, input_file: Path) -> list[_FramedOutput]:
                     "detections": detections,
                 }
             )
-        total_frames += len(batch)
-        logger.info("Processed {} frame(s)", total_frames)
+        logger.info("Processed {} frame(s)", len(output))
 
     total = sum(len(f["detections"]) for f in output)
     logger.info("Found {} detection(s) across {} frame(s)", total, len(output))
     return output
+
+
+def _box_to_dict(box) -> dict:
+    xmin, ymin, xmax, ymax = box.tolist()
+    return {
+        "xmin": round(xmin),
+        "ymin": round(ymin),
+        "xmax": round(xmax),
+        "ymax": round(ymax),
+    }
 
 
 def _batched(iterable: Iterator, n: int) -> Iterator[list]:
