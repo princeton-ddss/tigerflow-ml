@@ -1,0 +1,33 @@
+# Virtualenvs and caches (the image builds its own venv)
+.venv/
+**/__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.ty_cache/
+
+# VCS and CI
+.git/
+.github/
+.gitignore
+.pre-commit-config.yaml
+
+# Docs and local dev
+docs/
+site/
+*.md
+!README.md
+
+# Tests and fixtures (not needed at runtime; keep the image lean)
+tests/
+
+# Editor / OS cruft
+.vscode/
+.idea/
+.DS_Store
+.claude/
+
+# Docker
+Dockerfile
+.dockerignore

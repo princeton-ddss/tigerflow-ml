@@ -49,6 +49,44 @@ python -m tigerflow_ml.audio.transcribe.slurm --help
 python -m tigerflow_ml.image.detect.slurm --help
 ```
 
+## Container
+
+A GPU image with all tasks (including the `vllm` extra) is published to GHCR on
+each release:
+
+```bash
+docker pull ghcr.io/princeton-ddss/tigerflow-ml:latest
+```
+
+The image bundles its own CUDA libraries, so only the host NVIDIA driver is
+needed at runtime — pass `--gpus all` (Docker) or `--nv` (Apptainer). Models are
+fetched on first use; mount a cache at `/cache` to persist them.
+
+The entrypoint is `tigerflow`, so arguments are passed straight to the CLI:
+
+```bash
+# Run a pipeline (config file + input/output directories)
+docker run --gpus all -v "$PWD/cache:/cache" -v "$PWD:/data" \
+  ghcr.io/princeton-ddss/tigerflow-ml:latest \
+  run /data/pipeline.yaml /data/input /data/output
+
+# List available tasks
+docker run ghcr.io/princeton-ddss/tigerflow-ml:latest tasks list
+
+# Run a single task module directly (override the entrypoint)
+docker run --gpus all -v "$PWD/cache:/cache" -v "$PWD:/data" \
+  --entrypoint python ghcr.io/princeton-ddss/tigerflow-ml:latest \
+  -m tigerflow_ml.audio.transcribe.local --help
+```
+
+On HPC, convert to a Singularity/Apptainer image:
+
+```bash
+apptainer build tigerflow-ml.sif docker://ghcr.io/princeton-ddss/tigerflow-ml:latest
+apptainer run --nv -B ./cache:/cache tigerflow-ml.sif run pipeline.yaml input output
+apptainer exec --nv tigerflow-ml.sif python -m tigerflow_ml.audio.transcribe.local --help
+```
+
 ## Development
 
 ```bash
