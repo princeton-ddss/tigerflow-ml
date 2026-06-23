@@ -217,6 +217,13 @@ class BatchIterator:
         batch = []
         while len(batch) < self.batch_size and self._idx < len(self.array):
             batch.append(self.array[self._idx : self._idx + self.window_len])
+            # Stop once a window reaches the end: the whole file is now covered.
+            # Taking another stride would start a window inside the array but
+            # entirely within the previous window's reach -- a near-empty
+            # trailing window that decodes as padded silence (and hallucinates).
+            if self._idx + self.window_len >= len(self.array):
+                self._idx = len(self.array)
+                break
             self._idx += self.stride
         return batch
 

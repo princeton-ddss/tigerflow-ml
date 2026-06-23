@@ -189,3 +189,19 @@ class TestBatchIterator:
         array = np.zeros(60 * 16000, dtype=np.float32)
         first = next(iter(BatchIterator(array, 1, 5.0)))[0]
         assert len(first) == 30 * 16000
+
+    def test_stops_when_window_reaches_end(self):
+        # 50s + 1 sample: windows start at 0, 25, 50. The second one [25, 55)
+        # already covers the rest of the file, so the third (1-sample) window
+        # would decode as padded silence (hallucination). Iteration stops at 2.
+        array = np.zeros(50 * 16000 + 1, dtype=np.float32)
+        windows = [w for batch in BatchIterator(array, 1, 5.0) for w in batch]
+        assert len(windows) == 2
+
+    def test_trailing_window_never_shorter_than_overlap(self):
+        # The last window is always longer than the overlap, for any duration --
+        # never a degenerate sliver. Checked across awkward boundary lengths.
+        for samples in [25 * 16000 + 1, 30 * 16000 + 1, 55 * 16000]:
+            array = np.zeros(samples, dtype=np.float32)
+            windows = [w for batch in BatchIterator(array, 1, 5.0) for w in batch]
+            assert min(len(w) for w in windows) > 5 * 16000
