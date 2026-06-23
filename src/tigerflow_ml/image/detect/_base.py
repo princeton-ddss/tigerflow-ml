@@ -57,12 +57,19 @@ class _DetectBase:
 
         threshold: Annotated[
             float,
-            typer.Option(help="Minimum confidence score for detections"),
+            typer.Option(
+                help="Minimum confidence score for detections",
+                min=0.0,
+                max=1.0,
+            ),
         ] = 0.3
 
         batch_size: Annotated[
             int,
-            typer.Option(help="Number of frames to process in parallel on GPU"),
+            typer.Option(
+                help="Number of frames to process in parallel on GPU",
+                min=1,
+            ),
         ] = 4
 
         sample_fps: Annotated[
@@ -100,14 +107,14 @@ class _DetectBase:
         set_seed(context.seed)
 
         logger.info("Setting up detection model...")
-        logger.info("Model: {}", context.model)
+        logger.info(f"Model: {context.model}")
 
         device = context.device
         if device == "auto":
             device = "cuda" if torch.cuda.is_available() else "cpu"
 
         torch_dtype = _resolve_dtype(context.dtype, device)
-        logger.info("Dtype: {}", torch_dtype)
+        logger.info(f"Dtype: {torch_dtype}")
 
         try:
             config = AutoConfig.from_pretrained(
@@ -138,7 +145,7 @@ class _DetectBase:
         pipeline_type = (
             "zero-shot-object-detection" if is_zero_shot else "object-detection"
         )
-        logger.info("Pipeline: {} (model_type: {})", pipeline_type, config.model_type)
+        logger.info(f"Pipeline: {pipeline_type} (model_type: {config.model_type})")
 
         try:
             context.pipeline = pipeline(
@@ -164,7 +171,7 @@ class _DetectBase:
                 context.pipeline.model = torch.compile(context.pipeline.model)  # ty: ignore[invalid-assignment]
             except Exception as e:
                 logger.warning(
-                    "torch.compile failed ({}); falling back to eager model.", e
+                    f"torch.compile failed ({e}); falling back to eager model."
                 )
 
         context.is_zero_shot = is_zero_shot
@@ -174,11 +181,11 @@ class _DetectBase:
             else []
         )
 
-        logger.info("Detection ready on device: {}", device)
+        logger.info(f"Detection ready on device: {device}")
 
     @staticmethod
     def run(context: SetupContext, input_file: Path, output_file: Path):
-        logger.info("Processing: {}", input_file)
+        logger.info(f"Processing: {input_file}")
 
         is_video = input_file.suffix.lower() in _VIDEO_EXTENSIONS
         if is_video:
@@ -233,7 +240,7 @@ def _run_image(context: SetupContext, input_file: Path) -> list[dict]:
 
     results = context.pipeline(image, **_pipeline_kwargs(context))
     detections = _format_detections(results)
-    logger.info("Found {} detection(s)", len(detections))
+    logger.info(f"Found {len(detections)} detection(s)")
     return detections
 
 
@@ -249,9 +256,8 @@ def _run_video(context: SetupContext, input_file: Path) -> list[_FramedOutput]:
     if context.is_zero_shot:
         if context.batch_size > 1:
             logger.warning(
-                "--batch-size={} ignored for zero-shot models; frames are "
-                "processed one at a time.",
-                context.batch_size,
+                f"--batch-size={context.batch_size} ignored for zero-shot "
+                "models; frames are processed one at a time."
             )
         return _run_video_pipeline(context, input_file)
     return _run_video_batched(context, input_file)
@@ -269,10 +275,10 @@ def _run_video_pipeline(context: SetupContext, input_file: Path) -> list[_Framed
             }
         )
         if len(output) % max(1, context.batch_size) == 0:
-            logger.info("Processed {} frame(s)", len(output))
+            logger.info(f"Processed {len(output)} frame(s)")
 
     total = sum(len(f["detections"]) for f in output)
-    logger.info("Found {} detection(s) across {} frame(s)", total, len(output))
+    logger.info(f"Found {total} detection(s) across {len(output)} frame(s)")
     return output
 
 
@@ -321,10 +327,10 @@ def _run_video_batched(context: SetupContext, input_file: Path) -> list[_FramedO
                     "detections": detections,
                 }
             )
-        logger.info("Processed {} frame(s)", len(output))
+        logger.info(f"Processed {len(output)} frame(s)")
 
     total = sum(len(f["detections"]) for f in output)
-    logger.info("Found {} detection(s) across {} frame(s)", total, len(output))
+    logger.info(f"Found {total} detection(s) across {len(output)} frame(s)")
     return output
 
 
@@ -371,10 +377,8 @@ def _iter_frames(
         if sample_fps > 0:
             if sample_fps > video_fps:
                 logger.warning(
-                    "Requested sample_fps ({}) exceeds video fps ({:.2f}); "
-                    "sampling every frame.",
-                    sample_fps,
-                    video_fps,
+                    f"Requested sample_fps ({sample_fps}) exceeds video fps "
+                    f"({video_fps:.2f}); sampling every frame."
                 )
             frame_interval = max(1, int(video_fps / sample_fps))
         else:
