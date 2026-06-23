@@ -9,6 +9,8 @@ For video input, frames are sampled at a configurable rate and processed in batc
 """
 
 import json
+import math
+from collections.abc import Iterator
 from pathlib import Path
 from typing import TYPE_CHECKING, Annotated, TypedDict
 
@@ -59,7 +61,8 @@ class _DetectBase:
             float,
             typer.Option(
                 help="Frames per second to sample from video. "
-                "Set to 0 to process every frame."
+                "Set to 0 to process every frame.",
+                min=0,
             ),
         ] = 1.0
 
@@ -148,14 +151,7 @@ class _DetectBase:
         logger.info("Done")
 
 
-def _detect(context: SetupContext, image) -> list[dict]:
-    """Run detection on a single PIL image and return formatted results."""
-    kwargs = {"threshold": context.threshold}
-    if context.is_zero_shot:
-        kwargs["candidate_labels"] = context.labels_list
-
-    results = context.pipeline(image, **kwargs)
-
+def _format_detections(results: list[dict]) -> list[dict]:
     return [
         {
             "label": r["label"],
@@ -171,6 +167,16 @@ def _detect(context: SetupContext, image) -> list[dict]:
     ]
 
 
+def _detect_batch(context: SetupContext, images: list) -> list[list[dict]]:
+    """Run detection on a batch of PIL images and return formatted results."""
+    kwargs = {"threshold": context.threshold}
+    if context.is_zero_shot:
+        kwargs["candidate_labels"] = context.labels_list
+
+    batch_results = context.pipeline(images, batch_size=len(images), **kwargs)
+    return [_format_detections(r) for r in batch_results]
+
+
 def _run_image(context: SetupContext, input_file: Path) -> list[dict]:
     """Run detection on a single image file."""
     from PIL import Image
@@ -179,23 +185,22 @@ def _run_image(context: SetupContext, input_file: Path) -> list[dict]:
     if image.mode != "RGB":
         image = image.convert("RGB")
 
-    detections = _detect(context, image)
+    detections = _detect_batch(context, [image])[0]
     logger.info("Found {} detection(s)", len(detections))
     return detections
 
 
 def _run_video(context: SetupContext, input_file: Path) -> list[_FramedOutput]:
     """Run detection on video frames sampled at the configured FPS."""
-    frames = _extract_frames(input_file, context.sample_fps)
-    logger.info(
-        "Extracted {} frame(s) at {} fps", len(frames), context.sample_fps or "all"
-    )
-
     output: list[_FramedOutput] = []
-    for i in range(0, len(frames), context.batch_size):
-        batch = frames[i : i + context.batch_size]
-        for frame_num, timestamp, image in batch:
-            detections = _detect(context, image)
+    total_frames = 0
+
+    for batch in _batched(
+        _iter_frames(input_file, context.sample_fps), context.batch_size
+    ):
+        images = [img for _, _, img in batch]
+        batch_detections = _detect_batch(context, images)
+        for (frame_num, timestamp, _), detections in zip(batch, batch_detections):
             output.append(
                 {
                     "frame": frame_num,
@@ -203,25 +208,30 @@ def _run_video(context: SetupContext, input_file: Path) -> list[_FramedOutput]:
                     "detections": detections,
                 }
             )
-        logger.info(
-            "Processed frames {}-{} / {}",
-            i,
-            min(i + context.batch_size, len(frames)) - 1,
-            len(frames),
-        )
+        total_frames += len(batch)
+        logger.info("Processed {} frame(s)", total_frames)
 
     total = sum(len(f["detections"]) for f in output)
     logger.info("Found {} detection(s) across {} frame(s)", total, len(output))
     return output
 
 
-def _extract_frames(
-    video_path: Path, sample_fps: float
-) -> list[tuple[int, float, "PILImage.Image"]]:
-    """Extract frames from a video file at the given sample rate.
+def _batched(iterable: Iterator, n: int) -> Iterator[list]:
+    """Yield successive lists of up to n items from iterable."""
+    batch: list = []
+    for item in iterable:
+        batch.append(item)
+        if len(batch) == n:
+            yield batch
+            batch = []
+    if batch:
+        yield batch
 
-    Returns a list of (frame_number, timestamp_seconds, PIL.Image) tuples.
-    """
+
+def _iter_frames(
+    video_path: Path, sample_fps: float
+) -> Iterator[tuple[int, float, "PILImage.Image"]]:
+    """Yield (frame_number, timestamp_seconds, PIL.Image) sampled from a video."""
     import cv2
     from PIL import Image
 
@@ -230,23 +240,35 @@ def _extract_frames(
         msg = f"Could not open video: {video_path}"
         raise ValueError(msg)
 
-    video_fps = cap.get(cv2.CAP_PROP_FPS)
-    frame_interval = int(video_fps / sample_fps) if sample_fps > 0 else 1
+    try:
+        video_fps = cap.get(cv2.CAP_PROP_FPS)
+        if not video_fps or math.isnan(video_fps):
+            msg = f"Could not determine FPS for video: {video_path}"
+            raise ValueError(msg)
 
-    frames = []
-    frame_num = 0
-    while True:
-        ret, frame = cap.read()
-        if not ret:
-            break
+        if sample_fps > 0:
+            if sample_fps > video_fps:
+                logger.warning(
+                    "Requested sample_fps ({}) exceeds video fps ({:.2f}); "
+                    "sampling every frame.",
+                    sample_fps,
+                    video_fps,
+                )
+            frame_interval = max(1, int(video_fps / sample_fps))
+        else:
+            frame_interval = 1
 
-        if frame_num % frame_interval == 0:
-            timestamp = frame_num / video_fps
-            rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            image = Image.fromarray(rgb)
-            frames.append((frame_num, timestamp, image))
+        frame_num = 0
+        while True:
+            ret, frame = cap.read()
+            if not ret:
+                break
 
-        frame_num += 1
+            if frame_num % frame_interval == 0:
+                timestamp = frame_num / video_fps
+                rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                yield (frame_num, timestamp, Image.fromarray(rgb))
 
-    cap.release()
-    return frames
+            frame_num += 1
+    finally:
+        cap.release()
