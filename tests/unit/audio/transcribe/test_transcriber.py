@@ -91,6 +91,30 @@ class TestFromString:
         t = Transcription.from_string(s, language="en", offset=30.0)
         assert t.chunks[0].timestamp == (30.0, 31.0)
 
+    def test_trailing_open_segment_is_recovered(self):
+        # Generation truncated mid-segment (e.g. hit max tokens): a final
+        # segment opens with a timestamp but has no closing one. It must not be
+        # dropped -- it spans from its start to the window end.
+        s = "<|0.00|> Hello<|2.50|><|2.50|> cut off at the end"
+        t = Transcription.from_string(s, language="en")
+        assert t.text == " Hello cut off at the end"
+        assert len(t.chunks) == 2
+        assert t.chunks[0].timestamp == (0.0, 2.5)
+        assert t.chunks[1].text == " cut off at the end"
+        assert t.chunks[1].timestamp == (2.5, float(WINDOW_S))
+
+    def test_trailing_open_segment_respects_offset(self):
+        s = "<|0.00|> Hello<|2.50|><|2.50|> tail"
+        t = Transcription.from_string(s, language="en", offset=30.0)
+        assert t.chunks[1].timestamp == (32.5, 30.0 + float(WINDOW_S))
+
+    def test_trailing_open_whitespace_only_is_ignored(self):
+        # A bare trailing timestamp with no real text adds no chunk.
+        s = "<|0.00|> Hello<|2.50|><|2.50|>   "
+        t = Transcription.from_string(s, language="en")
+        assert t.text == " Hello"
+        assert len(t.chunks) == 1
+
 
 class TestAdjustTimestamps:
     def test_zero_offset_is_noop(self):

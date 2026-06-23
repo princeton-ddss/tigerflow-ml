@@ -63,8 +63,12 @@ class Transcription(BaseModel):
 
         Whisper emits inline timestamp tokens of the form
         ``<|0.00|> some text <|2.34|>``. We parse consecutive pairs into
-        segments; if none are present (e.g. a very short window), the whole
-        string becomes one segment spanning the window.
+        segments. If generation is truncated mid-segment (e.g. it hits the
+        token limit), the final segment opens with a timestamp but has no
+        closing one; that tail is recovered as a segment spanning to the
+        window end so it is never dropped. If no timestamps are present at all
+        (e.g. a very short window), the whole string becomes one segment
+        spanning the window.
 
         Args:
             string: Decoded text with timestamp tokens for a single window.
@@ -76,7 +80,7 @@ class Transcription(BaseModel):
             A ``Transcription`` for the window, with absolute timestamps.
         """
         pattern = re.compile(r"<\|(\d+\.\d+)\|>([^<]+)<\|(\d+\.\d+)\|>")
-        matches = pattern.findall(string)
+        matches = list(pattern.finditer(string))
 
         if not matches:
             cleaned = re.sub(r"<\|.*?\|>", "", string).strip()
@@ -88,13 +92,29 @@ class Transcription(BaseModel):
                 ],
             ).adjust_timestamps(offset)
 
+        chunks = [
+            TranscriptChunk(
+                text=m.group(2), timestamp=(float(m.group(1)), float(m.group(3)))
+            )
+            for m in matches
+        ]
+
+        # A trailing segment opened but never closed (truncated generation):
+        # <|t|> text with no closing <|t|>. Recover it spanning to the window
+        # end so its text is not dropped. Whitespace-only tails are ignored.
+        tail = re.match(r"<\|(\d+\.\d+)\|>([^<]+)$", string[matches[-1].end() :])
+        if tail and tail.group(2).strip():
+            chunks.append(
+                TranscriptChunk(
+                    text=tail.group(2),
+                    timestamp=(float(tail.group(1)), float(WINDOW_S)),
+                )
+            )
+
         return cls(
             language=language,
-            text="".join(text for _, text, _ in matches),
-            chunks=[
-                TranscriptChunk(text=text, timestamp=(float(start), float(end)))
-                for start, text, end in matches
-            ],
+            text="".join(c.text or "" for c in chunks),
+            chunks=chunks,
         ).adjust_timestamps(offset)
 
     def adjust_timestamps(self, offset: float = 0.0) -> Transcription:
