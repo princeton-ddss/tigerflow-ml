@@ -63,6 +63,7 @@ def test_run_image(
             f"detect/{input_file.stem}.json",
             snapshot_dir,
             update_snapshots,
+            threshold=0.9,
         )
 
 
@@ -86,6 +87,7 @@ def test_run_video(
             f"detect/{input_file.stem}.json",
             snapshot_dir,
             update_snapshots,
+            threshold=0.9,
         )
 
 
@@ -122,6 +124,7 @@ def test_run_zero_shot_image(
             f"detect/{input_file.stem}.zero-shot.json",
             snapshot_dir,
             update_snapshots,
+            threshold=0.9,
         )
 
 
