@@ -99,10 +99,12 @@ class _DetectBase:
     @staticmethod
     def setup(context: SetupContext):
         import torch
-        from transformers import AutoConfig, pipeline, set_seed
+        from transformers import pipeline, set_seed
         from transformers.models.auto.modeling_auto import (
             MODEL_FOR_ZERO_SHOT_OBJECT_DETECTION_MAPPING_NAMES,
         )
+
+        from tigerflow_ml.utils import get_model_config
 
         set_seed(context.seed)
 
@@ -116,20 +118,12 @@ class _DetectBase:
         torch_dtype = _resolve_dtype(context.dtype, device)
         logger.info(f"Dtype: {torch_dtype}")
 
-        try:
-            config = AutoConfig.from_pretrained(
-                context.model,
-                revision=context.revision,
-                cache_dir=context.cache_dir or None,
-                local_files_only=not context.allow_fetch,
-            )
-        except OSError as e:
-            if not context.allow_fetch:
-                raise RuntimeError(
-                    f"'{context.model}' not found in cache ({context.cache_dir}). "
-                    "Run with --allow_fetch or download manually."
-                ) from e
-            raise
+        config = get_model_config(
+            model=context.model,
+            allow_fetch=context.allow_fetch,
+            cache_dir=context.cache_dir,
+            revision=context.revision,
+        )
 
         is_zero_shot = (
             config.model_type in MODEL_FOR_ZERO_SHOT_OBJECT_DETECTION_MAPPING_NAMES
