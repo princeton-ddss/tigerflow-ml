@@ -23,8 +23,6 @@ from tigerflow.utils import SetupContext
 
 from tigerflow_ml.params import HFParams
 
-_ZERO_SHOT_MODEL_TYPES = {"grounding-dino", "owlv2", "owlvit"}
-
 _VIDEO_EXTENSIONS = {".mp4", ".avi", ".mov", ".mkv", ".webm", ".flv", ".wmv"}
 
 
@@ -70,6 +68,9 @@ class _DetectBase:
     def setup(context: SetupContext):
         import torch
         from transformers import AutoConfig, pipeline, set_seed
+        from transformers.models.auto.modeling_auto import (
+            MODEL_FOR_ZERO_SHOT_OBJECT_DETECTION_MAPPING_NAMES,
+        )
 
         set_seed(context.seed)
 
@@ -95,7 +96,9 @@ class _DetectBase:
                 ) from e
             raise
 
-        is_zero_shot = config.model_type in _ZERO_SHOT_MODEL_TYPES
+        is_zero_shot = (
+            config.model_type in MODEL_FOR_ZERO_SHOT_OBJECT_DETECTION_MAPPING_NAMES
+        )
 
         if is_zero_shot and not context.labels:
             msg = (
