@@ -81,6 +81,14 @@ class _DetectBase:
             ),
         ] = Dtype.AUTO
 
+        compile: Annotated[
+            bool,
+            typer.Option(
+                help="Compile the model with torch.compile. Adds 30-60s of "
+                "first-call overhead; worthwhile for long videos."
+            ),
+        ] = False
+
     @staticmethod
     def setup(context: SetupContext):
         import torch
@@ -149,6 +157,15 @@ class _DetectBase:
                     "Run with --allow_fetch or download manually."
                 ) from e
             raise
+
+        if context.compile:
+            try:
+                logger.info("Compiling model with torch.compile...")
+                context.pipeline.model = torch.compile(context.pipeline.model)  # ty: ignore[invalid-assignment]
+            except Exception as e:
+                logger.warning(
+                    "torch.compile failed ({}); falling back to eager model.", e
+                )
 
         context.is_zero_shot = is_zero_shot
         context.labels_list = (
