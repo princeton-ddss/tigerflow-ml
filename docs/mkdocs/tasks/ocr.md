@@ -18,7 +18,8 @@ Extract text from images and PDFs using HuggingFace image-text-to-text models.
 | `--llm-kwargs`    | `{}`                          | Additional kwargs for vLLM's LLM() constructor. Supplied values override task defaults.            |
 | `--sampling-kwargs` | `{}`                        | Additional kwargs for vLLM's SamplingParams() constructor. Supplied values override task defaults. |
 | `--chat-kwargs`   | `{}`                          | Additional kwargs for vLLM's LLM.chat(). Supplied values override task defaults.                   |
-| `--prompt`        | `Extract all text from this image.` | Prompt for image-text-to-text models                                                         |
+| `--prompt`        |                               | Prompt for image-text-to-text models                                                               |
+| `--format`        | `text`                        | Validates output format: 'text', 'markdown', or 'json' (see [Output Format](#output-format))       |
 
 
 ## Supported Input Formats
@@ -28,7 +29,14 @@ Extract text from images and PDFs using HuggingFace image-text-to-text models.
 
 ## Output Format
 
-Plain text. For multi-page inputs, pages are separated by form-feed characters (`\f`).
+Depends on `--format`:
+
+- **`text`** (default) — Plain text; for multi-page inputs, pages are separated by form-feed characters (`\f`).
+- **`markdown`** — Formatted output preserving tables, equations, and document structure as markdown/LaTeX; for multi-page inputs, pages are separated by form-feed characters (`\f`).
+- **`json`** — Structured JSON with per-page text; each page's content is validated and they're all returned as a list.
+
+> [!WARNING]
+> Specifying the `--format` triggers output validation and affects final save format -- this primarily comes into play when ensuring model outputs are valid json. _However_, this does not ensure model output is in the desired format. Make sure your `--prompt` has specific instructions specifying proper output format.
 
 ## Models
 
@@ -54,8 +62,10 @@ Any HuggingFace [`image-text-to-text`](https://huggingface.co/models?pipeline_ta
         kind: local
         module: tigerflow_ml.text.ocr.local
         input_ext: .jpg
+        output-ext: .txt
         params:
           model: stepfun-ai/GOT-OCR-2.0-hf
+          prompt: "Extract all text from this image"
           allow-fetch: True #if model is not already downloaded
     ```
 
@@ -63,7 +73,7 @@ Any HuggingFace [`image-text-to-text`](https://huggingface.co/models?pipeline_ta
 
     ![1820 handwritten census form](../assets/img/1820-handwritten-census-form-geauga-oh.jpg)
 
-=== "Output (.txt)"
+=== "Output"
 
     ```text title="census-form.txt"
     The number of Persons within the Division taken by Charles C. Paine
@@ -79,32 +89,6 @@ Any HuggingFace [`image-text-to-text`](https://huggingface.co/models?pipeline_ta
     ...
     ```
 
-=== "Output (.md)"
-
-    ```markdown title="census-form.md"
-    The number of Persons within the Division taken by **Charles C. Paine**
-    consisting of part of **Geauga County, Ohio**, and also the number of
-    persons within the Division Allotted to **Eleazer Paine** consisting of
-    the residue of said County...
-
-    *Schedule of the whole number of Persons in the County of Geauga*
-
-    ...
-    ```
-
-=== "Output (.json)"
-
-    ```json title="census-form.json"
-    {
-      "pages": [
-        {
-          "page": 1,
-          "text": "The number of Persons within the Division taken by Charles C. Paine consisting of part of Geauga County, Ohio..."
-        }
-      ]
-    }
-    ```
-
 ### Extract text from a document with tables
 
 === "Config"
@@ -115,34 +99,17 @@ Any HuggingFace [`image-text-to-text`](https://huggingface.co/models?pipeline_ta
         kind: local
         module: tigerflow_ml.text.ocr.local
         input_ext: .png
-        output_ext: .txt
+        output_ext: .md
         params:
           model: stepfun-ai/GOT-OCR-2.0-hf
+          prompt: "Extract all text from this image with markdown formatting"
           allow_fetch: True
+          format: markdown
     ```
 
 === "Input"
 
     ![Statistical Abstract of the United States](../assets/img/statistical-abstract-of-the-united-states.png)
-
-=== "Output (.txt)"
-
-    ```text title="abstract.txt"
-    STATISTICAL ABSTRACT OF THE UNITED STATES
-
-    1. AREA AND POPULATION
-
-    No. 1.—TERRITORIAL EXPANSION OF CONTINENTAL UNITED STATES AND
-    ACQUISITIONS OF OUTLYING TERRITORIES AND POSSESSIONS
-
-    ACCESSION    Date    Gross area, square miles
-    Aggregate (1930)    3,738,395
-    Continental United States    3,026,789
-    Territory in 1790    892,135
-    Louisiana Purchase    1803    827,987
-    Florida    1819    58,666
-    ...
-    ```
 
 === "Output (.md)"
 
@@ -169,18 +136,6 @@ Any HuggingFace [`image-text-to-text`](https://huggingface.co/models?pipeline_ta
     ...
     ```
 
-=== "Output (.json)"
-
-    ```json title="abstract.json"
-    {
-      "pages": [
-        {
-          "page": 1,
-          "text": "STATISTICAL ABSTRACT OF THE UNITED STATES\n\n1. AREA AND POPULATION\n\nNo. 1.—TERRITORIAL EXPANSION OF CONTINENTAL UNITED STATES..."
-        }
-      ]
-    }
-    ```
 
 ### Extract text from a multi-page PDF
 
@@ -192,9 +147,9 @@ Any HuggingFace [`image-text-to-text`](https://huggingface.co/models?pipeline_ta
         kind: local
         module: tigerflow_ml.text.ocr.local
         input_ext: .pdf
-        output_ext: .txt
         params:
           model: stepfun-ai/GOT-OCR-2.0-hf
+          prompt: "Extract all text from this image"
           allow_fetch: True
     ```
 
@@ -227,18 +182,11 @@ Any HuggingFace [`image-text-to-text`](https://huggingface.co/models?pipeline_ta
 === "Output (.json)"
 
     ```json title="2602.15607v1.json"
-    {
-      "pages": [
-        {
-          "page": 1,
-          "text": "..."
-        },
-        {
-          "page": 2,
-          "text": "..."
-        }
-      ]
-    }
+    [
+      Page 1 formatted text...,
+      Page 2 formatted text...,
+      ...
+    ]
     ```
 
 ### Run on HPC with Slurm
@@ -261,5 +209,6 @@ tasks:
       time: 04:00:00
     params:
       model: stepfun-ai/GOT-OCR-2.0-hf
+      prompt: "Extract all text from this image"
       cache_dir: ~/path/to/model/hub/
 ```
