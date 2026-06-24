@@ -302,3 +302,19 @@ def get_model_context_window(config: "PretrainedConfig") -> int | None:
     )
 
     return max_model_len
+
+
+def strip_markdown_from_json(json_str: str) -> str:
+    """If str starts with ```json, strip this markdown formatting from beginning and end
+
+    Args:
+        json_str: The string that should be valid json
+
+    Returns:
+        The stripped string"""
+    stripped = json_str.strip()
+    if stripped.startswith("```"):
+        stripped = stripped.removeprefix("```json").removeprefix("```")
+        stripped = stripped.removesuffix("```")
+        stripped = stripped.strip()
+    return stripped

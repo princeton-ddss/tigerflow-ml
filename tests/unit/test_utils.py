@@ -15,6 +15,7 @@ from tigerflow_ml.utils import (
     load_images,
     read_text_file_strict,
     read_text_file_with_fallback,
+    strip_markdown_from_json,
 )
 
 
@@ -259,6 +260,31 @@ class TestLoadImages:
             assert len(images) == 1
         with pytest.raises(ValueError, match="not a valid file type"):
             load_images(tmp_path / "test.txt")
+
+
+class TestStripMarkdownFromJson:
+    def test_strips_json_fence(self):
+        result = strip_markdown_from_json('```json\n{"key": "value"}\n```')
+        assert result == '{"key": "value"}'
+
+    def test_strips_bare_fence(self):
+        result = strip_markdown_from_json('```\n{"key": "value"}\n```')
+        assert result == '{"key": "value"}'
+
+    def test_passthrough_plain_json(self):
+        s = '{"key": "value"}'
+        assert strip_markdown_from_json(s) == s
+
+    def test_strips_surrounding_whitespace(self):
+        result = strip_markdown_from_json("  ```json\n{}\n```  ")
+        assert result == "{}"
+
+    def test_empty_json_block(self):
+        assert strip_markdown_from_json("```json\n\n```") == ""
+
+    def test_no_language_tag_with_array(self):
+        result = strip_markdown_from_json("```\n[1, 2, 3]\n```")
+        assert result == "[1, 2, 3]"
 
 
 class TestGetModelContextWindow:

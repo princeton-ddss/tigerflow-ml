@@ -15,7 +15,7 @@ from tigerflow.logconfig import logger
 from tigerflow.utils import SetupContext
 
 from tigerflow_ml.params import VLLMParams
-from tigerflow_ml.utils import load_images, parse_kwargs
+from tigerflow_ml.utils import load_images, parse_kwargs, strip_markdown_from_json
 
 if TYPE_CHECKING:
     from PIL import Image
@@ -143,6 +143,8 @@ class _OCRBase:
                 else:
                     msg = f"Unexpected finish reason: {completion.finish_reason!r}"
                 raise RuntimeError(msg)
+            if output_format == OutputFormat.JSON:
+                completion.text = strip_markdown_from_json(completion.text)
             if not completion.text.strip():  # empty model output
                 if page > 1:
                     msg = f"    Model output empty on page {page}"

@@ -28,15 +28,15 @@ class TestValidateOutputFormat:
         _validate_output_format('[{"page": 1, "text": "hello"}]', OutputFormat.JSON)
 
     def test_invalid_json_raises(self):
-        with pytest.raises(RuntimeError):
+        with pytest.raises(ValueError):
             _validate_output_format("not json at all", OutputFormat.JSON)
 
     def test_truncated_json_raises(self):
-        with pytest.raises(RuntimeError):
+        with pytest.raises(ValueError):
             _validate_output_format('{"key": "val', OutputFormat.JSON)
 
     def test_empty_string_raises(self):
-        with pytest.raises(RuntimeError):
+        with pytest.raises(ValueError):
             _validate_output_format("", OutputFormat.JSON)
 
     def test_unknown_format_raises(self):
