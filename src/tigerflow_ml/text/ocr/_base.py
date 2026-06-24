@@ -12,7 +12,7 @@ from tigerflow.logconfig import logger
 from tigerflow.utils import SetupContext
 
 from tigerflow_ml.params import VLLMParams
-from tigerflow_ml.utils import parse_kwargs
+from tigerflow_ml.utils import load_images, parse_kwargs
 
 if TYPE_CHECKING:
     from PIL import Image
@@ -96,7 +96,7 @@ class _OCRBase:
 
     @staticmethod
     def run(context: SetupContext, input_file: Path, output_file: Path):
-        images = _load_images(input_file)
+        images = load_images(input_file)
         logger.info(f"Loaded {len(images)} image(s)")
 
         messages = []
@@ -140,26 +140,7 @@ class _OCRBase:
         with open(output_file, "w", encoding="utf-8") as f:
             f.write(output_text)
 
-
-def _load_images(path: Path) -> list:
-    """Load images from a file. Supports image files and PDFs."""
-    from PIL import Image
-
-    if path.suffix.lower() == ".pdf":
-        import pymupdf
-
-        images = []
-        with pymupdf.open(path) as doc:
-            for page in doc:
-                pix = page.get_pixmap()
-                image = Image.frombytes("RGB", (pix.width, pix.height), pix.samples)
-                images.append(image)
-        return images
-
-    image = Image.open(path)
-    if image.mode != "RGB":
-        image = image.convert("RGB")
-    return [image]
+        logger.info("Done")
 
 
 def _format_message(
