@@ -1,0 +1,75 @@
+[
+  {
+    "JOHN DOE": {
+      "Full Address": "",
+      "City, State, ZIP": "",
+      "Phone Number": "",
+      "E-mail": ""
+    },
+    "OBJECTIVE": "Design apparel print for an innovative retail company",
+    "EDUCATION": {
+      "UNIVERSITY OF MINNESOTA": {
+        "College of Design": {
+          "Bachelor of Science in Graphic Design": "",
+          "Cumulative GPA 3.93, Dean's List": "",
+          "Twin Cities Iron Range Scholarship": ""
+        },
+        "City, State": "",
+        "May 2011": ""
+      }
+    },
+    "WORK EXPERIENCE": {
+      "AMERICAN EAGLE": {
+        "City, State": "",
+        "July 2009 - present": "",
+        "Sales Associate": {
+          "Collaborated with the store merchandiser creating displays to attract clientele": "",
+          "Use my trend awareness to assist customers in their shopping experience": "",
+          "Thereby help manage every piece of merchandise for inventory control": "",
+          "Process input to increase my product knowledge": ""
+        }
+      },
+      "PLANET BEACH": {
+        "City, State": "",
+        "Aug. 2008 - present": "",
+        "Spa Consultant": {
+          "Sell retail and membership to meet company sales goals": "",
+          "Build organizational skills by single handedly running all operating procedures": "",
+          "Communicate with clients to fulfill their wants and needs": "",
+          "Attend promotional events to market our services": "",
+          "Handle customer complaints and resolve issues": "",
+          "Received employee of the month award twice": ""
+        }
+      },
+      "HEARTBREAKER": {
+        "City, State": "",
+        "May 2008 - Aug. 2008": "",
+        "Sales Associate": {
+          "Stocked the sales floor with fast fashion inventory": "",
+          "Matched down item allowing me to see unsuccessful merchandise in a retail market": "",
+          "Offered advice and assistance to each goal": ""
+        }
+      },
+      "VICTORIA'S SECRET": {
+        "City, State": "",
+        "Jan. 2006 - Feb. 2009": "",
+        "Fashion Representative": {
+          "Applied my merchandising skills by assisting in the training of coworkers": "",
+          "Set up mannequins and displays in order to entice future customers": "",
+          "Provided superior customer service by helping with consumer decisions": "",
+          "Took seasonal inventory": ""
+        }
+      }
+    },
+    "VOLUNTEER EXPERIENCE": {
+      "TARGET CORPORATION": {
+        "City, State": "",
+        "August 2009": "",
+        "Target Brand Ambassador": {
+          "Represented Perceptics Marketing and Target Inc. at a college event": "",
+          "Engaged University of Minnesota freshman in the Target brand experience": ""
+        }
+      }
+    }
+  }
+]
