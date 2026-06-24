@@ -11,7 +11,6 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Annotated, Any
 
 import typer
-from markdown_it import MarkdownIt
 from tigerflow.logconfig import logger
 from tigerflow.utils import SetupContext
 
@@ -26,7 +25,6 @@ class OutputFormat(str, Enum):
     """Output format for OCR results."""
 
     TEXT = "text"
-    MARKDOWN = "markdown"
     JSON = "json"
 
 
@@ -49,7 +47,7 @@ class _OCRBase:
     def setup(context: SetupContext):
         import torch
         from huggingface_hub import snapshot_download
-        from vllm import LLM, SamplingParams  # type: ignore[import-unresolved]
+        from vllm import LLM, SamplingParams  # type: ignore
 
         logger.info("Setting up OCR model...")
         logger.info(f"   Model: {context.model}")
@@ -188,12 +186,10 @@ def _format_message(
 
 
 def _determine_output_format(path: Path) -> OutputFormat:
-    if path.suffix.lower() in [".txt", ".text"]:
+    if path.suffix.lower() in [".txt", ".text", ".md", ".markdown", ".mdown", ".mkd"]:
         format = OutputFormat.TEXT
     elif path.suffix.lower() in [".json"]:
         format = OutputFormat.JSON
-    elif path.suffix.lower() in [".md", ".markdown", ".mdown", ".mkd"]:
-        format = OutputFormat.MARKDOWN
     else:
         raise ValueError(
             f"{path.suffix.lower()} is not currently a supported output."
@@ -207,16 +203,6 @@ def _validate_output_format(output: str, output_format: OutputFormat) -> None:
     if output_format == OutputFormat.TEXT:
         # no validation required
         return
-    elif output_format == OutputFormat.MARKDOWN:
-        # accepts plain text with no formatting
-        try:
-            MarkdownIt().parse(output)
-        except Exception as e:
-            raise RuntimeError(
-                "Model did not return valid markdown output."
-                " Try refining your prompt or save to a different format."
-                f" Output returned: {output}"
-            ) from e
     elif output_format == OutputFormat.JSON:
         try:
             json.loads(output)

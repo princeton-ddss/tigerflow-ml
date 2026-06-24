@@ -12,27 +12,14 @@ from tigerflow_ml.text.ocr._base import (
 
 
 class TestValidateOutputFormat:
-    def test_txt_md_plain_string_passes(self):
+    def test_txt_plain_string_passes(self):
         _validate_output_format("hello world", OutputFormat.TEXT)
-        _validate_output_format("hello world", OutputFormat.MARKDOWN)
 
-    def test_txt_md_empty_string_passes(self):
+    def test_txt_empty_string_passes(self):
         _validate_output_format("", OutputFormat.TEXT)
-        _validate_output_format("", OutputFormat.MARKDOWN)
 
-    def test_txt_md_markdown_with_headers_passes(self):
+    def test_txt_with_headers_passes(self):
         _validate_output_format("# Title\n\nSome text\n\n## Section", OutputFormat.TEXT)
-        _validate_output_format(
-            "# Title\n\nSome text\n\n## Section", OutputFormat.MARKDOWN
-        )
-
-    def test_txt_md_markdown_with_list_passes(self):
-        _validate_output_format(
-            "- item one\n- item two\n- item three", OutputFormat.TEXT
-        )
-        _validate_output_format(
-            "- item one\n- item two\n- item three", OutputFormat.MARKDOWN
-        )
 
     def test_valid_json_object_passes(self):
         _validate_output_format('{"key": "value"}', OutputFormat.JSON)
@@ -77,10 +64,6 @@ class TestFormatOutput:
         result = _format_output(["page one", "page two"], OutputFormat.TEXT)
         assert result == "page one\fpage two"
 
-    def test_markdown_multiple_pages_joined_with_form_feed(self):
-        result = _format_output(["# Page 1", "# Page 2"], OutputFormat.MARKDOWN)
-        assert result == "# Page 1\f# Page 2"
-
     def test_accepts_generator(self):
         result = _format_output(
             (p for p in ['{"a": 1}', '{"b": 2}']), OutputFormat.JSON
@@ -92,20 +75,17 @@ class TestDetermineOutputFormat:
     def test_txt(self):
         assert _determine_output_format(Path("out.txt")) == OutputFormat.TEXT
         assert _determine_output_format(Path("out.text")) == OutputFormat.TEXT
+        assert _determine_output_format(Path("out.md")) == OutputFormat.TEXT
+        assert _determine_output_format(Path("out.markdown")) == OutputFormat.TEXT
+        assert _determine_output_format(Path("out.mdown")) == OutputFormat.TEXT
+        assert _determine_output_format(Path("out.mkd")) == OutputFormat.TEXT
 
     def test_json(self):
         assert _determine_output_format(Path("out.json")) == OutputFormat.JSON
 
-    def test_markdown(self):
-        assert _determine_output_format(Path("out.md")) == OutputFormat.MARKDOWN
-        assert _determine_output_format(Path("out.markdown")) == OutputFormat.MARKDOWN
-        assert _determine_output_format(Path("out.mdown")) == OutputFormat.MARKDOWN
-        assert _determine_output_format(Path("out.mkd")) == OutputFormat.MARKDOWN
-
     def test_case_insensitive(self):
         assert _determine_output_format(Path("out.TXT")) == OutputFormat.TEXT
         assert _determine_output_format(Path("out.JSON")) == OutputFormat.JSON
-        assert _determine_output_format(Path("out.MD")) == OutputFormat.MARKDOWN
 
     def test_unsupported_extension_raises(self):
         with pytest.raises(ValueError):
