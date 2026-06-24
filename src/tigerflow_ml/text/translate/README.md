@@ -75,7 +75,6 @@ Some other arguments you can use are:
 - `--prompt-template` : (**not used for tgemma models**) Prompt template for chat-based translation models. Defaults to `Translate the following text from {source_lang} to {target_lang}. Output only the translated text, nothing else. Text: {text}`.
 - `--use-fallback-prompt` : (**not used for tgemma models**) When no source language can be determined and the prompt template uses `{source_lang}`, swap to a source-language-free fallback prompt (`Translate the following text to {target_lang}. Output only the translated text, nothing else. Text: {text}`) for that file instead of raising an error. Disabled by default.
 - `--system-message` : (**not used for tgemma models**) Optional system message for chat models.
-- `--temperature` : Sampling temperature. Lower values make output more deterministic. Defaults to `0.0`.
 - `--seed` : Random seed for reproducibility. Defaults to `42`.
 
 Advanced vLLM options (accept JSON strings):

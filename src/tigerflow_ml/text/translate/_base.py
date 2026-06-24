@@ -178,7 +178,7 @@ class _TranslateBase:
             max_model_len=context.max_model_len,
             config=config,
             seed=context.seed,
-            temperature=context.temperature,
+            temperature=0,
             fetch=context.allow_fetch,
             prompt_template=context.prompt_template,
             system_message=context.system_message,
