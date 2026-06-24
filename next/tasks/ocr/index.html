@@ -911,7 +911,7 @@
 </tr>
 <tr>
 <td><code>--prompt</code></td>
-<td><code>Extract all text from this image.</code></td>
+<td></td>
 <td>Prompt for image-text-to-text models</td>
 </tr>
 </tbody>
@@ -922,7 +922,15 @@
 <li>PDF files (each page is rendered and processed separately)</li>
 </ul>
 <h2 id="output-format">Output Format<a class="headerlink" href="#output-format" title="Permanent link">&para;</a></h2>
-<p>Plain text. For multi-page inputs, pages are separated by form-feed characters (<code>\f</code>).</p>
+<ul>
+<li><strong><code>text</code></strong> — Plain text (<code>.txt</code>); for multi-page inputs, pages are separated by form-feed characters (<code>\f</code>).</li>
+<li><strong><code>markdown</code></strong> — Formatted output preserving tables, equations, and document structure as markdown/LaTeX (<code>.md</code>); for multi-page inputs, pages are separated by form-feed characters (<code>\f</code>).</li>
+<li><strong><code>json</code></strong> — Structured JSON with per-page text (<code>.json</code>); each page's content is validated and they're all returned as a list.</li>
+</ul>
+<blockquote>
+<p>[!WARNING]
+The output format is specified when setting <code>--output-ext</code>. This affects the final save format and triggers validation for <code>.json</code> format (also strips markdown formatting if present). <em>However</em>, this does not ensure model output is in the desired format. Make sure your <code>--prompt</code> has specific instructions specifying proper output format.</p>
+</blockquote>
 <h2 id="models">Models<a class="headerlink" href="#models" title="Permanent link">&para;</a></h2>
 <p>Any HuggingFace <a href="https://huggingface.co/models?pipeline_tag=image-text-to-text"><code>image-text-to-text</code></a> model is supported. The <a href="https://huggingface.co/stepfun-ai/GOT-OCR-2.0-hf">GOT-OCR</a> model is recommended for general-purpose English document OCR. For multilingual documents, see the alternatives below.</p>
 <table>
@@ -963,7 +971,7 @@
 </table>
 <h2 id="examples">Examples<a class="headerlink" href="#examples" title="Permanent link">&para;</a></h2>
 <h3 id="extract-text-from-a-handwritten-document">Extract text from a handwritten document<a class="headerlink" href="#extract-text-from-a-handwritten-document" title="Permanent link">&para;</a></h3>
-<div class="tabbed-set tabbed-alternate" data-tabs="1:5"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><input id="__tabbed_1_3" name="__tabbed_1" type="radio" /><input id="__tabbed_1_4" name="__tabbed_1" type="radio" /><input id="__tabbed_1_5" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">Config</label><label for="__tabbed_1_2">Input</label><label for="__tabbed_1_3">Output (.txt)</label><label for="__tabbed_1_4">Output (.md)</label><label for="__tabbed_1_5">Output (.json)</label></div>
+<div class="tabbed-set tabbed-alternate" data-tabs="1:3"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><input id="__tabbed_1_3" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">Config</label><label for="__tabbed_1_2">Input</label><label for="__tabbed_1_3">Output</label></div>
 <div class="tabbed-content">
 <div class="tabbed-block">
 <div class="highlight"><span class="filename">config.yaml</span><pre><span></span><code><span class="nt">tasks</span><span class="p">:</span>
@@ -971,9 +979,11 @@
 <span class="w">    </span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">local</span>
 <span class="w">    </span><span class="nt">module</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">tigerflow_ml.text.ocr.local</span>
 <span class="w">    </span><span class="nt">input_ext</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">.jpg</span>
+<span class="w">    </span><span class="nt">output_ext</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">.txt</span>
 <span class="w">    </span><span class="nt">params</span><span class="p">:</span>
 <span class="w">      </span><span class="nt">model</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">stepfun-ai/GOT-OCR-2.0-hf</span>
-<span class="w">      </span><span class="nt">allow-fetch</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">True</span><span class="w"> </span><span class="c1">#if model is not already downloaded</span>
+<span class="w">      </span><span class="nt">prompt</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Extract</span><span class="nv"> </span><span class="s">all</span><span class="nv"> </span><span class="s">text</span><span class="nv"> </span><span class="s">from</span><span class="nv"> </span><span class="s">this</span><span class="nv"> </span><span class="s">image&quot;</span>
+<span class="w">      </span><span class="nt">allow_fetch</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">True</span><span class="w"> </span><span class="c1">#if model is not already downloaded</span>
 </code></pre></div>
 </div>
 <div class="tabbed-block">
@@ -993,32 +1003,10 @@ Schedule of the whole number of Persons in the County of Geauga
 ...
 </code></pre></div>
 </div>
-<div class="tabbed-block">
-<div class="highlight"><span class="filename">census-form.md</span><pre><span></span><code>The number of Persons within the Division taken by <span class="gs">**Charles C. Paine**</span>
-consisting of part of <span class="gs">**Geauga County, Ohio**</span>, and also the number of
-persons within the Division Allotted to <span class="gs">**Eleazer Paine**</span> consisting of
-the residue of said County...
-
-<span class="ge">*Schedule of the whole number of Persons in the County of Geauga*</span>
-
-...
-</code></pre></div>
-</div>
-<div class="tabbed-block">
-<div class="highlight"><span class="filename">census-form.json</span><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;pages&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-<span class="w">    </span><span class="p">{</span>
-<span class="w">      </span><span class="nt">&quot;page&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;text&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;The number of Persons within the Division taken by Charles C. Paine consisting of part of Geauga County, Ohio...&quot;</span>
-<span class="w">    </span><span class="p">}</span>
-<span class="w">  </span><span class="p">]</span>
-<span class="p">}</span>
-</code></pre></div>
-</div>
 </div>
 </div>
 <h3 id="extract-text-from-a-document-with-tables">Extract text from a document with tables<a class="headerlink" href="#extract-text-from-a-document-with-tables" title="Permanent link">&para;</a></h3>
-<div class="tabbed-set tabbed-alternate" data-tabs="2:5"><input checked="checked" id="__tabbed_2_1" name="__tabbed_2" type="radio" /><input id="__tabbed_2_2" name="__tabbed_2" type="radio" /><input id="__tabbed_2_3" name="__tabbed_2" type="radio" /><input id="__tabbed_2_4" name="__tabbed_2" type="radio" /><input id="__tabbed_2_5" name="__tabbed_2" type="radio" /><div class="tabbed-labels"><label for="__tabbed_2_1">Config</label><label for="__tabbed_2_2">Input</label><label for="__tabbed_2_3">Output (.txt)</label><label for="__tabbed_2_4">Output (.md)</label><label for="__tabbed_2_5">Output (.json)</label></div>
+<div class="tabbed-set tabbed-alternate" data-tabs="2:3"><input checked="checked" id="__tabbed_2_1" name="__tabbed_2" type="radio" /><input id="__tabbed_2_2" name="__tabbed_2" type="radio" /><input id="__tabbed_2_3" name="__tabbed_2" type="radio" /><div class="tabbed-labels"><label for="__tabbed_2_1">Config</label><label for="__tabbed_2_2">Input</label><label for="__tabbed_2_3">Output</label></div>
 <div class="tabbed-content">
 <div class="tabbed-block">
 <div class="highlight"><span class="filename">config.yaml</span><pre><span></span><code><span class="nt">tasks</span><span class="p">:</span>
@@ -1026,31 +1014,15 @@ the residue of said County...
 <span class="w">    </span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">local</span>
 <span class="w">    </span><span class="nt">module</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">tigerflow_ml.text.ocr.local</span>
 <span class="w">    </span><span class="nt">input_ext</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">.png</span>
-<span class="w">    </span><span class="nt">output_ext</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">.txt</span>
+<span class="w">    </span><span class="nt">output_ext</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">.md</span>
 <span class="w">    </span><span class="nt">params</span><span class="p">:</span>
 <span class="w">      </span><span class="nt">model</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">stepfun-ai/GOT-OCR-2.0-hf</span>
+<span class="w">      </span><span class="nt">prompt</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Extract</span><span class="nv"> </span><span class="s">all</span><span class="nv"> </span><span class="s">text</span><span class="nv"> </span><span class="s">from</span><span class="nv"> </span><span class="s">this</span><span class="nv"> </span><span class="s">image</span><span class="nv"> </span><span class="s">with</span><span class="nv"> </span><span class="s">markdown</span><span class="nv"> </span><span class="s">formatting&quot;</span>
 <span class="w">      </span><span class="nt">allow_fetch</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">True</span>
 </code></pre></div>
 </div>
 <div class="tabbed-block">
 <p><img alt="Statistical Abstract of the United States" src="../../assets/img/statistical-abstract-of-the-united-states.png" /></p>
-</div>
-<div class="tabbed-block">
-<div class="highlight"><span class="filename">abstract.txt</span><pre><span></span><code>STATISTICAL ABSTRACT OF THE UNITED STATES
-
-1. AREA AND POPULATION
-
-No. 1.—TERRITORIAL EXPANSION OF CONTINENTAL UNITED STATES AND
-ACQUISITIONS OF OUTLYING TERRITORIES AND POSSESSIONS
-
-ACCESSION    Date    Gross area, square miles
-Aggregate (1930)    3,738,395
-Continental United States    3,026,789
-Territory in 1790    892,135
-Louisiana Purchase    1803    827,987
-Florida    1819    58,666
-...
-</code></pre></div>
 </div>
 <div class="tabbed-block">
 <div class="highlight"><span class="filename">abstract.md</span><pre><span></span><code><span class="gh"># STATISTICAL ABSTRACT OF THE UNITED STATES</span>
@@ -1075,17 +1047,6 @@ Acquisitions of Outlying Territories and Possessions**
 ...
 </code></pre></div>
 </div>
-<div class="tabbed-block">
-<div class="highlight"><span class="filename">abstract.json</span><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;pages&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-<span class="w">    </span><span class="p">{</span>
-<span class="w">      </span><span class="nt">&quot;page&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;text&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;STATISTICAL ABSTRACT OF THE UNITED STATES\n\n1. AREA AND POPULATION\n\nNo. 1.—TERRITORIAL EXPANSION OF CONTINENTAL UNITED STATES...&quot;</span>
-<span class="w">    </span><span class="p">}</span>
-<span class="w">  </span><span class="p">]</span>
-<span class="p">}</span>
-</code></pre></div>
-</div>
 </div>
 </div>
 <h3 id="extract-text-from-a-multi-page-pdf">Extract text from a multi-page PDF<a class="headerlink" href="#extract-text-from-a-multi-page-pdf" title="Permanent link">&para;</a></h3>
@@ -1097,9 +1058,9 @@ Acquisitions of Outlying Territories and Possessions**
 <span class="w">    </span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">local</span>
 <span class="w">    </span><span class="nt">module</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">tigerflow_ml.text.ocr.local</span>
 <span class="w">    </span><span class="nt">input_ext</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">.pdf</span>
-<span class="w">    </span><span class="nt">output_ext</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">.txt</span>
 <span class="w">    </span><span class="nt">params</span><span class="p">:</span>
 <span class="w">      </span><span class="nt">model</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">stepfun-ai/GOT-OCR-2.0-hf</span>
+<span class="w">      </span><span class="nt">prompt</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Extract</span><span class="nv"> </span><span class="s">all</span><span class="nv"> </span><span class="s">text</span><span class="nv"> </span><span class="s">from</span><span class="nv"> </span><span class="s">this</span><span class="nv"> </span><span class="s">image&quot;</span>
 <span class="w">      </span><span class="nt">allow_fetch</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">True</span>
 </code></pre></div>
 </div>
@@ -1124,18 +1085,11 @@ Acquisitions of Outlying Territories and Possessions**
 </code></pre></div>
 </div>
 <div class="tabbed-block">
-<div class="highlight"><span class="filename">2602.15607v1.json</span><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;pages&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-<span class="w">    </span><span class="p">{</span>
-<span class="w">      </span><span class="nt">&quot;page&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;text&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;...&quot;</span>
-<span class="w">    </span><span class="p">},</span>
-<span class="w">    </span><span class="p">{</span>
-<span class="w">      </span><span class="nt">&quot;page&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;text&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;...&quot;</span>
-<span class="w">    </span><span class="p">}</span>
-<span class="w">  </span><span class="p">]</span>
-<span class="p">}</span>
+<div class="highlight"><span class="filename">2602.15607v1.json</span><pre><span></span><code><span class="p">[</span>
+<span class="w">  </span><span class="err">Page</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="kc">f</span><span class="err">orma</span><span class="kc">tte</span><span class="err">d</span><span class="w"> </span><span class="kc">te</span><span class="err">x</span><span class="kc">t</span><span class="err">...</span><span class="p">,</span>
+<span class="w">  </span><span class="err">Page</span><span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="kc">f</span><span class="err">orma</span><span class="kc">tte</span><span class="err">d</span><span class="w"> </span><span class="kc">te</span><span class="err">x</span><span class="kc">t</span><span class="err">...</span><span class="p">,</span>
+<span class="w">  </span><span class="err">...</span>
+<span class="p">]</span>
 </code></pre></div>
 </div>
 </div>
@@ -1157,6 +1111,7 @@ work across compute nodes:</p>
 <span class="w">      </span><span class="nt">time</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">04:00:00</span>
 <span class="w">    </span><span class="nt">params</span><span class="p">:</span>
 <span class="w">      </span><span class="nt">model</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">stepfun-ai/GOT-OCR-2.0-hf</span>
+<span class="w">      </span><span class="nt">prompt</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Extract</span><span class="nv"> </span><span class="s">all</span><span class="nv"> </span><span class="s">text</span><span class="nv"> </span><span class="s">from</span><span class="nv"> </span><span class="s">this</span><span class="nv"> </span><span class="s">image&quot;</span>
 <span class="w">      </span><span class="nt">cache_dir</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">~/path/to/model/hub/</span>
 </code></pre></div>
 
