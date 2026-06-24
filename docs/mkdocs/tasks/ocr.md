@@ -19,7 +19,7 @@ Extract text from images and PDFs using HuggingFace image-text-to-text models.
 | `--sampling-kwargs` | `{}`                        | Additional kwargs for vLLM's SamplingParams() constructor. Supplied values override task defaults. |
 | `--chat-kwargs`   | `{}`                          | Additional kwargs for vLLM's LLM.chat(). Supplied values override task defaults.                   |
 | `--prompt`        |                               | Prompt for image-text-to-text models                                                               |
-| `--format`        | `text`                        | Validates output format: 'text', 'markdown', or 'json' (see [Output Format](#output-format))       |
+
 
 
 ## Supported Input Formats
@@ -29,14 +29,12 @@ Extract text from images and PDFs using HuggingFace image-text-to-text models.
 
 ## Output Format
 
-Depends on `--format`:
-
-- **`text`** (default) — Plain text; for multi-page inputs, pages are separated by form-feed characters (`\f`).
-- **`markdown`** — Formatted output preserving tables, equations, and document structure as markdown/LaTeX; for multi-page inputs, pages are separated by form-feed characters (`\f`).
-- **`json`** — Structured JSON with per-page text; each page's content is validated and they're all returned as a list.
+- **`text`** — Plain text (`.txt`); for multi-page inputs, pages are separated by form-feed characters (`\f`).
+- **`markdown`** — Formatted output preserving tables, equations, and document structure as markdown/LaTeX (`.md`); for multi-page inputs, pages are separated by form-feed characters (`\f`).
+- **`json`** — Structured JSON with per-page text (`.json`); each page's content is validated and they're all returned as a list.
 
 > [!WARNING]
-> Specifying the `--format` triggers output validation and affects final save format -- this primarily comes into play when ensuring model outputs are valid json. _However_, this does not ensure model output is in the desired format. Make sure your `--prompt` has specific instructions specifying proper output format.
+> The output format is specified when setting `--output-ext`. This affects the final save format and triggers validation for `.json` format (also strips markdown formatting if present). _However_, this does not ensure model output is in the desired format. Make sure your `--prompt` has specific instructions specifying proper output format.
 
 ## Models
 
@@ -62,11 +60,11 @@ Any HuggingFace [`image-text-to-text`](https://huggingface.co/models?pipeline_ta
         kind: local
         module: tigerflow_ml.text.ocr.local
         input_ext: .jpg
-        output-ext: .txt
+        output_ext: .txt
         params:
           model: stepfun-ai/GOT-OCR-2.0-hf
           prompt: "Extract all text from this image"
-          allow-fetch: True #if model is not already downloaded
+          allow_fetch: True #if model is not already downloaded
     ```
 
 === "Input"
@@ -104,14 +102,13 @@ Any HuggingFace [`image-text-to-text`](https://huggingface.co/models?pipeline_ta
           model: stepfun-ai/GOT-OCR-2.0-hf
           prompt: "Extract all text from this image with markdown formatting"
           allow_fetch: True
-          format: markdown
     ```
 
 === "Input"
 
     ![Statistical Abstract of the United States](../assets/img/statistical-abstract-of-the-united-states.png)
 
-=== "Output (.md)"
+=== "Output"
 
     ```markdown title="abstract.md"
     # STATISTICAL ABSTRACT OF THE UNITED STATES

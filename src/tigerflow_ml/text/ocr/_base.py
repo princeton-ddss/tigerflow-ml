@@ -124,8 +124,8 @@ class _OCRBase:
                 if page > 1:
                     msg = (
                         f"    Output truncated at {context.max_tokens} tokens (page"
-                        f"{page}) — increase --max-tokens and/or --max_model_len "
-                        "for a complete result"
+                        f" {page}) — increase --max-tokens and/or --max_model_len"
+                        " for a complete result"
                     )
                 else:
                     msg = (
