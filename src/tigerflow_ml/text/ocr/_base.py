@@ -140,8 +140,6 @@ class _OCRBase:
         with open(output_file, "w", encoding="utf-8") as f:
             f.write(output_text)
 
-        logger.info("Done")
-
 
 def _format_message(
     image: "Image.Image", prompt: str, system_message: str | None = None
