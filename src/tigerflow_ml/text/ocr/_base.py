@@ -207,10 +207,11 @@ def _validate_output_format(output: str, output_format: OutputFormat) -> None:
         try:
             json.loads(output)
         except json.JSONDecodeError as e:
-            raise RuntimeError(
+            raise ValueError(
                 "Model did not return a valid json output."
                 " Try refining your prompt or save to a different format."
-                f" Output returned: {output}"
+                f" See line {e.lineno} column {e.colno} (char {e.pos}):"
+                f" {output!r}"
             ) from e
     else:
         raise ValueError(f" Unsupported output format: {output_format}")
