@@ -12,9 +12,7 @@ from tigerflow.logconfig import logger
 from tigerflow.utils import SetupContext
 
 from tigerflow_ml.params import VLLMParams
-
 from tigerflow_ml.utils import load_images, parse_kwargs
-
 
 if TYPE_CHECKING:
     from PIL import Image
@@ -141,6 +139,7 @@ class _OCRBase:
 
         with open(output_file, "w", encoding="utf-8") as f:
             f.write(output_text)
+
 
 def _format_message(
     image: "Image.Image", prompt: str, system_message: str | None = None
