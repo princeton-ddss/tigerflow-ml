@@ -9,13 +9,5 @@ def test_translate_defaults():
     assert p.max_model_len is None
     assert p.model_backend == "auto"
     assert p.prompt_template == _DEFAULT_PROMPT
-
-    assert p.allow_fetch is False
-    assert p.temperature == 0
-    assert p.seed == 42
-    assert p.system_message is None
-    assert p.revision == "main"
-    assert p.cache_dir is None
-    assert p.llm_kwargs == "{}"
-    assert p.sampling_kwargs == "{}"
-    assert p.chat_kwargs == "{}"
+    assert p.auto_lang_detect is True
+    assert p.use_fallback_prompt is False

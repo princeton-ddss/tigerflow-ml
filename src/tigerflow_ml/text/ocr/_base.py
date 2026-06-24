@@ -83,7 +83,7 @@ class _OCRBase:
 
         user_sampling_kwargs = parse_kwargs(context.sampling_kwargs)
         sampling_kwargs: dict[str, Any] = {
-            "temperature": context.temperature,
+            "temperature": 0,
             "seed": context.seed,
             "max_tokens": context.max_tokens,
         }

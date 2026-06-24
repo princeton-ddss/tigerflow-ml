@@ -30,7 +30,6 @@ def test_vLLM_defaults():
     assert p.system_message is None
     assert p.max_tokens == 512
     assert p.max_model_len is None
-    assert p.temperature == 0
     assert p.seed == 42
     assert p.llm_kwargs == "{}"
     assert p.sampling_kwargs == "{}"

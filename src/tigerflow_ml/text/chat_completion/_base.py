@@ -37,6 +37,16 @@ class _ChatCompletionBase:
             ),
         ] = None
 
+        temperature: Annotated[
+            float,
+            typer.Option(
+                help="The model temperature. Lower numbers make models more"
+                " deterministic",
+                min=0.0,
+                max=2.0,
+            ),
+        ] = 0.0
+
     @staticmethod
     def setup(context: SetupContext):
         import torch

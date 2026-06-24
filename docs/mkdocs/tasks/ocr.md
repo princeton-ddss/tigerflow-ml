@@ -13,7 +13,6 @@ Extract text from images and PDFs using HuggingFace image-text-to-text models.
 | `--system-message` |                              | System message for chat models                                                                     |
 | `--max-tokens`    | `4096`                        | Maximum number of tokens to generate per image                                                     |
 | `--max-model-len` |                               | Maximum sequence length (input + output tokens) passed to vLLM. Set this for large-context models to avoid OOM. |
-| `--temperature`   | `0`                           | The model temperature. Lower numbers make models more deterministic                                |
 | `--seed`          | `42`                          | The seed to set for more reproducible behavior                                                     |
 | `--llm-kwargs`    | `{}`                          | Additional kwargs for vLLM's LLM() constructor. Supplied values override task defaults.            |
 | `--sampling-kwargs` | `{}`                        | Additional kwargs for vLLM's SamplingParams() constructor. Supplied values override task defaults. |
