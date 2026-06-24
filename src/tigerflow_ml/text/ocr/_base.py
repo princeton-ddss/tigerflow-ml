@@ -4,6 +4,9 @@ Perform OCR on images using Hugging Face image-text-to-text models.
 Supports VLMs compatible with the image-text-to-text pipeline.
 """
 
+import json
+from collections.abc import Iterable
+from enum import Enum
 from pathlib import Path
 from typing import TYPE_CHECKING, Annotated, Any
 
@@ -12,28 +15,33 @@ from tigerflow.logconfig import logger
 from tigerflow.utils import SetupContext
 
 from tigerflow_ml.params import VLLMParams
-from tigerflow_ml.utils import load_images, parse_kwargs
+from tigerflow_ml.utils import load_images, parse_kwargs, strip_markdown_from_json
 
 if TYPE_CHECKING:
     from PIL import Image
 
-_DEFAULT_PROMPT = "Extract all text from this image."
+
+class OutputFormat(str, Enum):
+    """Output format for OCR results."""
+
+    TEXT = "text"
+    JSON = "json"
 
 
 class _OCRBase:
     """Extract text from images using image-text-to-text models."""
 
     class Params(VLLMParams):
+        prompt: Annotated[
+            str,
+            typer.Option(help="Prompt for image-text-to-text models"),
+        ]
+
         # overrides default
         max_tokens: Annotated[
             int,
             typer.Option(help="Maximum number of tokens to generate per image"),
         ] = 4096
-
-        prompt: Annotated[
-            str,
-            typer.Option(help="Prompt for image-text-to-text models"),
-        ] = _DEFAULT_PROMPT
 
     @staticmethod
     def setup(context: SetupContext):
@@ -97,7 +105,8 @@ class _OCRBase:
     @staticmethod
     def run(context: SetupContext, input_file: Path, output_file: Path):
         images = load_images(input_file)
-        logger.info(f"Loaded {len(images)} image(s)")
+        logger.info(f"    Loaded {len(images)} image(s)")
+        output_format = _determine_output_format(output_file)
 
         messages = []
         for image in images:
@@ -114,13 +123,13 @@ class _OCRBase:
             if completion.finish_reason == "length":
                 if page > 1:
                     msg = (
-                        f"  Output truncated at {context.max_tokens} tokens (page"
-                        f"{page}) — increase --max-tokens and/or --max_model_len "
-                        "for a complete result"
+                        f"    Output truncated at {context.max_tokens} tokens (page"
+                        f" {page}) — increase --max-tokens and/or --max_model_len"
+                        " for a complete result"
                     )
                 else:
                     msg = (
-                        f"  Output truncated at {context.max_tokens} tokens — "
+                        f"    Output truncated at {context.max_tokens} tokens — "
                         "increase --max-tokens and/or --max_model_len for a "
                         "complete result"
                     )
@@ -134,8 +143,19 @@ class _OCRBase:
                 else:
                     msg = f"Unexpected finish reason: {completion.finish_reason!r}"
                 raise RuntimeError(msg)
+            if output_format == OutputFormat.JSON:
+                completion.text = strip_markdown_from_json(completion.text)
+            if not completion.text.strip():  # empty model output
+                if page > 1:
+                    msg = f"    Model output empty on page {page}"
+                else:
+                    msg = "    Model output empty"
+                logger.warning(msg)
+            _validate_output_format(completion.text, output_format)
 
-        output_text = "\f".join(c.text for c in completions)
+        output_text = _format_output(
+            outputs=(c.text for c in completions), output_format=output_format
+        )
 
         with open(output_file, "w", encoding="utf-8") as f:
             f.write(output_text)
@@ -165,3 +185,49 @@ def _format_message(
             ],
         }
     ]
+
+
+def _determine_output_format(path: Path) -> OutputFormat:
+    if path.suffix.lower() in [".txt", ".text", ".md", ".markdown", ".mdown", ".mkd"]:
+        format = OutputFormat.TEXT
+    elif path.suffix.lower() in [".json"]:
+        format = OutputFormat.JSON
+    else:
+        raise ValueError(
+            f"{path.suffix.lower()} is not currently a supported output."
+            " Please save to a text, json, or markdown file, or raise an issue."
+        )
+    return format
+
+
+def _validate_output_format(output: str, output_format: OutputFormat) -> None:
+    """Raise error if model output doesn't match specified output format"""
+    if output_format == OutputFormat.TEXT:
+        # no validation required
+        return
+    elif output_format == OutputFormat.JSON:
+        try:
+            json.loads(output)
+        except json.JSONDecodeError as e:
+            raise ValueError(
+                "Model did not return a valid json output."
+                " Try refining your prompt or save to a different format."
+                f" See line {e.lineno} column {e.colno} (char {e.pos}):"
+                f" {output!r}"
+            ) from e
+    else:
+        raise ValueError(f" Unsupported output format: {output_format}")
+
+
+def _format_output(outputs: Iterable[str], output_format: OutputFormat) -> str:
+    """Format the final output based on specified output_format. MD and TXT
+    are joined with \f and JSON is loaded and dumped as a list"""
+    if output_format == OutputFormat.JSON:
+        output_text = json.dumps(
+            [json.loads(o) for o in outputs],
+            indent=2,
+            ensure_ascii=False,
+        )
+    else:
+        output_text = "\f".join(outputs)
+    return output_text
