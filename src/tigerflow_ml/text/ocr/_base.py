@@ -107,7 +107,7 @@ class _OCRBase:
     @staticmethod
     def run(context: SetupContext, input_file: Path, output_file: Path):
         images = load_images(input_file)
-        logger.info(f"Loaded {len(images)} image(s)")
+        logger.info(f"    Loaded {len(images)} image(s)")
         output_format = _determine_output_format(output_file)
 
         messages = []
@@ -125,13 +125,13 @@ class _OCRBase:
             if completion.finish_reason == "length":
                 if page > 1:
                     msg = (
-                        f"  Output truncated at {context.max_tokens} tokens (page"
+                        f"    Output truncated at {context.max_tokens} tokens (page"
                         f"{page}) — increase --max-tokens and/or --max_model_len "
                         "for a complete result"
                     )
                 else:
                     msg = (
-                        f"  Output truncated at {context.max_tokens} tokens — "
+                        f"    Output truncated at {context.max_tokens} tokens — "
                         "increase --max-tokens and/or --max_model_len for a "
                         "complete result"
                     )
@@ -147,9 +147,9 @@ class _OCRBase:
                 raise RuntimeError(msg)
             if not completion.text.strip():  # empty model output
                 if page > 1:
-                    msg = f"  Model output empty on page {page}"
+                    msg = f"    Model output empty on page {page}"
                 else:
-                    msg = "  Model output empty"
+                    msg = "    Model output empty"
                 logger.warning(msg)
             _validate_output_format(completion.text, output_format)
 
@@ -214,7 +214,8 @@ def _validate_output_format(output: str, output_format: OutputFormat) -> None:
         except Exception as e:
             raise RuntimeError(
                 "Model did not return valid markdown output."
-                " Try refining your prompt or save to a different format"
+                " Try refining your prompt or save to a different format."
+                f" Output returned: {output}"
             ) from e
     elif output_format == OutputFormat.JSON:
         try:
@@ -222,7 +223,8 @@ def _validate_output_format(output: str, output_format: OutputFormat) -> None:
         except json.JSONDecodeError as e:
             raise RuntimeError(
                 "Model did not return a valid json output."
-                " Try refining your prompt or save to a different format"
+                " Try refining your prompt or save to a different format."
+                f" Output returned: {output}"
             ) from e
     else:
         raise ValueError(f" Unsupported output format: {output_format}")
