@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, cast
 from tigerflow.logconfig import logger
 
 if TYPE_CHECKING:
+    from PIL import Image
     from transformers import PretrainedConfig, PreTrainedTokenizerBase
 
 
@@ -87,6 +88,54 @@ def read_text_file_strict(path: Path) -> str:
     if not content.strip():
         raise EmptyFileError(f"File is empty: {path}")
     return content
+
+
+_IMG_EXTENSIONS = [".jpg", ".jpeg", ".png", ".tiff", ".tif", ".bmp", ".pdf"]
+
+
+def load_images(path: Path, max_images: int | None = None) -> list["Image.Image"]:
+    """Load images from a file. Supports image files and PDFs.
+
+    Args:
+        path: Path to the file to read.
+        max_images: The maximum number of images to return if input is a PDF.
+            Defaults to None (returns all).
+
+    Returns:
+        A list of PIL images of length <= max_images.
+
+    Raises:
+        ValueError: If max_images is less than 1
+    """
+    from PIL import Image
+
+    if path.suffix.lower() not in _IMG_EXTENSIONS:
+        raise ValueError(
+            f"{path.suffix} is not a valid file type -- please choose "
+            f"one of: {_IMG_EXTENSIONS}"
+        )
+
+    if max_images is not None and max_images < 1:
+        raise ValueError(f"max_images must be greater than 0. Received {max_images}")
+
+    if path.suffix.lower() == ".pdf":
+        import pymupdf
+
+        limit = max_images if max_images is not None else float("inf")
+        images = []
+        with pymupdf.open(path) as doc:
+            for count, page in enumerate(doc, start=1):
+                if count > limit:
+                    break
+                pix = page.get_pixmap()
+                image = Image.frombytes("RGB", (pix.width, pix.height), pix.samples)
+                images.append(image)
+        return images
+
+    image = Image.open(path)
+    if image.mode != "RGB":
+        image = image.convert("RGB")
+    return [image]
 
 
 def parse_kwargs(value: str | dict, *, name: str = "kwargs") -> dict:

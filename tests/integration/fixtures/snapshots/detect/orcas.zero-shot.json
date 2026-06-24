@@ -1,0 +1,22 @@
+[
+  {
+    "label": "whale",
+    "score": 0.5671,
+    "box": {
+      "xmin": 94,
+      "ymin": 138,
+      "xmax": 685,
+      "ymax": 513
+    }
+  },
+  {
+    "label": "whale",
+    "score": 0.543,
+    "box": {
+      "xmin": 562,
+      "ymin": 121,
+      "xmax": 818,
+      "ymax": 432
+    }
+  }
+]

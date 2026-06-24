@@ -12,6 +12,7 @@ from tigerflow_ml.utils import (
     get_model_config,
     get_model_context_window,
     get_tokenizer,
+    load_images,
     read_text_file_strict,
     read_text_file_with_fallback,
 )
@@ -192,6 +193,72 @@ class TestGetTokenizer:
             "some/model", cache_dir="/cache", revision=None
         )
         assert mock_load.call_count == 2
+
+
+def _make_image_file(path, mode="RGB", color="red", size=(10, 10)):
+    from PIL import Image
+
+    Image.new(mode, size, color=color).save(path)
+    return path
+
+
+def _make_pdf_file(path, num_pages=1):
+    import pymupdf
+
+    doc = pymupdf.open()
+    for _ in range(num_pages):
+        doc.new_page()
+    doc.save(path)
+    doc.close()
+    return path
+
+
+class TestLoadImages:
+    def test_converts_non_rgb_image_to_rgb(self, tmp_path):
+        path = _make_image_file(tmp_path / "test.png", mode="L", color=128)
+        images = load_images(path)
+        assert len(images) == 1
+        assert images[0].mode == "RGB"
+
+    def test_max_images_ignored_for_single_image_file(self, tmp_path):
+        path = _make_image_file(tmp_path / "test.png")
+        images = load_images(path, max_images=5)
+        assert len(images) == 1
+
+    def test_loads_all_pdf_pages_by_default(self, tmp_path):
+        path = _make_pdf_file(tmp_path / "test.pdf", num_pages=3)
+        images = load_images(path)
+        assert len(images) == 3
+        assert all(image.mode == "RGB" for image in images)
+
+    def test_max_images_limits_pdf_pages(self, tmp_path):
+        path = _make_pdf_file(tmp_path / "test.pdf", num_pages=5)
+        images = load_images(path, max_images=2)
+        assert len(images) == 2
+
+    def test_max_images_larger_than_page_count_returns_all(self, tmp_path):
+        path = _make_pdf_file(tmp_path / "test.pdf", num_pages=2)
+        images = load_images(path, max_images=10)
+        assert len(images) == 2
+
+    def test_max_images_zero_raises(self, tmp_path):
+        with pytest.raises(ValueError, match="max_images must be greater than 0"):
+            load_images(tmp_path / "test.pdf", max_images=0)
+
+    def test_max_images_negative_raises(self, tmp_path):
+        with pytest.raises(ValueError, match="max_images must be greater than 0"):
+            load_images(tmp_path / "test.pdf", max_images=-1)
+
+    def test_only_supports_img_and_pdf_extensions(self, tmp_path):
+        from tigerflow_ml.utils import _IMG_EXTENSIONS
+
+        for ext in _IMG_EXTENSIONS:
+            file = "test" + ext
+            path = _make_image_file(tmp_path / file)
+            images = load_images(path)
+            assert len(images) == 1
+        with pytest.raises(ValueError, match="not a valid file type"):
+            load_images(tmp_path / "test.txt")
 
 
 class TestGetModelContextWindow:

@@ -35,6 +35,9 @@ dependencies = [
     "langdetect>=1.0.9",
     "protobuf",
     "accelerate>=1.13.0",
+    "pydantic>=2.0",
+    "soundfile>=0.12",
+    "soxr>=0.3",
 ]
 
 [project.optional-dependencies]
@@ -94,6 +97,9 @@ select = ["E", "F", "I", "UP"]
 
 [tool.ty.src]
 include = ["src"]
+
+[tool.ty.rules]
+unused-type-ignore-comment = "ignore"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
