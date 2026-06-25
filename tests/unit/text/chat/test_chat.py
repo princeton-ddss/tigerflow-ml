@@ -1,4 +1,4 @@
-"""Unit tests for chat_completion._base."""
+"""Unit tests for chat._base."""
 
 import base64
 import io
@@ -8,10 +8,10 @@ from unittest.mock import patch
 import PIL.Image
 import pytest
 
-from tigerflow_ml.text.chat_completion._base import (
+from tigerflow_ml.text.chat._base import (
     _build_img_message,
     _build_txt_message,
-    _ChatCompletionBase,
+    _ChatBase,
 )
 from tigerflow_ml.utils import EmptyFileError
 
@@ -55,13 +55,11 @@ class TestImageResize:
             return _build_img_message(prompt, image, system_message)
 
         with patch(
-            "tigerflow_ml.text.chat_completion._base._build_img_message",
+            "tigerflow_ml.text.chat._base._build_img_message",
             side_effect=capture,
         ):
-            with patch(
-                "tigerflow_ml.text.chat_completion._base._run_chat", return_value=""
-            ):
-                _ChatCompletionBase._process_img_file(context, img_path)
+            with patch("tigerflow_ml.text.chat._base._run_chat", return_value=""):
+                _ChatBase._process_img_file(context, img_path)
 
         return captured["size"]
 
@@ -90,17 +88,17 @@ class TestSetup:
     def test_max_tokens_exceeds_max_model_len_raises(self):
         context = _make_context(max_tokens=512, max_model_len=256)
         with pytest.raises(ValueError, match="max_tokens"):
-            _ChatCompletionBase.setup(context)
+            _ChatBase.setup(context)
 
     def test_max_tokens_equal_to_max_model_len_raises(self):
         context = _make_context(max_tokens=512, max_model_len=512)
         with pytest.raises(ValueError, match="max_tokens"):
-            _ChatCompletionBase.setup(context)
+            _ChatBase.setup(context)
 
     def test_model_not_found_without_allow_fetch_exits(self):
         context = _make_context(allow_fetch=False)
         with pytest.raises(RuntimeError, match="1"):
-            _ChatCompletionBase.setup(context)
+            _ChatBase.setup(context)
 
 
 class TestRun:
@@ -110,7 +108,7 @@ class TestRun:
         input_file.write_text("content")
 
         with pytest.raises(ValueError, match="not currently supported"):
-            _ChatCompletionBase.run(context, input_file, tmp_path / "out.txt")
+            _ChatBase.run(context, input_file, tmp_path / "out.txt")
 
     def test_empty_text_file_raises_skipped(self, tmp_path):
         context = _make_context()
@@ -118,7 +116,7 @@ class TestRun:
         input_file.write_text("   \n  ")
 
         with pytest.raises(EmptyFileError, match="File is empty"):
-            _ChatCompletionBase.run(context, input_file, tmp_path / "out.txt")
+            _ChatBase.run(context, input_file, tmp_path / "out.txt")
 
     def test_whitespace_only_text_file_raises_skipped(self, tmp_path):
         context = _make_context()
@@ -126,7 +124,7 @@ class TestRun:
         input_file.write_text("\t\n\r\n")
 
         with pytest.raises(EmptyFileError, match="File is empty"):
-            _ChatCompletionBase.run(context, input_file, tmp_path / "out.txt")
+            _ChatBase.run(context, input_file, tmp_path / "out.txt")
 
 
 class TestBuildTxtMessage:

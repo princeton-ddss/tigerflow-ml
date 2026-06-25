@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from tigerflow_ml.audio.transcribe.slurm import Transcribe
     from tigerflow_ml.image.detect.slurm import Detect
-    from tigerflow_ml.text.chat_completion.slurm import ChatCompletion
+    from tigerflow_ml.text.chat.slurm import Chat
     from tigerflow_ml.text.ocr.slurm import OCR
     from tigerflow_ml.text.translate.slurm import Translate
 
@@ -18,10 +18,10 @@ _LAZY_TASKS = {
     "Translate": "tigerflow_ml.text.translate.slurm",
     "Transcribe": "tigerflow_ml.audio.transcribe.slurm",
     "Detect": "tigerflow_ml.image.detect.slurm",
-    "ChatCompletion": "tigerflow_ml.text.chat_completion.slurm",
+    "Chat": "tigerflow_ml.text.chat.slurm",
 }
 
-__all__ = ["OCR", "Translate", "Transcribe", "Detect", "ChatCompletion"]
+__all__ = ["OCR", "Translate", "Transcribe", "Detect", "Chat"]
 
 
 def __getattr__(name: str):

@@ -64,4 +64,4 @@ nav:
       - Translation: tasks/translate.md
       - Transcription: tasks/transcribe.md
       - Object Detection: tasks/detect.md
-      - Chat Completion: tasks/chat_completion.md
+      - Chat: tasks/chat.md

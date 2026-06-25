@@ -16,7 +16,7 @@ _TEXT_EXTENSIONS = [".txt", ".text", ".md", ".log", ".rtf"]
 _IMG_EXTENSIONS = [".jpg", ".jpeg", ".png", ".tiff", ".tif", ".bmp"]
 
 
-class _ChatCompletionBase:
+class _ChatBase:
     """Analyze text using Hugging Face models."""
 
     class Params(VLLMParams):
@@ -115,9 +115,9 @@ class _ChatCompletionBase:
     def run(context: SetupContext, input_file: Path, output_file: Path):
 
         if input_file.suffix.lower() in _TEXT_EXTENSIONS:
-            result = _ChatCompletionBase._process_text_file(context, input_file)
+            result = _ChatBase._process_text_file(context, input_file)
         elif input_file.suffix.lower() in _IMG_EXTENSIONS:
-            result = _ChatCompletionBase._process_img_file(context, input_file)
+            result = _ChatBase._process_img_file(context, input_file)
         else:
             raise ValueError(
                 f"File extension {input_file.suffix} not currently supported - "

@@ -12,7 +12,7 @@ ML tasks for [TigerFlow](https://github.com/princeton-ddss/tigerflow) — privat
 pip install tigerflow-ml
 ```
 
-If using a task that relies on `vllm` (chat completion, OCR, or translation), install with:
+If using a task that relies on `vllm` (chat, OCR, or translation), install with:
 
 ```bash
 pip install tigerflow-ml[vllm]
@@ -25,7 +25,7 @@ pip install tigerflow-ml[vllm]
 |------------------|---------------------------------------|-----------------------------------|
 | OCR              | Extract text from images and PDFs     | `ocr` / `ocr-local`               |
 | Translation      | Translate text documents              | `translate` / `translate-local`   |
-| Chat Completion  | Apply a chat prompt to images or text | `chat-completion` / `chat-completion-local` |
+| Chat             | Apply a chat prompt to images or text | `chat` / `chat-local`             |
 | Transcription    | Transcribe audio to text              | `transcribe` / `transcribe-local` |
 | Object Detection | Detect objects in images and videos   | `detect` / `detect-local`         |
 
@@ -44,7 +44,7 @@ Run a task directly:
 ```bash
 python -m tigerflow_ml.text.ocr.slurm --help
 python -m tigerflow_ml.text.translate.slurm --help
-python -m tigerflow_ml.text.chat_completion.slurm --help
+python -m tigerflow_ml.text.chat.slurm --help
 python -m tigerflow_ml.audio.transcribe.slurm --help
 python -m tigerflow_ml.image.detect.slurm --help
 ```

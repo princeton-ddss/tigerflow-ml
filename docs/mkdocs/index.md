@@ -39,7 +39,7 @@ hide:
 - [Translation](tasks/translate.md) — Translate text documents
 - [Transcription](tasks/transcribe.md) — Transcribe audio to text
 - [Object Detection](tasks/detect.md) — Detect objects in images and videos
-- [Chat Completion](tasks/chat_completion.md) - Apply a chat prompt to text or image documents
+- [Chat](tasks/chat.md) - Apply a chat prompt to text or image documents
 
 ## Installation
 
@@ -49,7 +49,7 @@ TigerFlow ML requires [TigerFlow](https://github.com/princeton-ddss/tigerflow) t
 pip install tigerflow tigerflow-ml
 ```
 
-If using a task that relies on `vllm` (chat completion, OCR, or translation), install with:
+If using a task that relies on `vllm` (chat, OCR, or translation), install with:
 
 ```bash
 pip install tigerflow-ml[vllm]
