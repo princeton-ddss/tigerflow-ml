@@ -1,0 +1,28 @@
+# Configures GitHub's auto-generated release notes (the "Generate release notes"
+# button when drafting a release). PRs are grouped into the first category whose
+# label they match, so order matters and "*" must come last.
+# https://docs.github.com/en/repositories/releasing-projects-on-github/automatically-generated-release-notes
+changelog:
+  exclude:
+    authors:
+      - dependabot
+      - github-actions
+  categories:
+    - title: ⚠️ Breaking Changes
+      labels:
+        - breaking-change
+    - title: ✨ Features
+      labels:
+        - feature
+    - title: 🐛 Bug Fixes
+      labels:
+        - bug
+    - title: ♻️ Refactors
+      labels:
+        - refactor
+    - title: 📚 Documentation
+      labels:
+        - documentation
+    - title: 🧰 Other Changes
+      labels:
+        - "*"
