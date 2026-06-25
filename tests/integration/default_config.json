@@ -16,7 +16,7 @@
       "model": "PekingU/rtdetr_r50vd",
       "device": "auto"
     },
-    "chat-completion": {
+    "chat": {
       "model": "google/gemma-3-1b-it",
       "prompt": "Summarize the following text in one sentence: {text}"
     }

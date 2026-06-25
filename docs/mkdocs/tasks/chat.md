@@ -1,4 +1,4 @@
-# Chat Completion
+# Chat
 
 Analyze text or image files using vLLM compatible HuggingFace chat models.
 
@@ -42,9 +42,9 @@ Any HuggingFace model that is compatible with vLLM's `LLM.chat()`.
 
     ```yaml title="config.yaml"
     tasks:
-        - name: chat_completion
+        - name: chat
             kind: slurm
-            module: tigerflow_ml.text.chat_completion.slurm
+            module: tigerflow_ml.text.chat.slurm
             input_ext: .txt
             output_ext: .txt
             max_workers: 1
@@ -112,9 +112,9 @@ Any HuggingFace model that is compatible with vLLM's `LLM.chat()`.
 
     ```yaml title="config.yaml"
     tasks:
-        - name: chat_completion
+        - name: chat
             kind: slurm
-            module: tigerflow_ml.text.chat_completion.slurm
+            module: tigerflow_ml.text.chat.slurm
             input_ext: .jpeg
             output_ext: .txt
             max_workers: 1
