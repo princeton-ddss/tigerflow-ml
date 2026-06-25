@@ -21,7 +21,7 @@
     
     
       
-        <title>Chat - TigerFlow ML</title>
+        <title>Chat Completion - TigerFlow ML</title>
       
     
     
@@ -74,7 +74,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#chat" class="md-skip">
+        <a href="#chat-completion" class="md-skip">
           Skip to content
         </a>
       
@@ -111,7 +111,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Chat
+              Chat Completion
             
           </span>
         </div>
@@ -520,7 +520,7 @@
   <span class="md-ellipsis">
     
   
-    Chat
+    Chat Completion
   
 
     
@@ -538,7 +538,7 @@
   <span class="md-ellipsis">
     
   
-    Chat
+    Chat Completion
   
 
     
@@ -791,7 +791,7 @@
   
 
 
-<h1 id="chat">Chat<a class="headerlink" href="#chat" title="Permanent link">&para;</a></h1>
+<h1 id="chat-completion">Chat Completion<a class="headerlink" href="#chat-completion" title="Permanent link">&para;</a></h1>
 <p>Analyze text or image files using vLLM compatible HuggingFace chat models.</p>
 <h2 id="parameters">Parameters<a class="headerlink" href="#parameters" title="Permanent link">&para;</a></h2>
 <table>
@@ -887,9 +887,9 @@
 <div class="tabbed-content">
 <div class="tabbed-block">
 <div class="highlight"><span class="filename">config.yaml</span><pre><span></span><code><span class="nt">tasks</span><span class="p">:</span>
-<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">chat</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">chat_completion</span>
 <span class="w">        </span><span class="l l-Scalar l-Scalar-Plain">kind</span><span class="p p-Indicator">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">slurm</span>
-<span class="w">        </span><span class="l l-Scalar l-Scalar-Plain">module</span><span class="p p-Indicator">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">tigerflow_ml.text.chat.slurm</span>
+<span class="w">        </span><span class="l l-Scalar l-Scalar-Plain">module</span><span class="p p-Indicator">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">tigerflow_ml.text.chat_completion.slurm</span>
 <span class="w">        </span><span class="l l-Scalar l-Scalar-Plain">input_ext</span><span class="p p-Indicator">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">.txt</span>
 <span class="w">        </span><span class="l l-Scalar l-Scalar-Plain">output_ext</span><span class="p p-Indicator">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">.txt</span>
 <span class="w">        </span><span class="l l-Scalar l-Scalar-Plain">max_workers</span><span class="p p-Indicator">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1</span>
@@ -952,9 +952,9 @@
 <div class="tabbed-content">
 <div class="tabbed-block">
 <div class="highlight"><span class="filename">config.yaml</span><pre><span></span><code><span class="nt">tasks</span><span class="p">:</span>
-<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">chat</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">chat_completion</span>
 <span class="w">        </span><span class="l l-Scalar l-Scalar-Plain">kind</span><span class="p p-Indicator">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">slurm</span>
-<span class="w">        </span><span class="l l-Scalar l-Scalar-Plain">module</span><span class="p p-Indicator">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">tigerflow_ml.text.chat.slurm</span>
+<span class="w">        </span><span class="l l-Scalar l-Scalar-Plain">module</span><span class="p p-Indicator">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">tigerflow_ml.text.chat_completion.slurm</span>
 <span class="w">        </span><span class="l l-Scalar l-Scalar-Plain">input_ext</span><span class="p p-Indicator">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">.jpeg</span>
 <span class="w">        </span><span class="l l-Scalar l-Scalar-Plain">output_ext</span><span class="p p-Indicator">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">.txt</span>
 <span class="w">        </span><span class="l l-Scalar l-Scalar-Plain">max_workers</span><span class="p p-Indicator">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1</span>
