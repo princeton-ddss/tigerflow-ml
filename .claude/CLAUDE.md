@@ -61,3 +61,22 @@ Tasks are registered as `tigerflow.tasks` entry points in `pyproject.toml` (e.g.
 - Python: 3.10–3.13 (tested in matrix)
 - CI runs lockfile check, pre-commit, pytest across Python versions, then builds wheel/sdist
 - CD triggers on GitHub release: publishes to PyPI via trusted publishing
+
+## Dependency Policy
+
+tigerflow-ml is installed into dedicated, per-task environments (not added to
+shared user venvs), so library upper bounds don't cause the resolver collisions
+they would in a general-purpose library.
+
+- **Cap** dependencies whose majors are likely to break us or that have a
+  history of breaking within minors: `tigerflow` (unstabilized internal API),
+  `vllm` (breaks between minors — cap tracks the tested range), and defensive
+  major caps on `transformers` and `torch`.
+- **Leave unbounded** stable libs unlikely to break us: `Pillow`, `pymupdf`,
+  `langdetect`, `opencv-python-headless`, `sentencepiece`, `protobuf`.
+- **Implicit runtime deps** that have no `import` in `src/` but are still
+  required: `timm` (DETR/RT-DETR backbones, detect task) and `accelerate`
+  (transcribe's `from_pretrained(device_map=...)`). Keep them; comments in
+  `pyproject.toml` say why.
+- **Bumping:** Dependabot opens version-bump PRs (`.github/dependabot.yml`);
+  the integration suite verifies them against real models before merge.
