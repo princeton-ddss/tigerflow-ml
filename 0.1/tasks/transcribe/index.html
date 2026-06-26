@@ -19,7 +19,7 @@
       
       
       <link rel="icon" href="../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.2">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
     
     
       
@@ -521,6 +521,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#how-it-works" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How it works
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#supported-input-formats" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -570,6 +581,28 @@
     <span class="md-ellipsis">
       
         Transcribe audio to text
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#cleanest-transcript-slower" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Cleanest transcript (slower)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#exact-reconciliation-with-raw" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Exact reconciliation with --raw
       
     </span>
   </a>
@@ -640,6 +673,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../chat/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Chat
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -678,6 +739,17 @@
     <span class="md-ellipsis">
       
         Parameters
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#how-it-works" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How it works
       
     </span>
   </a>
@@ -734,6 +806,28 @@
     <span class="md-ellipsis">
       
         Transcribe audio to text
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#cleanest-transcript-slower" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Cleanest transcript (slower)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#exact-reconciliation-with-raw" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Exact reconciliation with --raw
       
     </span>
   </a>
@@ -801,8 +895,8 @@
 <tbody>
 <tr>
 <td><code>--model</code></td>
-<td><code>openai/whisper-large-v3</code></td>
-<td>HuggingFace model repo ID</td>
+<td></td>
+<td>HuggingFace model repo ID (a Whisper checkpoint)</td>
 </tr>
 <tr>
 <td><code>--revision</code></td>
@@ -822,41 +916,84 @@
 <tr>
 <td><code>--language</code></td>
 <td></td>
-<td>Source language code (e.g. <code>en</code>, <code>de</code>). Empty for auto-detect</td>
+<td>Source language code (e.g. <code>en</code>, <code>de</code>). Empty lets the model detect it per file</td>
 </tr>
 <tr>
-<td><code>--output-format</code></td>
-<td><code>text</code></td>
-<td>Output format: <code>text</code>, <code>srt</code>, or <code>json</code></td>
+<td><code>--raw</code></td>
+<td><code>false</code></td>
+<td>For <code>.json</code> output: emit un-merged per-window segments with overlap annotations</td>
+</tr>
+<tr>
+<td><code>--windowing</code></td>
+<td><code>batched</code></td>
+<td>Decode strategy: <code>batched</code> (fast, overlapping windows) or <code>native</code> (seam-free, slower)</td>
 </tr>
 <tr>
 <td><code>--batch-size</code></td>
 <td><code>16</code></td>
-<td>Batch size for processing audio chunks</td>
+<td>Number of 30s windows decoded per GPU batch (batched mode)</td>
 </tr>
 <tr>
-<td><code>--chunk-length-s</code></td>
-<td><code>30.0</code></td>
-<td>Length of audio chunks in seconds</td>
-</tr>
-<tr>
-<td><code>--stride-length-s</code></td>
+<td><code>--overlap-s</code></td>
 <td><code>5.0</code></td>
-<td>Overlap between chunks in seconds</td>
+<td>Overlap (seconds) between consecutive 30s windows (batched mode)</td>
 </tr>
 <tr>
-<td><code>--return-timestamps</code></td>
-<td><code>false</code></td>
-<td>Return word/segment timestamps (required for SRT)</td>
+<td><code>--allow-fetch</code></td>
+<td><code>--no-allow-fetch</code></td>
+<td>Allow downloads from HuggingFace Hub (network access required)</td>
+</tr>
+<tr>
+<td><code>--seed</code></td>
+<td><code>42</code></td>
+<td>Random seed for reproducibility</td>
 </tr>
 </tbody>
 </table>
+<h2 id="how-it-works">How it works<a class="headerlink" href="#how-it-works" title="Permanent link">&para;</a></h2>
+<p>Each audio file is loaded and resampled to 16kHz mono, then transcribed with
+<code>WhisperForConditionalGeneration</code>. Two decode strategies are available via
+<code>--windowing</code>:</p>
+<ul>
+<li><strong><code>batched</code></strong> (default) — the audio is cut into overlapping 30s windows
+  (<code>--overlap-s</code>) that decode in parallel on the GPU, then stitched into one
+  transcript. Fast. The overlap lets a word straddling a 30s boundary be
+  captured by a window; stitching is <strong>loss-averse</strong> — it never drops a span,
+  at the cost of occasionally repeating a few words at a seam.</li>
+<li><strong><code>native</code></strong> — the whole file is handed to Whisper's sequential long-form
+  algorithm, which advances each 30s context to the model's own last emitted
+  timestamp, so boundaries fall between segments rather than mid-word. No
+  seams, no merge, cleanest transcript — but it decodes sequentially and so is
+  much slower than <code>batched</code>.</li>
+</ul>
+<p>If you need an exact, duplicate-free transcript from the fast path, write to a
+<code>.json</code> output and pass <code>--raw</code> to reconcile the overlaps downstream (see
+below).</p>
 <h2 id="supported-input-formats">Supported Input Formats<a class="headerlink" href="#supported-input-formats" title="Permanent link">&para;</a></h2>
-<p>Audio files supported by the Whisper pipeline (WAV, MP3, FLAC, OGG, etc.).</p>
+<p>Audio is decoded with <a href="https://python-soundfile.readthedocs.io/"><code>soundfile</code></a>
+(libsndfile): WAV, FLAC, OGG/Vorbis, MP3, AIFF, and the other formats
+libsndfile supports. M4A/AAC and video containers (MP4, MOV) are not supported —
+extract the audio to a supported format first.</p>
 <h2 id="output-format">Output Format<a class="headerlink" href="#output-format" title="Permanent link">&para;</a></h2>
-<p>Depends on <code>--output-format</code>: plain text (default), SRT subtitles, or JSON with timestamps. See <a href="#transcribe-audio-to-text">examples</a> below.</p>
+<p>The format is chosen from the output file extension set by <code>--output-ext</code>:</p>
+<ul>
+<li><strong><code>.txt</code></strong> (or any other extension) — plain transcript text.</li>
+<li><strong><code>.srt</code></strong> — SubRip subtitles.</li>
+<li><strong><code>.json</code></strong> — merged transcript matching the
+  <a href="https://github.com/princeton-ddss/speech-recognition-inference">speech-recognition-inference</a>
+  service schema: <code>{language, text, chunks: [{text, timestamp}]}</code>.</li>
+</ul>
+<p>For <code>.json</code> output, the <code>--raw</code> flag instead emits every window's segments,
+un-merged, each tagged with its <code>window</code> index and an <code>overlap</code> flag marking
+segments that fall in a region shared with the next window. Because overlapping
+windows are decoded independently they agree semantically but not
+token-for-token, so <code>raw</code> defers reconciliation to you (or an LLM): drop the
+<code>overlap</code> segments for a quick transcript, or reconcile both copies for an exact
+one.</p>
 <h2 id="models">Models<a class="headerlink" href="#models" title="Permanent link">&para;</a></h2>
-<p>Any HuggingFace <a href="https://huggingface.co/models?pipeline_tag=automatic-speech-recognition"><code>automatic-speech-recognition</code></a> model is supported. The <a href="https://huggingface.co/collections/openai/whisper-release-6501bba2cf999715571c6057">OpenAI Whisper</a> family is recommended.</p>
+<p>Whisper checkpoints are supported. The
+<a href="https://huggingface.co/collections/openai/whisper-release-6501bba2cf999715571c6057">OpenAI Whisper</a>
+family is recommended.</p>
 <table>
 <thead>
 <tr>
@@ -868,7 +1005,7 @@
 </thead>
 <tbody>
 <tr>
-<td><a href="https://huggingface.co/openai/whisper-large-v3"><code>openai/whisper-large-v3</code></a> (default)</td>
+<td><a href="https://huggingface.co/openai/whisper-large-v3"><code>openai/whisper-large-v3</code></a></td>
 <td>1.5B</td>
 <td>1x</td>
 <td>Apache 2.0</td>
@@ -920,12 +1057,11 @@ nearly as accurate as <code>large-v3</code> at roughly 3x the speed.</p>
 <span class="w">    </span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">local</span>
 <span class="w">    </span><span class="nt">module</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">tigerflow_ml.audio.transcribe.local</span>
 <span class="w">    </span><span class="nt">input_ext</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">.mp3</span>
-<span class="w">    </span><span class="nt">output_ext</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">.txt</span><span class="w">  </span><span class="c1"># or .srt, .json</span>
+<span class="w">    </span><span class="nt">output_ext</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">.txt</span><span class="w">  </span><span class="c1"># .txt -&gt; text, .srt -&gt; subtitles, .json -&gt; JSON</span>
 <span class="w">    </span><span class="nt">params</span><span class="p">:</span>
-<span class="w">      </span><span class="c1"># output_format: text   # (default) plain text</span>
-<span class="w">      </span><span class="c1"># output_format: srt    # SRT subtitles (requires return_timestamps)</span>
-<span class="w">      </span><span class="c1"># output_format: json   # raw Whisper output with timestamps</span>
-<span class="w">      </span><span class="c1"># return_timestamps: true</span>
+<span class="w">      </span><span class="nt">model</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">openai/whisper-large-v3</span>
+<span class="w">      </span><span class="nt">allow_fetch</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">True</span>
+<span class="w">      </span><span class="c1"># raw: True   # with output_ext .json: un-merged, overlap-annotated segments</span>
 </code></pre></div>
 </div>
 <div class="tabbed-block">
@@ -953,6 +1089,7 @@ And then move on to discuss fault tolerance in large-scale systems.
 </div>
 <div class="tabbed-block">
 <div class="highlight"><span class="filename">lecture.json</span><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;language&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;en&quot;</span><span class="p">,</span>
 <span class="w">  </span><span class="nt">&quot;text&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Welcome to today&#39;s lecture on distributed computing...&quot;</span><span class="p">,</span>
 <span class="w">  </span><span class="nt">&quot;chunks&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
 <span class="w">    </span><span class="p">{</span>
@@ -969,10 +1106,45 @@ And then move on to discuss fault tolerance in large-scale systems.
 </div>
 </div>
 </div>
-<div class="admonition note">
-<p class="admonition-title">Note</p>
-<p>SRT and JSON output require <code>return_timestamps: true</code>.</p>
-</div>
+<h3 id="cleanest-transcript-slower">Cleanest transcript (slower)<a class="headerlink" href="#cleanest-transcript-slower" title="Permanent link">&para;</a></h3>
+<p>When transcript quality matters more than speed, use <code>--windowing native</code>. It
+avoids window seams entirely and produces no boundary duplication, at the cost
+of sequential (slower) decoding.</p>
+<div class="highlight"><span class="filename">config.yaml</span><pre><span></span><code><span class="nt">tasks</span><span class="p">:</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">transcribe</span>
+<span class="w">    </span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">local</span>
+<span class="w">    </span><span class="nt">module</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">tigerflow_ml.audio.transcribe.local</span>
+<span class="w">    </span><span class="nt">input_ext</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">.mp3</span>
+<span class="w">    </span><span class="nt">output_ext</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">.txt</span>
+<span class="w">    </span><span class="nt">params</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">model</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">openai/whisper-large-v3</span>
+<span class="w">      </span><span class="nt">windowing</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">native</span>
+<span class="w">      </span><span class="nt">allow_fetch</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">True</span>
+</code></pre></div>
+<h3 id="exact-reconciliation-with-raw">Exact reconciliation with <code>--raw</code><a class="headerlink" href="#exact-reconciliation-with-raw" title="Permanent link">&para;</a></h3>
+<p>Writing to a <code>.json</code> output with <code>raw: True</code> emits every window's segments with
+overlap annotations, so you can reconcile boundaries exactly — for example by
+feeding the overlapping segments to an LLM.</p>
+<div class="highlight"><span class="filename">config.yaml</span><pre><span></span><code><span class="nt">tasks</span><span class="p">:</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">transcribe</span>
+<span class="w">    </span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">local</span>
+<span class="w">    </span><span class="nt">module</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">tigerflow_ml.audio.transcribe.local</span>
+<span class="w">    </span><span class="nt">input_ext</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">.mp3</span>
+<span class="w">    </span><span class="nt">output_ext</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">.json</span>
+<span class="w">    </span><span class="nt">params</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">model</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">openai/whisper-large-v3</span>
+<span class="w">      </span><span class="nt">raw</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">True</span>
+<span class="w">      </span><span class="nt">allow_fetch</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">True</span>
+</code></pre></div>
+<div class="highlight"><span class="filename">recording.json (raw)</span><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;language&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;en&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;overlap_s&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">5.0</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;segments&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">    </span><span class="p">{</span><span class="nt">&quot;text&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot; ...the urban accent in Sligo&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;timestamp&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mf">57.7</span><span class="p">,</span><span class="w"> </span><span class="mf">59.5</span><span class="p">],</span><span class="w"> </span><span class="nt">&quot;window&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;overlap&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">},</span>
+<span class="w">    </span><span class="p">{</span><span class="nt">&quot;text&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot; which is, let&#39;s say the town...&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;timestamp&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mf">59.0</span><span class="p">,</span><span class="w"> </span><span class="mf">65.7</span><span class="p">],</span><span class="w"> </span><span class="nt">&quot;window&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;overlap&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">}</span>
+<span class="w">  </span><span class="p">]</span>
+<span class="p">}</span>
+</code></pre></div>
 <h3 id="transcribe-with-language-hint">Transcribe with language hint<a class="headerlink" href="#transcribe-with-language-hint" title="Permanent link">&para;</a></h3>
 <p>Setting <code>--language</code> skips auto-detection and can improve accuracy when the source
 language is known:</p>
@@ -983,7 +1155,9 @@ language is known:</p>
 <span class="w">    </span><span class="nt">input_ext</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">.mp3</span>
 <span class="w">    </span><span class="nt">output_ext</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">.txt</span>
 <span class="w">    </span><span class="nt">params</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">model</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">openai/whisper-large-v3</span>
 <span class="w">      </span><span class="nt">language</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">en</span>
+<span class="w">      </span><span class="nt">allow_fetch</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">True</span>
 </code></pre></div>
 <h3 id="run-on-hpc-with-slurm">Run on HPC with Slurm<a class="headerlink" href="#run-on-hpc-with-slurm" title="Permanent link">&para;</a></h3>
 <p>For bulk transcription of large audio collections, use the Slurm variant to distribute
@@ -1000,6 +1174,9 @@ work across compute nodes:</p>
 <span class="w">      </span><span class="nt">gpus</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1</span>
 <span class="w">      </span><span class="nt">memory</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">16G</span>
 <span class="w">      </span><span class="nt">time</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">04:00:00</span>
+<span class="w">    </span><span class="nt">params</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">model</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">openai/whisper-large-v3</span>
+<span class="w">      </span><span class="nt">cache_dir</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">~/path/to/model/hub/</span>
 </code></pre></div>
 
 
