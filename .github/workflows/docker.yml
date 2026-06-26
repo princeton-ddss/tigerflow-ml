@@ -20,7 +20,7 @@ jobs:
           ref: ${{ github.event.release.tag_name }}
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       # Publish only on release; a manual run is a build-only smoke test.
       - name: Log in to GHCR
