@@ -203,6 +203,15 @@ def _make_image_file(path, mode="RGB", color="red", size=(10, 10)):
     return path
 
 
+def _make_heic_file(path, size=(10, 10)):
+    import pillow_heif
+    from PIL import Image
+
+    pillow_heif.register_heif_opener()
+    Image.new("RGB", size, color="red").save(path, format="HEIF")
+    return path
+
+
 def _make_pdf_file(path, num_pages=1):
     import pymupdf
 
@@ -250,12 +259,21 @@ class TestLoadImages:
         with pytest.raises(ValueError, match="max_images must be greater than 0"):
             load_images(tmp_path / "test.pdf", max_images=-1)
 
+    def test_loads_heic_image(self, tmp_path):
+        path = _make_heic_file(tmp_path / "test.heic")
+        images = load_images(path)
+        assert len(images) == 1
+        assert images[0].mode == "RGB"
+
     def test_only_supports_img_and_pdf_extensions(self, tmp_path):
         from tigerflow_ml.utils import _IMG_EXTENSIONS
 
         for ext in _IMG_EXTENSIONS:
             file = "test" + ext
-            path = _make_image_file(tmp_path / file)
+            if ext in (".heic", ".heif"):
+                path = _make_heic_file(tmp_path / file)
+            else:
+                path = _make_image_file(tmp_path / file)
             images = load_images(path)
             assert len(images) == 1
         with pytest.raises(ValueError, match="not a valid file type"):
