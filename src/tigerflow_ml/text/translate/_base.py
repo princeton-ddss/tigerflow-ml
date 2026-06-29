@@ -152,7 +152,7 @@ class _TranslateBase:
         )
 
         tokenizer = get_tokenizer(
-            context.model,
+            model_name=context.model,
             allow_fetch=context.allow_fetch,
             cache_dir=context.cache_dir,
             revision=context.revision,
@@ -171,7 +171,7 @@ class _TranslateBase:
         logger.info("Initializing HuggingFace backend...")
 
         context.translator = build_translator(
-            context.model,
+            model_name=context.model,
             tokenizer=tokenizer,
             max_chunk_tokens=context.chunk_size,
             max_model_len=context.max_model_len,
@@ -195,11 +195,11 @@ class _TranslateBase:
     def run(context: SetupContext, input_file: Path, output_file: Path):
 
         _translate_file(
-            context.translator,
-            input_file,
-            output_file,
-            context.source_lang,
-            context.target_lang,
+            translator=context.translator,
+            input_file=input_file,
+            output_file=output_file,
+            source_lang=context.source_lang,
+            target_lang=context.target_lang,
             auto_lang_detect=context.auto_lang_detect,
             use_fallback_prompt=context.use_fallback_prompt,
         )
@@ -306,7 +306,10 @@ def _translate_file(
     logger.info(f"  File size: {len(content):,} characters")
 
     resolved_lang = _resolve_source_lang(
-        content, source_lang, target_lang, auto_lang_detect
+        content=content,
+        source_lang=source_lang,
+        target_lang=target_lang,
+        auto_lang_detect=auto_lang_detect,
     )
 
     original_prompt = translator.prompt_template
@@ -390,13 +393,13 @@ def _translate_text(
 
     if count_tokens(text, tokenizer) <= max_tokens:
         return _translate_chunk_with_retry(
-            text,
-            translator,
-            source_lang,
-            target_lang,
-            tokenizer,
-            max_tokens,
-            max_retries,
+            text=text,
+            translator=translator,
+            source_lang=source_lang,
+            target_lang=target_lang,
+            tokenizer=tokenizer,
+            max_tokens=max_tokens,
+            max_retries=max_retries,
         )
 
     chunks = chunk_text_by_tokens(text, tokenizer, max_tokens=max_tokens)
@@ -447,13 +450,13 @@ def _translate_chunk_with_retry(
                 f"({count_tokens(sub, tokenizer)} tokens)..."
             )
             result = _translate_chunk_with_retry(
-                sub,
-                translator,
-                source_lang,
-                target_lang,
-                tokenizer,
-                max_tokens,
-                max_retries,
+                text=sub,
+                translator=translator,
+                source_lang=source_lang,
+                target_lang=target_lang,
+                tokenizer=tokenizer,
+                max_tokens=max_tokens,
+                max_retries=max_retries,
                 retry_depth=retry_depth + 1,
             )
             parts.append(result)
