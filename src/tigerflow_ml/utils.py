@@ -90,7 +90,17 @@ def read_text_file_strict(path: Path) -> str:
     return content
 
 
-_IMG_EXTENSIONS = [".jpg", ".jpeg", ".png", ".tiff", ".tif", ".bmp", ".pdf"]
+_IMG_EXTENSIONS = [
+    ".jpg",
+    ".jpeg",
+    ".png",
+    ".tiff",
+    ".tif",
+    ".bmp",
+    ".pdf",
+    ".heic",
+    ".heif",
+]
 
 
 def load_images(path: Path, max_images: int | None = None) -> list["Image.Image"]:
@@ -114,6 +124,10 @@ def load_images(path: Path, max_images: int | None = None) -> list["Image.Image"
             f"{path.suffix} is not a valid file type -- please choose "
             f"one of: {_IMG_EXTENSIONS}"
         )
+    if path.suffix.lower() == ".heic" or path.suffix.lower() == ".heif":
+        from pillow_heif import register_heif_opener
+
+        register_heif_opener()
 
     if max_images is not None and max_images < 1:
         raise ValueError(f"max_images must be greater than 0. Received {max_images}")
