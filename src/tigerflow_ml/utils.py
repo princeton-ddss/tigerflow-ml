@@ -184,7 +184,7 @@ def process_response_schema(schema_type: str, schema_value: str):
         schema_value: The schema value as a string. For "choice", a list;
             for "json", a JSON object; for "regex"/"grammar", a raw string.
     """
-    from vllm.sampling_params import StructuredOutputsParams
+    from vllm.sampling_params import StructuredOutputsParams  # type: ignore
 
     if schema_type == "choice":
         try:

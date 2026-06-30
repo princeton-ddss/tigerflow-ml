@@ -18,6 +18,7 @@ Extract text from images and PDFs using HuggingFace image-text-to-text models.
 | `--sampling-kwargs` | `{}`                        | Additional kwargs for vLLM's SamplingParams() constructor. Supplied values override task defaults. |
 | `--chat-kwargs`   | `{}`                          | Additional kwargs for vLLM's LLM.chat(). Supplied values override task defaults.                   |
 | `--prompt`        |                               | Prompt for image-text-to-text models                                                               |
+| `--json-schema`   |                               | Constrain the model's output to a JSON schema using vllm structured outputs. Provide the schema as a JSON string, e.g. `{"type":"object","properties":{"text":{"type":"string"}},"required":["text"]}`. Requires a model that supports structured outputs. |
 
 
 
