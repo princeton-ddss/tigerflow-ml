@@ -16,6 +16,7 @@ Analyze text or image files using vLLM compatible HuggingFace chat models.
 | `--max-model-len`     |                           | Maximum sequence length (input + output tokens) passed to vLLM. Set this for large-context models to avoid OOM. |
 | `--max-image-pixels`  |                           | Maximum image dimension in pixels (width or height). Larger images are downscaled while preserving aspect ratio. |
 | `--temperature`       | `0`                       | The model temperature. Lower numbers make models more deterministic |
+| `--response-schema`   |                           | Constrain the model's output format using vllm structured outputs. Format: `<type>=<value>`. Types: `choice` (list of strings), `json` (JSON schema dict), `regex` (regular expression), `grammar` (EBNF/GBNF grammar string). |
 | `--seed`              | `42`                      | The seed to set for more reproducible behavior                 |
 | `--llm-kwargs`        | `{}`                      | Additional kwargs for vLLM's LLM() constructor. Supplied values override task defaults. |
 | `--sampling-kwargs`   | `{}`                      | Additional kwargs for vLLM's SamplingParams() constructor. Supplied values override task defaults. |
@@ -144,4 +145,63 @@ Any HuggingFace model that is compatible with vLLM's `LLM.chat()`.
 
     ```text title="hummingbird.txt"
     "Nature's Symphony: A Hummingbird's Dance with a Lily"
+    ```
+
+### Structured outputs
+
+If you're using a model which supports [structured output](https://docs.vllm.ai/en/latest/features/structured_outputs/#offline-inference), you can provide one using `--response-schema`.
+
+=== "Choice"
+
+    ```yaml title="config.yaml"
+    tasks:
+        - name: chat
+            kind: slurm
+            module: tigerflow_ml.text.chat.slurm
+            input_ext: .txt
+            output_ext: .txt
+            max_workers: 1
+            worker_resources:
+                cpus: 1
+                gpus: 1
+                memory: 10G
+                time: 00:10:00
+                sbatch_options:
+                    - "--constraint=gpu80"
+            setup_commands:
+                - source ~/github/tigerflow-ml/.venv/bin/activate
+                - export VLLM_USE_FLASHINFER_SAMPLER=0
+            params:
+                model: Qwen/Qwen2.5-VL-7B-Instruct
+                cache-dir: ~/github/tigerflow-ml/.hf/hub/
+                prompt: 'What is the sentiment of this text?'
+                response_schema: choice=["Positive", "Negative]
+    ```
+
+=== "JSON"
+
+    ```yaml title="config.yaml"
+    tasks:
+        - name: chat
+            kind: slurm
+            module: tigerflow_ml.text.chat.slurm
+            input_ext: .jpeg
+            output_ext: .txt
+            max_workers: 1
+            worker_resources:
+                cpus: 1
+                gpus: 2
+                memory: 8G
+                time: 01:00:00
+                sbatch_options:
+                    - "--constraint=gpu80"
+            setup_commands:
+                - source ~/github/tigerflow-ml/.venv/bin/activate
+                - export VLLM_USE_FLASHINFER_SAMPLER=0
+            params:
+            model: Qwen/Qwen2.5-VL-32B-Instruct
+                cache-dir: ~/github/tigerflow-ml/.hf/hub/
+                prompt: What is in this image?
+                response_schema: 'json={"type":"object","properties":{"objects":{"type":"array","items":{"type":"string"}},"scene":{"type":"string"},"dominant_colors":{"type":"array","items":{"type":"string"}}},"required":["objects","scene"]}'
+                max-model-len: 4096
     ```
