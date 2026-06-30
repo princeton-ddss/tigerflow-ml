@@ -308,6 +308,7 @@ class TestStripMarkdownFromJson:
 
 class TestProcessResponseSchema:
     def _call(self, schema_type, schema_value):
+        pytest.importorskip("vllm")
         with patch("vllm.sampling_params.StructuredOutputsParams") as mock_cls:
             process_response_schema(schema_type, schema_value)
         return mock_cls

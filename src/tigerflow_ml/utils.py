@@ -184,8 +184,6 @@ def process_response_schema(schema_type: str, schema_value: str):
         schema_value: The schema value as a string. For "choice", a list;
             for "json", a JSON object; for "regex"/"grammar", a raw string.
     """
-    from vllm.sampling_params import StructuredOutputsParams  # type: ignore
-
     if schema_type == "choice":
         try:
             value = json.loads(schema_value)
@@ -202,6 +200,8 @@ def process_response_schema(schema_type: str, schema_value: str):
                 "--response-schema choice value must be a list of strings,"
                 f" got: {value!r}"
             )
+        from vllm.sampling_params import StructuredOutputsParams  # type: ignore
+
         return StructuredOutputsParams(choice=value)
     elif schema_type == "json":
         try:
@@ -210,10 +210,16 @@ def process_response_schema(schema_type: str, schema_value: str):
             raise ValueError(
                 f"--response-schema json value is not valid JSON: {schema_value!r}"
             ) from e
+        from vllm.sampling_params import StructuredOutputsParams  # type: ignore
+
         return StructuredOutputsParams(json=value)
     elif schema_type == "regex":
+        from vllm.sampling_params import StructuredOutputsParams  # type: ignore
+
         return StructuredOutputsParams(regex=schema_value)
     elif schema_type == "grammar":
+        from vllm.sampling_params import StructuredOutputsParams  # type: ignore
+
         return StructuredOutputsParams(grammar=schema_value)
     else:
         raise ValueError(
