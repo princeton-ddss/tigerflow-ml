@@ -175,6 +175,53 @@ def parse_kwargs(value: str | dict, *, name: str = "kwargs") -> dict:
         raise ValueError(f"--{name} is not a valid dict: {value!r}") from e
 
 
+def process_response_schema(schema_type: str, schema_value: str):
+    """
+    Build a vllm StructuredOutputsParams from an explicit type and value string.
+
+    Args:
+        schema_type: One of "choice", "json", "regex", "grammar".
+        schema_value: The schema value as a string. For "choice", a list;
+            for "json", a JSON object; for "regex"/"grammar", a raw string.
+    """
+    from vllm.sampling_params import StructuredOutputsParams
+
+    if schema_type == "choice":
+        try:
+            value = json.loads(schema_value)
+        except json.JSONDecodeError:
+            try:
+                value = ast.literal_eval(schema_value)
+            except (ValueError, SyntaxError) as e:
+                raise ValueError(
+                    "--response-schema choice value is not a valid list: "
+                    f"{schema_value!r}"
+                ) from e
+        if not isinstance(value, list) or not all(isinstance(v, str) for v in value):
+            raise ValueError(
+                "--response-schema choice value must be a list of strings,"
+                f" got: {value!r}"
+            )
+        return StructuredOutputsParams(choice=value)
+    elif schema_type == "json":
+        try:
+            value = json.loads(schema_value)
+        except json.JSONDecodeError as e:
+            raise ValueError(
+                f"--response-schema json value is not valid JSON: {schema_value!r}"
+            ) from e
+        return StructuredOutputsParams(json=value)
+    elif schema_type == "regex":
+        return StructuredOutputsParams(regex=schema_value)
+    elif schema_type == "grammar":
+        return StructuredOutputsParams(grammar=schema_value)
+    else:
+        raise ValueError(
+            f"--response-schema type {schema_type!r} is not supported. "
+            "Valid types: choice, json, regex, grammar"
+        )
+
+
 def get_model_config(
     model: str,
     allow_fetch: bool = False,
