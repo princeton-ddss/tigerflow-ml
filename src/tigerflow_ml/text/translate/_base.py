@@ -14,7 +14,6 @@ python -m tigerflow_ml.text.translate.slurm --input-dir ../tgemma/tests/input/
 
 from __future__ import annotations
 
-from collections.abc import Callable
 from pathlib import Path
 from typing import TYPE_CHECKING, Annotated, Literal
 
@@ -153,7 +152,7 @@ class _TranslateBase:
         )
 
         tokenizer = get_tokenizer(
-            context.model,
+            model_name=context.model,
             allow_fetch=context.allow_fetch,
             cache_dir=context.cache_dir,
             revision=context.revision,
@@ -172,7 +171,7 @@ class _TranslateBase:
         logger.info("Initializing HuggingFace backend...")
 
         context.translator = build_translator(
-            context.model,
+            model_name=context.model,
             tokenizer=tokenizer,
             max_chunk_tokens=context.chunk_size,
             max_model_len=context.max_model_len,
@@ -196,17 +195,14 @@ class _TranslateBase:
     def run(context: SetupContext, input_file: Path, output_file: Path):
 
         _translate_file(
-            context.translator,
-            input_file,
-            output_file,
-            context.source_lang,
-            context.target_lang,
-            logger.info,
+            translator=context.translator,
+            input_file=input_file,
+            output_file=output_file,
+            source_lang=context.source_lang,
+            target_lang=context.target_lang,
             auto_lang_detect=context.auto_lang_detect,
             use_fallback_prompt=context.use_fallback_prompt,
         )
-
-        logger.info("Translation complete!")
 
 
 def _resolve_source_lang(
@@ -214,7 +210,6 @@ def _resolve_source_lang(
     source_lang: str | None,
     target_lang: str,
     auto_lang_detect: bool,
-    on_progress: Callable[..., None],
 ) -> str | None:
     """
     Resolve the source language for a file.
@@ -229,7 +224,6 @@ def _resolve_source_lang(
         source_lang: Explicit source language code, or None.
         target_lang: Target language code.
         auto_lang_detect: Whether to run langdetect.
-        on_progress: Callback for progress messages.
 
     Returns:
         Resolved source language code, or None if unresolvable.
@@ -244,23 +238,23 @@ def _resolve_source_lang(
                 "Source language could not be determined. "
                 "Explicitly set --source-lang or enable --auto-lang-detect."
             )
-        on_progress(
+        logger.info(
             f"  Source language: {get_language_name(source_lang)} ({source_lang})"
         )
         resolved: str | None = source_lang
     else:
         detected = detect_language(content)
         if detected is not None:
-            on_progress(
+            logger.info(
                 f"  Detected language: {get_language_name(detected)} ({detected})"
             )
         if source_lang is not None:
-            on_progress(
+            logger.info(
                 f"  Source language: {get_language_name(source_lang)} ({source_lang})"
             )
             if detected is not None and detected != source_lang:
-                on_progress(
-                    f"  Warning: detected {detected} but --source-lang is"
+                logger.warning(
+                    f"  Detected {detected} but --source-lang is"
                     f" {source_lang}; using --source-lang"
                 )
             resolved = source_lang
@@ -280,7 +274,6 @@ def _translate_file(
     output_file: Path,
     source_lang: str | None = None,
     target_lang: str = "en",
-    on_progress: Callable[..., None] = print,
     auto_lang_detect: bool = True,
     use_fallback_prompt: bool = False,
 ) -> str:
@@ -294,7 +287,6 @@ def _translate_file(
         source_lang: Source language code. Required when auto_lang_detect is
             False; otherwise overrides auto-detection if provided.
         target_lang: Target language code.
-        on_progress: Callback for progress messages.
         auto_lang_detect: Run langdetect on the file. Explicit source_lang
             takes precedence; when False, source_lang is required.
         use_fallback_prompt: When no source language can be determined and
@@ -309,14 +301,15 @@ def _translate_file(
     """
     from .translator import TgemmaTranslator
 
-    on_progress(f"Processing: {input_file.name}")
-
     content = read_text_file_strict(input_file)
 
-    on_progress(f"  File size: {len(content):,} characters")
+    logger.info(f"  File size: {len(content):,} characters")
 
     resolved_lang = _resolve_source_lang(
-        content, source_lang, target_lang, auto_lang_detect, on_progress
+        content=content,
+        source_lang=source_lang,
+        target_lang=target_lang,
+        auto_lang_detect=auto_lang_detect,
     )
 
     original_prompt = translator.prompt_template
@@ -334,16 +327,16 @@ def _translate_file(
                     "Explicitly set --source-lang or run with"
                     " --use-fallback-prompt."
                 )
-            on_progress(f"  Using fallback prompt: {_FALLBACK_PROMPT}")
+            logger.warning(f"  Using fallback prompt: {_FALLBACK_PROMPT}")
             use_fallback = True
 
     if resolved_lang is not None and resolved_lang not in LANGUAGES:
-        on_progress(
+        logger.info(
             f"  Note: '{resolved_lang}' not in common language list,"
             " attempting anyway..."
         )
 
-    on_progress(
+    logger.info(
         f"  Translating to: {get_language_name(target_lang)} ({target_lang})..."
     )
 
@@ -358,16 +351,15 @@ def _translate_file(
     # Sanity check
     if len(translated) > 100 and resolved_lang != "en":
         if content[:100] == translated[:100]:
-            on_progress(
-                "  Warning: Output appears identical to input -"
-                " translation may have failed"
+            logger.warning(
+                "  Output appears identical to input - translation may have failed"
             )
 
     # Write output
     with open(output_file, "w", encoding="utf-8") as f:
         f.write(translated)
 
-    on_progress(f"  Output size: {len(translated):,} characters")
+    logger.info(f"  Output size: {len(translated):,} characters")
 
     return translated
 
@@ -401,13 +393,13 @@ def _translate_text(
 
     if count_tokens(text, tokenizer) <= max_tokens:
         return _translate_chunk_with_retry(
-            text,
-            translator,
-            source_lang,
-            target_lang,
-            tokenizer,
-            max_tokens,
-            max_retries,
+            text=text,
+            translator=translator,
+            source_lang=source_lang,
+            target_lang=target_lang,
+            tokenizer=tokenizer,
+            max_tokens=max_tokens,
+            max_retries=max_retries,
         )
 
     chunks = chunk_text_by_tokens(text, tokenizer, max_tokens=max_tokens)
@@ -458,13 +450,13 @@ def _translate_chunk_with_retry(
                 f"({count_tokens(sub, tokenizer)} tokens)..."
             )
             result = _translate_chunk_with_retry(
-                sub,
-                translator,
-                source_lang,
-                target_lang,
-                tokenizer,
-                max_tokens,
-                max_retries,
+                text=sub,
+                translator=translator,
+                source_lang=source_lang,
+                target_lang=target_lang,
+                tokenizer=tokenizer,
+                max_tokens=max_tokens,
+                max_retries=max_retries,
                 retry_depth=retry_depth + 1,
             )
             parts.append(result)
