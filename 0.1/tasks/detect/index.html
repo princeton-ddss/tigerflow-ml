@@ -948,6 +948,16 @@
 <td>Frames per second to sample from video (0 = every frame)</td>
 </tr>
 <tr>
+<td><code>--dtype</code></td>
+<td><code>auto</code></td>
+<td>Model dtype. 'auto' uses float16 on cuda, float32 on cpu.</td>
+</tr>
+<tr>
+<td><code>--compile</code></td>
+<td><code>--no-compile</code></td>
+<td>Compile the model with torch.compile. Adds 30-60s of first-call overhead; worthwhile for long videos.</td>
+</tr>
+<tr>
 <td><code>--allow-fetch</code></td>
 <td><code>--no-allow-fetch</code></td>
 <td>Allow downloads from HuggingFace Hub (network access required)</td>
