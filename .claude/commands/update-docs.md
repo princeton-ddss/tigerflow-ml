@@ -72,6 +72,19 @@ For each found README, read it and update any param documentation to match the c
 - Preserve the existing format and prose style of each README; do not convert between formats (e.g. don't turn a bullet list into a table)
 - Some READMEs intentionally omit shared base-class params — preserve this design choice
 
+## Step 6 — Update vllm installation instructions
+
+The `vllm` optional dependency (defined in `pyproject.toml` under `[project.optional-dependencies]`) is only required by tasks whose `Params` class inherits from `VLLMParams`. Tasks that inherit from `HFParams` do not need it.
+
+From the `_base.py` files read in Step 1, determine which tasks use `VLLMParams` vs `HFParams`. This is the authoritative list of vllm-requiring tasks.
+
+Update every place in the docs that names which tasks need the `vllm` extra:
+- `README.md` — the `pip install tigerflow-ml[vllm]` block and surrounding prose
+- `docs/mkdocs/index.md` — the installation section
+- `docs/mkdocs/tasks/<taskname>.md`- if vllm install is needed, this should be mentioned before `## Parameters`
+
+In each location, rewrite the task list to exactly match the vllm-requiring tasks derived from the code. Preserve all surrounding prose structure and formatting; only update the task names within it.
+
 ## Summary
 
 After all edits, print one line per file: what changed (e.g. "detect.md: added --dtype, --compile") or "no changes needed".

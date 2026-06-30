@@ -60,6 +60,22 @@ For each found README, read it and check it against the corresponding `_base.py`
 - Flag params that have changed their defaults without the README being updated
 - Note: some READMEs intentionally omit shared base-class params (e.g. HFParams fields) and defer to `--help` — this is correct, not an error
 
+## Step 6 — Check vllm installation instructions
+
+The `vllm` optional dependency (defined in `pyproject.toml` under `[project.optional-dependencies]`) is only required by tasks whose `Params` class inherits from `VLLMParams`. Tasks that inherit from `HFParams` do not need it.
+
+From the `_base.py` files read in Step 1, determine which tasks use `VLLMParams` vs `HFParams`. This is the authoritative list of vllm-requiring tasks.
+
+Check every place in the docs that names which tasks need the `vllm` extra:
+- `README.md` — the `pip install tigerflow-ml[vllm]` block and any surrounding prose
+- `docs/mkdocs/index.md` — the installation section
+- `docs/mkdocs/tasks/<taskname>.md`- if vllm install is needed, this should be mentioned before `## Parameters`
+
+For each location, verify:
+1. **Missing task** — a vllm-requiring task is not mentioned
+2. **Extra task** — a task is listed as needing vllm but its `Params` inherits `HFParams`
+3. **Stale prose** — the surrounding sentence names specific tasks and that list is wrong
+
 ## Summary
 
 Print a grouped summary:
