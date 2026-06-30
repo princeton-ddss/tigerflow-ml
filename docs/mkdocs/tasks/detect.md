@@ -17,6 +17,8 @@ Supports both fixed-class models (e.g. RT-DETR) and open-vocabulary models
 | `--threshold`  | `0.3`                  | Minimum confidence score for detections                                |
 | `--batch-size` | `4`                    | Number of video frames to process in parallel on GPU                   |
 | `--sample-fps` | `1.0`                  | Frames per second to sample from video (0 = every frame)               |
+| `--dtype`      | `auto`                 | Model dtype. 'auto' uses float16 on cuda, float32 on cpu.              |
+| `--compile`    | `--no-compile`         | Compile the model with torch.compile. Adds 30-60s of first-call overhead; worthwhile for long videos. |
 | `--allow-fetch` | `--no-allow-fetch`    | Allow downloads from HuggingFace Hub (network access required)         |
 | `--seed`       | `42`                   | Random seed for reproducibility                                        |
 
