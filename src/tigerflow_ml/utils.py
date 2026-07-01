@@ -11,6 +11,7 @@ from tigerflow.logconfig import logger
 if TYPE_CHECKING:
     from PIL import Image
     from transformers import PretrainedConfig, PreTrainedTokenizerBase
+    from vllm.sampling_params import StructuredOutputsParams  # type: ignore
 
 
 class EmptyFileError(Exception):
@@ -185,7 +186,9 @@ class SchemaType(str, Enum):
     GRAMMAR = "grammar"
 
 
-def process_response_schema(schema_type: SchemaType, schema_value: str):
+def process_response_schema(
+    schema_type: SchemaType, schema_value: str
+) -> "StructuredOutputsParams":
     """
     Build a vllm StructuredOutputsParams from an explicit type and value string.
 
@@ -194,6 +197,8 @@ def process_response_schema(schema_type: SchemaType, schema_value: str):
         schema_value: The schema value as a string. For "choice", a list;
             for "json", a JSON object; for "regex"/"grammar", a raw string.
     """
+    from vllm.sampling_params import StructuredOutputsParams  # type: ignore
+
     if schema_type == SchemaType.CHOICE:
         try:
             value = json.loads(schema_value)
@@ -210,7 +215,6 @@ def process_response_schema(schema_type: SchemaType, schema_value: str):
                 "--response-schema choice value must be a list of strings,"
                 f" got: {value!r}"
             )
-        from vllm.sampling_params import StructuredOutputsParams  # type: ignore
 
         return StructuredOutputsParams(choice=value)
     elif schema_type == SchemaType.JSON:
@@ -220,16 +224,11 @@ def process_response_schema(schema_type: SchemaType, schema_value: str):
             raise ValueError(
                 f"--response-schema json value is not valid JSON: {schema_value!r}"
             ) from e
-        from vllm.sampling_params import StructuredOutputsParams  # type: ignore
 
         return StructuredOutputsParams(json=value)
     elif schema_type == SchemaType.REGEX:
-        from vllm.sampling_params import StructuredOutputsParams  # type: ignore
-
         return StructuredOutputsParams(regex=schema_value)
     elif schema_type == SchemaType.GRAMMAR:
-        from vllm.sampling_params import StructuredOutputsParams  # type: ignore
-
         return StructuredOutputsParams(grammar=schema_value)
 
 

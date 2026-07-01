@@ -339,14 +339,17 @@ class TestProcessResponseSchema:
         mock_cls.assert_called_once_with(grammar=grammar)
 
     def test_choice_invalid_value_raises(self):
+        pytest.importorskip("vllm")
         with pytest.raises(ValueError, match="not a valid list"):
             process_response_schema(SchemaType.CHOICE, "not a list")
 
     def test_choice_non_string_elements_raises(self):
+        pytest.importorskip("vllm")
         with pytest.raises(ValueError, match="list of strings"):
             process_response_schema(SchemaType.CHOICE, "[1, 2, 3]")
 
     def test_json_invalid_raises(self):
+        pytest.importorskip("vllm")
         with pytest.raises(ValueError, match="not valid JSON"):
             process_response_schema(SchemaType.JSON, "{bad json}")
 
