@@ -641,6 +641,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#structured-outputs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Structured outputs
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -766,6 +777,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#structured-outputs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Structured outputs
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -852,6 +874,11 @@
 <td><code>--temperature</code></td>
 <td><code>0</code></td>
 <td>The model temperature. Lower numbers make models more deterministic</td>
+</tr>
+<tr>
+<td><code>--response-schema</code></td>
+<td></td>
+<td>Constrain the model's output format using vllm structured outputs. Format: <code>&lt;type&gt;=&lt;value&gt;</code>. Types: <code>choice</code> (list of strings), <code>json</code> (JSON schema dict), <code>regex</code> (regular expression), <code>grammar</code> (EBNF/GBNF grammar string).</td>
 </tr>
 <tr>
 <td><code>--seed</code></td>
@@ -981,6 +1008,63 @@
 </div>
 <div class="tabbed-block">
 <div class="highlight"><span class="filename">hummingbird.txt</span><pre><span></span><code>&quot;Nature&#39;s Symphony: A Hummingbird&#39;s Dance with a Lily&quot;
+</code></pre></div>
+</div>
+</div>
+</div>
+<h3 id="structured-outputs">Structured outputs<a class="headerlink" href="#structured-outputs" title="Permanent link">&para;</a></h3>
+<p>If you're using a model which supports <a href="https://docs.vllm.ai/en/latest/features/structured_outputs/#offline-inference">structured output</a>, you can provide one using <code>--response-schema</code>.</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="3:2"><input checked="checked" id="__tabbed_3_1" name="__tabbed_3" type="radio" /><input id="__tabbed_3_2" name="__tabbed_3" type="radio" /><div class="tabbed-labels"><label for="__tabbed_3_1">Choice</label><label for="__tabbed_3_2">JSON</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="highlight"><span class="filename">config.yaml</span><pre><span></span><code><span class="nt">tasks</span><span class="p">:</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">chat</span>
+<span class="w">        </span><span class="l l-Scalar l-Scalar-Plain">kind</span><span class="p p-Indicator">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">slurm</span>
+<span class="w">        </span><span class="l l-Scalar l-Scalar-Plain">module</span><span class="p p-Indicator">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">tigerflow_ml.text.chat.slurm</span>
+<span class="w">        </span><span class="l l-Scalar l-Scalar-Plain">input_ext</span><span class="p p-Indicator">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">.txt</span>
+<span class="w">        </span><span class="l l-Scalar l-Scalar-Plain">output_ext</span><span class="p p-Indicator">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">.txt</span>
+<span class="w">        </span><span class="l l-Scalar l-Scalar-Plain">max_workers</span><span class="p p-Indicator">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1</span>
+<span class="w">        </span><span class="l l-Scalar l-Scalar-Plain">worker_resources</span><span class="p p-Indicator">:</span>
+<span class="w">            </span><span class="nt">cpus</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1</span>
+<span class="w">            </span><span class="nt">gpus</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1</span>
+<span class="w">            </span><span class="nt">memory</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">10G</span>
+<span class="w">            </span><span class="nt">time</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">00:10:00</span>
+<span class="w">            </span><span class="nt">sbatch_options</span><span class="p">:</span>
+<span class="w">                </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;--constraint=gpu80&quot;</span>
+<span class="w">      </span><span class="w w-Error">  </span><span class="nt">setup_commands</span><span class="p">:</span>
+<span class="w">            </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">source ~/github/tigerflow-ml/.venv/bin/activate</span>
+<span class="w">            </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">export VLLM_USE_FLASHINFER_SAMPLER=0</span>
+<span class="w">        </span><span class="nt">params</span><span class="p">:</span>
+<span class="w">            </span><span class="nt">model</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Qwen/Qwen2.5-VL-7B-Instruct</span>
+<span class="w">            </span><span class="nt">cache-dir</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">~/github/tigerflow-ml/.hf/hub/</span>
+<span class="w">            </span><span class="nt">prompt</span><span class="p">:</span><span class="w"> </span><span class="s">&#39;What</span><span class="nv"> </span><span class="s">is</span><span class="nv"> </span><span class="s">the</span><span class="nv"> </span><span class="s">sentiment</span><span class="nv"> </span><span class="s">of</span><span class="nv"> </span><span class="s">this</span><span class="nv"> </span><span class="s">text?&#39;</span>
+<span class="w">            </span><span class="nt">response_schema</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">choice=[&quot;Positive&quot;, &quot;Negative&quot;]</span>
+</code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="highlight"><span class="filename">config.yaml</span><pre><span></span><code><span class="nt">tasks</span><span class="p">:</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">chat</span>
+<span class="w">        </span><span class="l l-Scalar l-Scalar-Plain">kind</span><span class="p p-Indicator">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">slurm</span>
+<span class="w">        </span><span class="l l-Scalar l-Scalar-Plain">module</span><span class="p p-Indicator">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">tigerflow_ml.text.chat.slurm</span>
+<span class="w">        </span><span class="l l-Scalar l-Scalar-Plain">input_ext</span><span class="p p-Indicator">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">.jpeg</span>
+<span class="w">        </span><span class="l l-Scalar l-Scalar-Plain">output_ext</span><span class="p p-Indicator">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">.txt</span>
+<span class="w">        </span><span class="l l-Scalar l-Scalar-Plain">max_workers</span><span class="p p-Indicator">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1</span>
+<span class="w">        </span><span class="l l-Scalar l-Scalar-Plain">worker_resources</span><span class="p p-Indicator">:</span>
+<span class="w">            </span><span class="nt">cpus</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1</span>
+<span class="w">            </span><span class="nt">gpus</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2</span>
+<span class="w">            </span><span class="nt">memory</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">8G</span>
+<span class="w">            </span><span class="nt">time</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">01:00:00</span>
+<span class="w">            </span><span class="nt">sbatch_options</span><span class="p">:</span>
+<span class="w">                </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;--constraint=gpu80&quot;</span>
+<span class="w">      </span><span class="w w-Error">  </span><span class="nt">setup_commands</span><span class="p">:</span>
+<span class="w">            </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">source ~/github/tigerflow-ml/.venv/bin/activate</span>
+<span class="w">            </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">export VLLM_USE_FLASHINFER_SAMPLER=0</span>
+<span class="w">        </span><span class="nt">params</span><span class="p">:</span>
+<span class="w">            </span><span class="nt">model</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Qwen/Qwen2.5-VL-32B-Instruct</span>
+<span class="w">            </span><span class="nt">cache-dir</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">~/github/tigerflow-ml/.hf/hub/</span>
+<span class="w">            </span><span class="nt">prompt</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">What is in this image?</span>
+<span class="w">            </span><span class="nt">response_schema</span><span class="p">:</span><span class="w"> </span><span class="s">&#39;json={&quot;type&quot;:&quot;object&quot;,&quot;properties&quot;:{&quot;objects&quot;:{&quot;type&quot;:&quot;array&quot;,&quot;items&quot;:{&quot;type&quot;:&quot;string&quot;}},&quot;scene&quot;:{&quot;type&quot;:&quot;string&quot;},&quot;dominant_colors&quot;:{&quot;type&quot;:&quot;array&quot;,&quot;items&quot;:{&quot;type&quot;:&quot;string&quot;}}},&quot;required&quot;:[&quot;objects&quot;,&quot;scene&quot;]}&#39;</span>
+<span class="w">            </span><span class="nt">max-model-len</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">4096</span>
 </code></pre></div>
 </div>
 </div>

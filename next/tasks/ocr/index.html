@@ -553,6 +553,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#structured-json-output" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Structured JSON output
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -812,6 +823,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#structured-json-output" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Structured JSON output
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -908,6 +930,11 @@
 <td><code>--prompt</code></td>
 <td></td>
 <td>Prompt for image-text-to-text models</td>
+</tr>
+<tr>
+<td><code>--json-schema</code></td>
+<td></td>
+<td>Constrain the model's output to a JSON schema using vllm structured outputs. Provide the schema as a JSON string, e.g. <code>{"type":"object","properties":{"text":{"type":"string"}},"required":["text"]}</code>. Requires a model that supports structured outputs.</td>
 </tr>
 </tbody>
 </table>
@@ -1100,7 +1127,7 @@ work across compute nodes:</p>
 <span class="w">    </span><span class="nt">output_ext</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">.txt</span>
 <span class="w">    </span><span class="nt">max_workers</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">4</span>
 <span class="w">    </span><span class="nt">worker_resources</span><span class="p">:</span>
-<span class="w">      </span><span class="nt">cpus</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2</span>
+<span class="w">      </span><span class="nt">cpus</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1</span>
 <span class="w">      </span><span class="nt">gpus</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1</span>
 <span class="w">      </span><span class="nt">memory</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">16G</span>
 <span class="w">      </span><span class="nt">time</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">04:00:00</span>
@@ -1108,6 +1135,27 @@ work across compute nodes:</p>
 <span class="w">      </span><span class="nt">model</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">stepfun-ai/GOT-OCR-2.0-hf</span>
 <span class="w">      </span><span class="nt">prompt</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Extract</span><span class="nv"> </span><span class="s">all</span><span class="nv"> </span><span class="s">text</span><span class="nv"> </span><span class="s">from</span><span class="nv"> </span><span class="s">this</span><span class="nv"> </span><span class="s">image&quot;</span>
 <span class="w">      </span><span class="nt">cache_dir</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">~/path/to/model/hub/</span>
+</code></pre></div>
+<h3 id="structured-json-output">Structured JSON output<a class="headerlink" href="#structured-json-output" title="Permanent link">&para;</a></h3>
+<p>If you're using a model which supports <a href="https://docs.vllm.ai/en/latest/features/structured_outputs/#offline-inference">structured output</a>, you can provide a structured json output schema using <code>--json-schema</code></p>
+<div class="highlight"><span class="filename">config.yaml</span><pre><span></span><code><span class="nt">tasks</span><span class="p">:</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ocr</span>
+<span class="w">    </span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">slurm</span>
+<span class="w">    </span><span class="nt">module</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">tigerflow_ml.text.ocr.slurm</span>
+<span class="w">    </span><span class="nt">input_ext</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">.pdf</span>
+<span class="w">    </span><span class="nt">output_ext</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">.txt</span>
+<span class="w">    </span><span class="nt">max_workers</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">4</span>
+<span class="w">    </span><span class="nt">worker_resources</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">cpus</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1</span>
+<span class="w">      </span><span class="nt">gpus</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2</span>
+<span class="w">      </span><span class="nt">memory</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">16G</span>
+<span class="w">      </span><span class="nt">time</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">04:00:00</span>
+<span class="w">    </span><span class="nt">params</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">model</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Qwen/Qwen2.5-VL-32B-Instruct</span>
+<span class="w">      </span><span class="nt">prompt</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Extract</span><span class="nv"> </span><span class="s">all</span><span class="nv"> </span><span class="s">text</span><span class="nv"> </span><span class="s">from</span><span class="nv"> </span><span class="s">this</span><span class="nv"> </span><span class="s">image</span><span class="nv"> </span><span class="s">in</span><span class="nv"> </span><span class="s">valid</span><span class="nv"> </span><span class="s">json</span><span class="nv"> </span><span class="s">format&quot;</span>
+<span class="w">      </span><span class="nt">cache_dir</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">~/path/to/model/hub/</span>
+<span class="w">      </span><span class="nt">max-model-len</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">4096</span>
+<span class="w">      </span><span class="nt">json-schema</span><span class="p">:</span><span class="w"> </span><span class="s">&#39;{&quot;type&quot;:&quot;object&quot;,&quot;properties&quot;:{&quot;text&quot;:{&quot;type&quot;:&quot;string&quot;}},&quot;required&quot;:[&quot;text&quot;]}&#39;</span>
 </code></pre></div>
 
 
