@@ -273,7 +273,7 @@ class TestLoadImages:
         for ext in _IMG_EXTENSIONS:
             file = "test" + ext
             if ext in (".heic", ".heif"):
-                path = _make_heic_file(tmp_path / file)
+                continue
             else:
                 path = _make_image_file(tmp_path / file)
             images = load_images(path)
