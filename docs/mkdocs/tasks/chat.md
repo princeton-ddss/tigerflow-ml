@@ -175,7 +175,7 @@ If you're using a model which supports [structured output](https://docs.vllm.ai/
                 model: Qwen/Qwen2.5-VL-7B-Instruct
                 cache-dir: ~/github/tigerflow-ml/.hf/hub/
                 prompt: 'What is the sentiment of this text?'
-                response_schema: choice=["Positive", "Negative]
+                response_schema: choice=["Positive", "Negative"]
     ```
 
 === "JSON"
@@ -199,7 +199,7 @@ If you're using a model which supports [structured output](https://docs.vllm.ai/
                 - source ~/github/tigerflow-ml/.venv/bin/activate
                 - export VLLM_USE_FLASHINFER_SAMPLER=0
             params:
-            model: Qwen/Qwen2.5-VL-32B-Instruct
+                model: Qwen/Qwen2.5-VL-32B-Instruct
                 cache-dir: ~/github/tigerflow-ml/.hf/hub/
                 prompt: What is in this image?
                 response_schema: 'json={"type":"object","properties":{"objects":{"type":"array","items":{"type":"string"}},"scene":{"type":"string"},"dominant_colors":{"type":"array","items":{"type":"string"}}},"required":["objects","scene"]}'
