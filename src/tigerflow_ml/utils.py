@@ -2,6 +2,7 @@
 
 import ast
 import json
+from enum import Enum
 from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
@@ -10,6 +11,7 @@ from tigerflow.logconfig import logger
 if TYPE_CHECKING:
     from PIL import Image
     from transformers import PretrainedConfig, PreTrainedTokenizerBase
+    from vllm.sampling_params import StructuredOutputsParams  # type: ignore
 
 
 class EmptyFileError(Exception):
@@ -173,6 +175,61 @@ def parse_kwargs(value: str | dict, *, name: str = "kwargs") -> dict:
         return ast.literal_eval(value)
     except (ValueError, SyntaxError) as e:
         raise ValueError(f"--{name} is not a valid dict: {value!r}") from e
+
+
+class SchemaType(str, Enum):
+    """Schema type for vllm structured response"""
+
+    JSON = "json"
+    CHOICE = "choice"
+    REGEX = "regex"
+    GRAMMAR = "grammar"
+
+
+def process_response_schema(
+    schema_type: SchemaType, schema_value: str
+) -> "StructuredOutputsParams":
+    """
+    Build a vllm StructuredOutputsParams from an explicit type and value string.
+
+    Args:
+        schema_type: One of "choice", "json", "regex", "grammar".
+        schema_value: The schema value as a string. For "choice", a list;
+            for "json", a JSON object; for "regex"/"grammar", a raw string.
+    """
+    from vllm.sampling_params import StructuredOutputsParams  # type: ignore
+
+    if schema_type == SchemaType.CHOICE:
+        try:
+            value = json.loads(schema_value)
+        except json.JSONDecodeError:
+            try:
+                value = ast.literal_eval(schema_value)
+            except (ValueError, SyntaxError) as e:
+                raise ValueError(
+                    "--response-schema choice value is not a valid list: "
+                    f"{schema_value!r}"
+                ) from e
+        if not isinstance(value, list) or not all(isinstance(v, str) for v in value):
+            raise ValueError(
+                "--response-schema choice value must be a list of strings,"
+                f" got: {value!r}"
+            )
+
+        return StructuredOutputsParams(choice=value)
+    elif schema_type == SchemaType.JSON:
+        try:
+            value = json.loads(schema_value)
+        except json.JSONDecodeError as e:
+            raise ValueError(
+                f"--response-schema json value is not valid JSON: {schema_value!r}"
+            ) from e
+
+        return StructuredOutputsParams(json=value)
+    elif schema_type == SchemaType.REGEX:
+        return StructuredOutputsParams(regex=schema_value)
+    elif schema_type == SchemaType.GRAMMAR:
+        return StructuredOutputsParams(grammar=schema_value)
 
 
 def get_model_config(

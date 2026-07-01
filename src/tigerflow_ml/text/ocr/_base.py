@@ -15,7 +15,12 @@ from tigerflow.logconfig import logger
 from tigerflow.utils import SetupContext
 
 from tigerflow_ml.params import VLLMParams
-from tigerflow_ml.utils import load_images, parse_kwargs, strip_markdown_from_json
+from tigerflow_ml.utils import (
+    load_images,
+    parse_kwargs,
+    process_response_schema,
+    strip_markdown_from_json,
+)
 
 if TYPE_CHECKING:
     from PIL import Image
@@ -42,6 +47,19 @@ class _OCRBase:
             int,
             typer.Option(help="Maximum number of tokens to generate per image"),
         ] = 4096
+
+        json_schema: Annotated[
+            str | None,
+            typer.Option(
+                help=(
+                    "Constrain the model's output to a JSON schema using vllm "
+                    "structured outputs. Provide the schema as a JSON string, e.g. "
+                    '\'{"type":"object","properties":{"text":{"type":"string"}},"required"'
+                    ':["text"]}\'. '
+                    "Requires a model that supports structured outputs."
+                )
+            ),
+        ] = None
 
     @staticmethod
     def setup(context: SetupContext):
@@ -87,6 +105,12 @@ class _OCRBase:
             "seed": context.seed,
             "max_tokens": context.max_tokens,
         }
+        if context.json_schema is not None:
+            from tigerflow_ml.utils import SchemaType
+
+            sampling_kwargs["structured_outputs"] = process_response_schema(
+                SchemaType.JSON, context.json_schema
+            )
         sampling_kwargs.update(user_sampling_kwargs)
         logger.info(f"   sampling_kwargs={sampling_kwargs}")
 

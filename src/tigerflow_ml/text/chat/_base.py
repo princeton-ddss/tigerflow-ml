@@ -10,7 +10,11 @@ from tigerflow.logconfig import logger
 from tigerflow.utils import SetupContext
 
 from tigerflow_ml.params import VLLMParams
-from tigerflow_ml.utils import parse_kwargs, read_text_file_strict
+from tigerflow_ml.utils import (
+    parse_kwargs,
+    process_response_schema,
+    read_text_file_strict,
+)
 
 _TEXT_EXTENSIONS = [".txt", ".text", ".md", ".log", ".rtf"]
 _IMG_EXTENSIONS = [".jpg", ".jpeg", ".png", ".tiff", ".tif", ".bmp"]
@@ -46,6 +50,21 @@ class _ChatBase:
                 max=2.0,
             ),
         ] = 0.0
+
+        response_schema: Annotated[
+            str | None,
+            typer.Option(
+                help=(
+                    "Constrain the model's output format using vllm structured outputs."
+                    " Format: '<type>=<value>'. "
+                    "Types: "
+                    'choice (list of strings, e.g. choice=["Yes","No"]), '
+                    'json (JSON schema dict, e.g. json={"type":"object",...}), '
+                    "regex (regular expression, e.g. regex=[0-9]+), "
+                    "grammar (EBNF/GBNF grammar string)."
+                )
+            ),
+        ] = None
 
     @staticmethod
     def setup(context: SetupContext):
@@ -98,6 +117,20 @@ class _ChatBase:
             "seed": context.seed,
             "max_tokens": context.max_tokens,
         }
+        if context.response_schema is not None:
+            from tigerflow_ml.utils import SchemaType
+
+            schema_type, sep, schema_value = context.response_schema.partition("=")
+            if not sep:
+                raise ValueError(
+                    f"--response-schema must be in the form '<type>=<value>', got: "
+                    f"{context.response_schema!r}. Valid types: choice, json, regex,"
+                    " grammar"
+                )
+            sampling_kwargs["structured_outputs"] = process_response_schema(
+                SchemaType(schema_type.strip()), schema_value.strip()
+            )
+
         sampling_kwargs.update(user_sampling_kwargs)
         logger.info(f"    sampling_kwargs={sampling_kwargs}")
 

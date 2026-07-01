@@ -18,6 +18,7 @@ Extract text from images and PDFs using HuggingFace image-text-to-text models.
 | `--sampling-kwargs` | `{}`                        | Additional kwargs for vLLM's SamplingParams() constructor. Supplied values override task defaults. |
 | `--chat-kwargs`   | `{}`                          | Additional kwargs for vLLM's LLM.chat(). Supplied values override task defaults.                   |
 | `--prompt`        |                               | Prompt for image-text-to-text models                                                               |
+| `--json-schema`   |                               | Constrain the model's output to a JSON schema using vllm structured outputs. Provide the schema as a JSON string, e.g. `{"type":"object","properties":{"text":{"type":"string"}},"required":["text"]}`. Requires a model that supports structured outputs. |
 
 
 
@@ -199,7 +200,7 @@ tasks:
     output_ext: .txt
     max_workers: 4
     worker_resources:
-      cpus: 2
+      cpus: 1
       gpus: 1
       memory: 16G
       time: 04:00:00
@@ -207,4 +208,29 @@ tasks:
       model: stepfun-ai/GOT-OCR-2.0-hf
       prompt: "Extract all text from this image"
       cache_dir: ~/path/to/model/hub/
+```
+
+### Structured JSON output
+
+If you're using a model which supports [structured output](https://docs.vllm.ai/en/latest/features/structured_outputs/#offline-inference), you can provide a structured json output schema using `--json-schema`
+
+```yaml title="config.yaml"
+tasks:
+  - name: ocr
+    kind: slurm
+    module: tigerflow_ml.text.ocr.slurm
+    input_ext: .pdf
+    output_ext: .txt
+    max_workers: 4
+    worker_resources:
+      cpus: 1
+      gpus: 2
+      memory: 16G
+      time: 04:00:00
+    params:
+      model: Qwen/Qwen2.5-VL-32B-Instruct
+      prompt: "Extract all text from this image in valid json format"
+      cache_dir: ~/path/to/model/hub/
+      max-model-len: 4096
+      json-schema: '{"type":"object","properties":{"text":{"type":"string"}},"required":["text"]}'
 ```
