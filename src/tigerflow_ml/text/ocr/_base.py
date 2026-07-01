@@ -106,8 +106,10 @@ class _OCRBase:
             "max_tokens": context.max_tokens,
         }
         if context.json_schema is not None:
+            from tigerflow_ml.utils import SchemaType
+
             sampling_kwargs["structured_outputs"] = process_response_schema(
-                "json", context.json_schema
+                SchemaType.JSON, context.json_schema
             )
         sampling_kwargs.update(user_sampling_kwargs)
         logger.info(f"   sampling_kwargs={sampling_kwargs}")

@@ -118,6 +118,8 @@ class _ChatBase:
             "max_tokens": context.max_tokens,
         }
         if context.response_schema is not None:
+            from tigerflow_ml.utils import SchemaType
+
             schema_type, sep, schema_value = context.response_schema.partition("=")
             if not sep:
                 raise ValueError(
@@ -126,7 +128,7 @@ class _ChatBase:
                     " grammar"
                 )
             sampling_kwargs["structured_outputs"] = process_response_schema(
-                schema_type.strip(), schema_value.strip()
+                SchemaType(schema_type.strip()), schema_value.strip()
             )
 
         sampling_kwargs.update(user_sampling_kwargs)

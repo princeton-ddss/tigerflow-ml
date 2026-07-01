@@ -2,6 +2,7 @@
 
 import ast
 import json
+from enum import Enum
 from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
@@ -175,7 +176,16 @@ def parse_kwargs(value: str | dict, *, name: str = "kwargs") -> dict:
         raise ValueError(f"--{name} is not a valid dict: {value!r}") from e
 
 
-def process_response_schema(schema_type: str, schema_value: str):
+class SchemaType(str, Enum):
+    """Schema type for vllm structured response"""
+
+    JSON = "json"
+    CHOICE = "choice"
+    REGEX = "regex"
+    GRAMMAR = "grammar"
+
+
+def process_response_schema(schema_type: SchemaType, schema_value: str):
     """
     Build a vllm StructuredOutputsParams from an explicit type and value string.
 
@@ -184,7 +194,7 @@ def process_response_schema(schema_type: str, schema_value: str):
         schema_value: The schema value as a string. For "choice", a list;
             for "json", a JSON object; for "regex"/"grammar", a raw string.
     """
-    if schema_type == "choice":
+    if schema_type == SchemaType.CHOICE:
         try:
             value = json.loads(schema_value)
         except json.JSONDecodeError:
@@ -203,7 +213,7 @@ def process_response_schema(schema_type: str, schema_value: str):
         from vllm.sampling_params import StructuredOutputsParams  # type: ignore
 
         return StructuredOutputsParams(choice=value)
-    elif schema_type == "json":
+    elif schema_type == SchemaType.JSON:
         try:
             value = json.loads(schema_value)
         except json.JSONDecodeError as e:
@@ -213,19 +223,14 @@ def process_response_schema(schema_type: str, schema_value: str):
         from vllm.sampling_params import StructuredOutputsParams  # type: ignore
 
         return StructuredOutputsParams(json=value)
-    elif schema_type == "regex":
+    elif schema_type == SchemaType.REGEX:
         from vllm.sampling_params import StructuredOutputsParams  # type: ignore
 
         return StructuredOutputsParams(regex=schema_value)
-    elif schema_type == "grammar":
+    elif schema_type == SchemaType.GRAMMAR:
         from vllm.sampling_params import StructuredOutputsParams  # type: ignore
 
         return StructuredOutputsParams(grammar=schema_value)
-    else:
-        raise ValueError(
-            f"--response-schema type {schema_type!r} is not supported. "
-            "Valid types: choice, json, regex, grammar"
-        )
 
 
 def get_model_config(

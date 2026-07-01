@@ -9,6 +9,7 @@ from tigerflow_ml.utils import (
     ENCODING_FALLBACK_CHAIN,
     EmptyFileError,
     ModelConfigParsingError,
+    SchemaType,
     get_model_config,
     get_model_context_window,
     get_tokenizer,
@@ -314,44 +315,40 @@ class TestProcessResponseSchema:
         return mock_cls
 
     def test_choice_json_list(self):
-        mock_cls = self._call("choice", '["Yes", "No"]')
+        mock_cls = self._call(SchemaType.CHOICE, '["Yes", "No"]')
         mock_cls.assert_called_once_with(choice=["Yes", "No"])
 
     def test_choice_python_list_syntax(self):
-        mock_cls = self._call("choice", "['A', 'B', 'C']")
+        mock_cls = self._call(SchemaType.CHOICE, "['A', 'B', 'C']")
         mock_cls.assert_called_once_with(choice=["A", "B", "C"])
 
     def test_json_schema_dict(self):
         schema = '{"type": "object", "properties": {"label": {"type": "string"}}}'
-        mock_cls = self._call("json", schema)
+        mock_cls = self._call(SchemaType.JSON, schema)
         mock_cls.assert_called_once_with(
             json={"type": "object", "properties": {"label": {"type": "string"}}}
         )
 
     def test_regex_passes_raw_string(self):
-        mock_cls = self._call("regex", "[0-9]+")
+        mock_cls = self._call(SchemaType.REGEX, "[0-9]+")
         mock_cls.assert_called_once_with(regex="[0-9]+")
 
     def test_grammar_passes_raw_string(self):
         grammar = 'root ::= "yes" | "no"'
-        mock_cls = self._call("grammar", grammar)
+        mock_cls = self._call(SchemaType.GRAMMAR, grammar)
         mock_cls.assert_called_once_with(grammar=grammar)
 
     def test_choice_invalid_value_raises(self):
         with pytest.raises(ValueError, match="not a valid list"):
-            process_response_schema("choice", "not a list")
+            process_response_schema(SchemaType.CHOICE, "not a list")
 
     def test_choice_non_string_elements_raises(self):
         with pytest.raises(ValueError, match="list of strings"):
-            process_response_schema("choice", "[1, 2, 3]")
+            process_response_schema(SchemaType.CHOICE, "[1, 2, 3]")
 
     def test_json_invalid_raises(self):
         with pytest.raises(ValueError, match="not valid JSON"):
-            process_response_schema("json", "{bad json}")
-
-    def test_unknown_type_raises(self):
-        with pytest.raises(ValueError, match="not supported"):
-            process_response_schema("structured", "value")
+            process_response_schema(SchemaType.JSON, "{bad json}")
 
 
 class TestGetModelContextWindow:
