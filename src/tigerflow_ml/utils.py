@@ -92,7 +92,7 @@ def read_text_file_strict(path: Path) -> str:
     return content
 
 
-_IMG_EXTENSIONS = [
+IMG_EXTENSIONS = [
     ".jpg",
     ".jpeg",
     ".png",
@@ -121,10 +121,10 @@ def load_images(path: Path, max_images: int | None = None) -> list["Image.Image"
     """
     from PIL import Image
 
-    if path.suffix.lower() not in _IMG_EXTENSIONS:
+    if path.suffix.lower() not in IMG_EXTENSIONS:
         raise ValueError(
             f"{path.suffix} is not a valid file type -- please choose "
-            f"one of: {_IMG_EXTENSIONS}"
+            f"one of: {IMG_EXTENSIONS}"
         )
     if path.suffix.lower() == ".heic" or path.suffix.lower() == ".heif":
         from pillow_heif import register_heif_opener
