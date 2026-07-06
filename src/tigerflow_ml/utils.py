@@ -218,26 +218,38 @@ def load_audio(input_file: Path, sampling_rate: int = 16000) -> np.ndarray:
 def load_video(input_file: Path, sample_fps: float | None = None) -> bytes:
     """Load a video file as MP4 bytes, optionally subsampled to a lower fps.
 
+    Note that resampling re-encodes the video with OpenCV, which drops any
+    audio track the source file may have.
+
     Args:
         input_file: Path to the video file.
         sample_fps: If set and lower than the source fps, frames are dropped
             so the output plays back at this rate. Defaults to None (returns
-            the original bytes unchanged).
+            the original bytes unchanged). Must be positive.
 
     Returns:
         MP4-encoded video bytes.
     """
     if sample_fps is None:
         return input_file.read_bytes()
+    if sample_fps <= 0:
+        raise ValueError(f"sample_fps must be positive, got {sample_fps}")
 
+    import math
     import tempfile
 
     import cv2
 
     cap = cv2.VideoCapture(str(input_file))
+    if not cap.isOpened():
+        cap.release()
+        raise ValueError(f"Could not open video: {input_file}")
+
     try:
         source_fps = cap.get(cv2.CAP_PROP_FPS)
-        if not source_fps or sample_fps >= source_fps:
+        if not source_fps or math.isnan(source_fps):
+            raise ValueError(f"Could not determine FPS for video: {input_file}")
+        if sample_fps >= source_fps:
             return input_file.read_bytes()
 
         width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
@@ -248,6 +260,8 @@ def load_video(input_file: Path, sample_fps: float | None = None) -> bytes:
             out_path = Path(tmp_dir) / "resampled.mp4"
             fourcc = cv2.VideoWriter_fourcc(*"mp4v")  # type: ignore
             writer = cv2.VideoWriter(str(out_path), fourcc, sample_fps, (width, height))
+            if not writer.isOpened():
+                raise RuntimeError(f"Could not open video writer for: {input_file}")
             try:
                 next_frame = 0.0
                 frame_idx = 0
@@ -262,7 +276,8 @@ def load_video(input_file: Path, sample_fps: float | None = None) -> bytes:
                 writer.release()
 
             logger.info(
-                "  Resampled video from {:.2f} fps to {:.2f} fps",
+                "  Resampled video from {:.2f} fps to {:.2f} fps "
+                "(audio track, if any, is dropped)",
                 source_fps,
                 sample_fps,
             )

@@ -60,7 +60,7 @@ class _ChatBase:
             typer.Option(
                 help="Frame rate (fps) video inputs are resampled to before "
                 "being sent to the model. Frames are dropped to hit this rate. "
-                "Defaults to None (no resampling)."
+                "Defaults to None (no resampling).",
             ),
         ] = None
 
