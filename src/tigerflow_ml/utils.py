@@ -215,6 +215,17 @@ def load_audio(input_file: Path, sampling_rate: int = 16000) -> np.ndarray:
     return np.ascontiguousarray(array, dtype=np.float32)
 
 
+def load_video(input_file: Path, sample_fps: float | None = None) -> bytes:
+    """Load a video file as MP4 bytes
+    Args:
+        input_file: Path to the video file.
+
+    Returns:
+        MP4-encoded video bytes.
+    """
+    return input_file.read_bytes()
+
+
 def parse_kwargs(value: str | dict, *, name: str = "kwargs") -> dict:
     """
     Parse a string or dict into a dict, trying JSON then Python literal syntax.

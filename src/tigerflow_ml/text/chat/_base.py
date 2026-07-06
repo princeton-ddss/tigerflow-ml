@@ -15,6 +15,7 @@ from tigerflow_ml.utils import (
     IMG_EXTENSIONS,
     load_audio,
     load_images,
+    load_video,
     parse_kwargs,
     process_response_schema,
     read_text_file_strict,
@@ -22,6 +23,7 @@ from tigerflow_ml.utils import (
 
 _TEXT_EXTENSIONS = [".txt", ".text", ".md", ".log", ".rtf"]
 _AUDIO_EXTENSIONS = [".wav", ".flac", ".ogg", ".aiff", ".aif", ".mp3"]
+_VIDEO_EXTENSIONS = [".mp4", ".avi", ".mov", ".mkv", ".webm", ".flv", ".wmv"]
 
 
 class _ChatBase:
@@ -170,6 +172,8 @@ class _ChatBase:
             result = _ChatBase._process_img_file(context, input_file)
         elif input_file.suffix.lower() in _AUDIO_EXTENSIONS:
             result = _ChatBase._process_audio_file(context, input_file)
+        elif input_file.suffix.lower() in _VIDEO_EXTENSIONS:
+            result = _ChatBase._process_video_file(context, input_file)
         else:
             raise ValueError(
                 f"File extension {input_file.suffix} not currently supported - "
@@ -222,6 +226,16 @@ class _ChatBase:
             prompt=context.prompt,
             audio_data=audio_data,
             sampling_rate=context.audio_sampling_rate,
+            system_message=context.system_message,
+        )
+        return _run_chat(context, message)
+
+    @staticmethod
+    def _process_video_file(context: SetupContext, input_file: Path) -> str:
+        video_bytes = load_video(input_file)
+        message = _build_video_message(
+            prompt=context.prompt,
+            video_bytes=video_bytes,
             system_message=context.system_message,
         )
         return _run_chat(context, message)
@@ -336,6 +350,26 @@ def _build_audio_message(
 
     user_content: list[dict[str, Any]] = [
         {"type": "audio_url", "audio_url": {"url": f"data:audio/wav;base64,{b64}"}},
+        {"type": "text", "text": prompt},
+    ]
+
+    if system_message:
+        return [
+            {"role": "system", "content": system_message},
+            {"role": "user", "content": user_content},
+        ]
+    return [{"role": "user", "content": user_content}]
+
+
+def _build_video_message(
+    prompt: str, video_bytes: bytes, system_message: str | None
+) -> list[dict[str, Any]]:
+    import base64
+
+    b64 = base64.b64encode(video_bytes).decode("utf-8")
+
+    user_content: list[dict[str, Any]] = [
+        {"type": "video_url", "video_url": {"url": f"data:video/mp4;base64,{b64}"}},
         {"type": "text", "text": prompt},
     ]
 
