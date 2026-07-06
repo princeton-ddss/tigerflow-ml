@@ -55,6 +55,15 @@ class _ChatBase:
             ),
         ] = 16000
 
+        video_sample_fps: Annotated[
+            float | None,
+            typer.Option(
+                help="Frame rate (fps) video inputs are resampled to before "
+                "being sent to the model. Frames are dropped to hit this rate. "
+                "Defaults to None (no resampling)."
+            ),
+        ] = None
+
         temperature: Annotated[
             float,
             typer.Option(
@@ -232,7 +241,7 @@ class _ChatBase:
 
     @staticmethod
     def _process_video_file(context: SetupContext, input_file: Path) -> str:
-        video_bytes = load_video(input_file)
+        video_bytes = load_video(input_file, sample_fps=context.video_sample_fps)
         message = _build_video_message(
             prompt=context.prompt,
             video_bytes=video_bytes,

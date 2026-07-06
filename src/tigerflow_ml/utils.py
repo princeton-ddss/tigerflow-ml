@@ -216,14 +216,59 @@ def load_audio(input_file: Path, sampling_rate: int = 16000) -> np.ndarray:
 
 
 def load_video(input_file: Path, sample_fps: float | None = None) -> bytes:
-    """Load a video file as MP4 bytes
+    """Load a video file as MP4 bytes, optionally subsampled to a lower fps.
+
     Args:
         input_file: Path to the video file.
+        sample_fps: If set and lower than the source fps, frames are dropped
+            so the output plays back at this rate. Defaults to None (returns
+            the original bytes unchanged).
 
     Returns:
         MP4-encoded video bytes.
     """
-    return input_file.read_bytes()
+    if sample_fps is None:
+        return input_file.read_bytes()
+
+    import tempfile
+
+    import cv2
+
+    cap = cv2.VideoCapture(str(input_file))
+    try:
+        source_fps = cap.get(cv2.CAP_PROP_FPS)
+        if not source_fps or sample_fps >= source_fps:
+            return input_file.read_bytes()
+
+        width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+        height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        step = source_fps / sample_fps
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            out_path = Path(tmp_dir) / "resampled.mp4"
+            fourcc = cv2.VideoWriter_fourcc(*"mp4v")  # type: ignore
+            writer = cv2.VideoWriter(str(out_path), fourcc, sample_fps, (width, height))
+            try:
+                next_frame = 0.0
+                frame_idx = 0
+                ok, frame = cap.read()
+                while ok:
+                    if frame_idx >= next_frame:
+                        writer.write(frame)
+                        next_frame += step
+                    frame_idx += 1
+                    ok, frame = cap.read()
+            finally:
+                writer.release()
+
+            logger.info(
+                "  Resampled video from {:.2f} fps to {:.2f} fps",
+                source_fps,
+                sample_fps,
+            )
+            return out_path.read_bytes()
+    finally:
+        cap.release()
 
 
 def parse_kwargs(value: str | dict, *, name: str = "kwargs") -> dict:
