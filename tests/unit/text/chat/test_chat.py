@@ -5,12 +5,16 @@ import io
 from types import SimpleNamespace
 from unittest.mock import patch
 
+import numpy as np
 import PIL.Image
 import pytest
+import soundfile as sf
 
 from tigerflow_ml.text.chat._base import (
+    _build_audio_message,
     _build_img_message,
     _build_txt_message,
+    _build_video_message,
     _ChatBase,
 )
 from tigerflow_ml.utils import EmptyFileError
@@ -22,6 +26,8 @@ def _make_context(**kwargs):
         prompt="Describe this",
         system_message=None,
         max_image_pixels=None,
+        audio_sampling_rate=16000,
+        video_sample_fps=None,
         max_tokens=512,
         max_model_len=32000,
         allow_fetch=False,
@@ -205,3 +211,83 @@ class TestBuildImgMessage:
         raw = base64.b64decode(url.removeprefix("data:image/png;base64,"))
         decoded = PIL.Image.open(io.BytesIO(raw))
         assert decoded.size == (64, 48)
+
+
+class TestBuildAudioMessage:
+    @pytest.fixture
+    def audio_data(self):
+        return np.zeros(16000, dtype=np.float32)
+
+    def _user_content(self, messages):
+        return messages[-1]["content"]
+
+    def test_audio_comes_before_text(self, audio_data):
+        content = self._user_content(
+            _build_audio_message(
+                "Describe", audio_data, sampling_rate=16000, system_message=None
+            )
+        )
+        assert content[0]["type"] == "audio_url"
+        assert content[1]["type"] == "text"
+
+    def test_system_message_is_first(self, audio_data):
+        messages = _build_audio_message(
+            "Describe", audio_data, sampling_rate=16000, system_message="Be concise."
+        )
+        assert messages[0] == {"role": "system", "content": "Be concise."}
+        assert messages[1]["role"] == "user"
+
+    def test_no_system_message_single_user_turn(self, audio_data):
+        messages = _build_audio_message(
+            "Describe", audio_data, sampling_rate=16000, system_message=None
+        )
+        assert len(messages) == 1
+        assert messages[0]["role"] == "user"
+
+    def test_base64_url_is_valid_wav_at_sampling_rate(self, audio_data):
+        content = self._user_content(
+            _build_audio_message(
+                "Describe", audio_data, sampling_rate=16000, system_message=None
+            )
+        )
+        url = next(c for c in content if c["type"] == "audio_url")["audio_url"]["url"]
+        assert url.startswith("data:audio/wav;base64,")
+        raw = base64.b64decode(url.removeprefix("data:audio/wav;base64,"))
+        decoded, sr = sf.read(io.BytesIO(raw))
+        assert sr == 16000
+        assert len(decoded) == len(audio_data)
+
+
+class TestBuildVideoMessage:
+    def _user_content(self, messages):
+        return messages[-1]["content"]
+
+    def test_video_comes_before_text(self):
+        content = self._user_content(
+            _build_video_message("Describe", b"fake-mp4-bytes", system_message=None)
+        )
+        assert content[0]["type"] == "video_url"
+        assert content[1]["type"] == "text"
+
+    def test_system_message_is_first(self):
+        messages = _build_video_message(
+            "Describe", b"fake-mp4-bytes", system_message="Be concise."
+        )
+        assert messages[0] == {"role": "system", "content": "Be concise."}
+        assert messages[1]["role"] == "user"
+
+    def test_no_system_message_single_user_turn(self):
+        messages = _build_video_message(
+            "Describe", b"fake-mp4-bytes", system_message=None
+        )
+        assert len(messages) == 1
+        assert messages[0]["role"] == "user"
+
+    def test_base64_url_roundtrips_original_bytes(self):
+        content = self._user_content(
+            _build_video_message("Describe", b"fake-mp4-bytes", system_message=None)
+        )
+        url = next(c for c in content if c["type"] == "video_url")["video_url"]["url"]
+        assert url.startswith("data:video/mp4;base64,")
+        raw = base64.b64decode(url.removeprefix("data:video/mp4;base64,"))
+        assert raw == b"fake-mp4-bytes"
