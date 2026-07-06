@@ -7,6 +7,7 @@ from enum import Enum
 from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
+import numpy as np
 from tigerflow.logconfig import logger
 
 if TYPE_CHECKING:
@@ -188,6 +189,30 @@ def batched(iterable: Iterator, n: int) -> Iterator[list]:
             batch = []
     if batch:
         yield batch
+
+
+def load_audio(input_file: Path, sampling_rate: int = 16000) -> np.ndarray:
+    """Load an audio file as a mono float32 array at the given sampling rate.
+
+    Decodes with ``soundfile``, averages channels to mono, and resamples with
+    ``soxr`` if needed.
+
+    Args:
+        input_file: Path to the audio file.
+        sampling_rate: Target sampling rate in Hz.
+
+    Returns:
+        A 1-D float32 array of samples at ``sampling_rate``.
+    """
+    import soundfile as sf
+    import soxr
+
+    array, sr = sf.read(str(input_file), dtype="float32", always_2d=False)
+    if array.ndim > 1:
+        array = array.mean(axis=1)
+    if sr != sampling_rate:
+        array = soxr.resample(array, sr, sampling_rate)
+    return np.ascontiguousarray(array, dtype=np.float32)
 
 
 def parse_kwargs(value: str | dict, *, name: str = "kwargs") -> dict:
