@@ -29,8 +29,11 @@ recursively, so you only need to specify what differs.
 Snapshots
 ---------
 Tests compare task outputs against committed snapshots in
-``tests/integration/fixtures/snapshots/``. To regenerate snapshots after an
-intentional behavior change, run with ``--update-snapshots``::
+``tests/integration/fixtures/snapshots/``. Text outputs use
+``assert_or_update_snapshot``; array outputs (e.g. embeddings) use
+``assert_or_update_array_snapshot``, which compares ``.npy`` files by cosine
+similarity. To regenerate snapshots after an intentional behavior change, run
+with ``--update-snapshots``::
 
     TIGERFLOW_ML_INTEGRATION_TESTS=1 uv run pytest tests --update-snapshots
 
@@ -46,6 +49,7 @@ import os
 import tempfile
 from pathlib import Path
 
+import numpy as np
 import pytest
 
 _RUN_VAR = "TIGERFLOW_ML_INTEGRATION_TESTS"
@@ -113,6 +117,52 @@ def assert_or_update_snapshot(
         ratio = SequenceMatcher(None, expected, actual).ratio()
         assert ratio >= threshold, (
             f"Snapshot similarity {ratio:.3f} below threshold {threshold} for {name}"
+        )
+
+
+def assert_or_update_array_snapshot(
+    actual: np.ndarray,
+    name: str,
+    snapshot_dir: Path,
+    update: bool,
+    threshold: float | None = None,
+) -> None:
+    """Compare ``actual`` against the ``.npy`` snapshot at ``snapshot_dir/name``.
+
+    When ``update`` is True, writes ``actual`` to the snapshot path instead of
+    asserting. The snapshot file is created if missing.
+
+    When ``threshold`` is None (default), asserts exact equality. When
+    ``threshold`` is a float in [0, 1], asserts the cosine similarity between
+    ``actual`` and the snapshot is at least the threshold for every row —
+    useful for embeddings that vary slightly across hardware or library
+    versions.
+    """
+    snapshot_file = snapshot_dir / name
+    if update:
+        snapshot_file.parent.mkdir(parents=True, exist_ok=True)
+        np.save(snapshot_file, actual)
+        return
+    if not snapshot_file.exists():
+        raise AssertionError(
+            f"No snapshot at {snapshot_file}. Run with --update-snapshots to create."
+        )
+    expected = np.load(snapshot_file)
+    assert actual.shape == expected.shape, (
+        f"Snapshot shape mismatch for {name}: {actual.shape} != {expected.shape}"
+    )
+    if threshold is None:
+        assert np.array_equal(actual, expected), f"Snapshot mismatch for {name}"
+    else:
+        actual_2d = np.atleast_2d(actual)
+        expected_2d = np.atleast_2d(expected)
+        norms = np.linalg.norm(actual_2d, axis=1) * np.linalg.norm(expected_2d, axis=1)
+        norms[norms == 0] = np.finfo(norms.dtype).eps
+        similarities = np.sum(actual_2d * expected_2d, axis=1) / norms
+        min_similarity = similarities.min()
+        assert min_similarity >= threshold, (
+            f"Snapshot cosine similarity {min_similarity:.4f} below threshold "
+            f"{threshold} for {name}"
         )
 
 
