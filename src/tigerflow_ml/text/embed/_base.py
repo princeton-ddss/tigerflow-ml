@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Any
 
 import numpy as np
 import typer
@@ -33,14 +33,48 @@ class _EmbedBase:
             ),
         ] = 32
 
+        prompt: Annotated[
+            str | None,
+            typer.Option(
+                help="Raw text prepended to each input before encoding (e.g. "
+                "'query: '). Mutually exclusive with --prompt-name."
+            ),
+        ] = None
+
+        prompt_name: Annotated[
+            str | None,
+            typer.Option(
+                help="Name of a prompt predefined in the model's config (e.g. "
+                "'query' or 'passage' for e5/bge models). Mutually exclusive "
+                "with --prompt."
+            ),
+        ] = None
+
+        normalize: Annotated[
+            bool,
+            typer.Option(
+                help="Whether to normalize returned vectors to have length 1."
+            ),
+        ] = False
+
+        truncate_dim: Annotated[
+            int | None,
+            typer.Option(help="The dimension to truncate sentence embeddings to."),
+        ] = None
+
     @staticmethod
     def setup(context: SetupContext):
         import torch
         from sentence_transformers import SentenceTransformer
 
+        if context.prompt is not None and context.prompt_name is not None:
+            raise ValueError("--prompt and --prompt-name are mutually exclusive")
+
         device = context.device
         if context.device == "auto":
             device = "cuda" if torch.cuda.is_available() else "cpu"
+
+        torch.manual_seed(context.seed)
 
         try:
             context.embedder = SentenceTransformer(
@@ -69,8 +103,22 @@ class _EmbedBase:
                 "save to a .npy file."
             )
 
+        encode_kwargs = {
+            "normalize_embeddings": context.normalize,
+            "show_progress_bar": False,
+        }
+        if context.prompt is not None:
+            encode_kwargs["prompt"] = context.prompt
+        if context.prompt_name is not None:
+            encode_kwargs["prompt_name"] = context.prompt_name
+        if context.truncate_dim is not None:
+            encode_kwargs["truncate_dim"] = context.truncate_dim
+        logger.info(f"   Encode kwargs: {encode_kwargs}")
+
         if input_file.suffix.lower() in _TEXT_EXTENSIONS:
-            embeddings = _EmbedBase._embed_text(context=context, input_file=input_file)
+            embeddings = _EmbedBase._embed_text(
+                context=context, input_file=input_file, encode_kwargs=encode_kwargs
+            )
         else:
             raise ValueError(
                 f"File extension {input_file.suffix} not currently supported - "
@@ -79,15 +127,19 @@ class _EmbedBase:
         np.save(output_file, embeddings)
 
     @staticmethod
-    def _embed_text(context: SetupContext, input_file: Path):
+    def _embed_text(
+        context: SetupContext, input_file: Path, encode_kwargs: dict[str, Any]
+    ):
         content = read_text_file_strict(input_file)
         if context.per_line:
             texts = [line.strip() for line in content.splitlines() if line.strip()]
-            embeddings = context.embedder.encode(texts, batch_size=context.batch_size)
+            embeddings = context.embedder.encode(
+                texts, batch_size=context.batch_size, **encode_kwargs
+            )
             logger.info(
                 f"   Embedded {len(texts)} line(s) with shape {embeddings.shape}"
             )
         else:
-            embeddings = context.embedder.encode(content)
+            embeddings = context.embedder.encode_document(content, **encode_kwargs)
             logger.info(f"   Embedded 1 document with shape {embeddings.shape}")
         return embeddings
