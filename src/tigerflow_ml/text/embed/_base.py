@@ -97,7 +97,7 @@ class _EmbedBase:
 
     @staticmethod
     def run(context: SetupContext, input_file: Path, output_file: Path):
-        if output_file.suffix.lower() != ".npy":  # TODO: support json?
+        if output_file.suffix.lower() != ".npy":
             raise ValueError(
                 f"{output_file.suffix} is not a supported output for embed — "
                 "save to a .npy file."
