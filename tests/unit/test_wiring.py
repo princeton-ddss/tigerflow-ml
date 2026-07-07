@@ -32,6 +32,12 @@ _TASKS = [
         "tigerflow_ml.text.chat.local",
         "tigerflow_ml.text.chat.slurm",
     ),
+    (
+        "embed",
+        ".txt",
+        "tigerflow_ml.text.embed.local",
+        "tigerflow_ml.text.embed.slurm",
+    ),
 ]
 
 
