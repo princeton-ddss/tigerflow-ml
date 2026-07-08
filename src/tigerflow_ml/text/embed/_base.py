@@ -15,6 +15,7 @@ from tigerflow_ml.utils import (
 )
 
 _TEXT_EXTENSIONS = [".txt", ".text", ".md", ".log", ".rtf"]
+_AUDIO_EXTENSIONS = [".wav", ".flac", ".ogg", ".aiff", ".aif", ".mp3"]
 
 
 class _EmbedBase:
@@ -81,7 +82,7 @@ class _EmbedBase:
             device = "cuda" if torch.cuda.is_available() else "cpu"
 
         torch.manual_seed(context.seed)
-
+        logger.info(f"   Loading model {context.model}")
         try:
             context.embedder = SentenceTransformer(
                 context.model,
@@ -129,6 +130,10 @@ class _EmbedBase:
             embeddings = _EmbedBase._embed_image(
                 context=context, input_file=input_file, encode_kwargs=encode_kwargs
             )
+        elif input_file.suffix.lower() in _AUDIO_EXTENSIONS:
+            embeddings = _EmbedBase._embed_audio(
+                context=context, input_file=input_file, encode_kwargs=encode_kwargs
+            )
         else:
             raise ValueError(
                 f"File extension {input_file.suffix} not currently supported - "
@@ -172,3 +177,33 @@ class _EmbedBase:
                 f"   Embedded {len(images)} page(s) with shape {embeddings.shape}"
             )
         return embeddings
+
+    @staticmethod
+    def _embed_audio(
+        context: SetupContext, input_file: Path, encode_kwargs: dict[str, Any]
+    ):
+        sampling_rate = context.embedder[0].processor.feature_extractor.sampling_rate
+        audio = load_audio(input_file=input_file, sampling_rate=sampling_rate)
+        if audio.size == 0:
+            raise EmptyFileError(f"{input_file} is empty")
+        embeddings = context.embedder.encode(
+            {"array": audio, "sampling_rate": sampling_rate}, **encode_kwargs
+        )
+        logger.info(
+            f"   Embedded audio with shape {embeddings.shape} "
+            f"(sampling rate {sampling_rate}Hz)"
+        )
+        return embeddings
+
+
+def load_audio(input_file: Path, sampling_rate: int = 16000) -> np.ndarray:
+    """Delete once PR #176 merged (will be in shared utils)"""
+    import soundfile as sf
+    import soxr
+
+    array, sr = sf.read(str(input_file), dtype="float32", always_2d=False)
+    if array.ndim > 1:
+        array = array.mean(axis=1)
+    if sr != sampling_rate:
+        array = soxr.resample(array, sr, sampling_rate)
+    return np.ascontiguousarray(array, dtype=np.float32)
