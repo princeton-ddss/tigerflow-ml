@@ -28,7 +28,7 @@ pip install tigerflow-ml[vllm]
 | Chat             | Apply a chat prompt to images or text | `chat` / `chat-local`             |
 | Transcription    | Transcribe audio to text              | `transcribe` / `transcribe-local` |
 | Object Detection | Detect objects in images and videos   | `detect` / `detect-local`         |
-| Embed            | Embed text documents                  | `embed` / `embed-local`           |
+| Embed            | Embed text or images                  | `embed` / `embed-local`           |
 
 Each task provides both a Slurm variant (for HPC) and a Local variant (for development).
 
