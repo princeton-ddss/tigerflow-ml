@@ -10,12 +10,13 @@ from tigerflow_ml.params import HFParams
 from tigerflow_ml.utils import (
     IMG_EXTENSIONS,
     TEXT_EXTENSIONS,
+    EmptyFileError,
+    batched,
+    count_images,
     load_images,
     parse_kwargs,
     read_text_file_strict,
 )
-
-_TEXT_EXTENSIONS = [".txt", ".text", ".md", ".log", ".rtf"]
 
 
 class _EmbedBase:
@@ -57,6 +58,15 @@ class _EmbedBase:
                 "(e.g., {'prompt':'query: '}). Supplied values override task defaults."
             ),
         ] = "{}"
+
+        batch_size: Annotated[
+            int,
+            typer.Option(
+                help="The number of pages to encode in one batch if encoding"
+                "multi-page pdfs as images",
+                min=1,
+            ),
+        ] = 100
 
     @staticmethod
     def setup(context: SetupContext):
@@ -116,10 +126,7 @@ class _EmbedBase:
                 context=context,
                 input_file=input_file,
             )
-        elif (
-            input_file.suffix.lower() in IMG_EXTENSIONS
-            and input_file.suffix.lower() != ".pdf"
-        ):
+        elif input_file.suffix.lower() in IMG_EXTENSIONS:
             embeddings = _EmbedBase._embed_image(
                 context=context,
                 input_file=input_file,
@@ -148,7 +155,19 @@ class _EmbedBase:
 
     @staticmethod
     def _embed_image(context: SetupContext, input_file: Path):
-        image = next(load_images(path=input_file, max_images=1))
-        embedding = context.embedder.encode(image, **context.encode_kwargs)
-        logger.info(f"   Embedded image with shape {embedding.shape}")
-        return embedding
+        total = count_images(input_file)
+        if total == 0:
+            raise EmptyFileError(f"{input_file} is empty")
+        if total == 1:
+            image = next(load_images(input_file))
+            embeddings = context.embedder.encode(image, **context.encode_kwargs)
+            logger.info(f"   Embedded image with shape {embeddings.shape}")
+        else:  # multi-page
+            embeddings = np.concatenate(
+                [
+                    context.embedder.encode(batch, **context.encode_kwargs)
+                    for batch in batched(load_images(input_file), context.batch_size)
+                ]
+            )
+            logger.info(f"   Embedded {total} page(s) with shape {embeddings.shape}")
+        return embeddings
