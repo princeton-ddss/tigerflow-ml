@@ -7,7 +7,7 @@ from tigerflow.logconfig import logger
 from tigerflow.utils import SetupContext
 
 from tigerflow_ml.params import HFParams
-from tigerflow_ml.utils import read_text_file_strict
+from tigerflow_ml.utils import _IMG_EXTENSIONS, load_images, read_text_file_strict
 
 _TEXT_EXTENSIONS = [".txt", ".text", ".md", ".log", ".rtf"]
 
@@ -119,6 +119,13 @@ class _EmbedBase:
             embeddings = _EmbedBase._embed_text(
                 context=context, input_file=input_file, encode_kwargs=encode_kwargs
             )
+        elif (
+            input_file.suffix.lower() in _IMG_EXTENSIONS
+            and input_file.suffix.lower() != ".pdf"
+        ):
+            embeddings = _EmbedBase._embed_image(
+                context=context, input_file=input_file, encode_kwargs=encode_kwargs
+            )
         else:
             raise ValueError(
                 f"File extension {input_file.suffix} not currently supported - "
@@ -143,3 +150,12 @@ class _EmbedBase:
             embeddings = context.embedder.encode_document(content, **encode_kwargs)
             logger.info(f"   Embedded 1 document with shape {embeddings.shape}")
         return embeddings
+
+    @staticmethod
+    def _embed_image(
+        context: SetupContext, input_file: Path, encode_kwargs: dict[str, Any]
+    ):
+        image = load_images(input_file)[0]
+        embedding = context.embedder.encode(image, **encode_kwargs)
+        logger.info(f"   Embedded image with shape {embedding.shape}")
+        return embedding

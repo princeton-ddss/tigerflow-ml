@@ -4737,6 +4737,11 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/76/c1/dc1582b79e9a2eb0cddf9559cd9bcdff084f541d6fe881fdd9d98630dba7/sentence_transformers-5.6.0-py3-none-any.whl", hash = "sha256:d2075b5e687a1611005e20ab04a6846994d51adfcf39610aed066af3c0c0b81f", size = 596411, upload-time = "2026-06-16T14:01:55.103Z" },
 ]
 
+[package.optional-dependencies]
+image = [
+    { name = "transformers", extra = ["vision"] },
+]
+
 [[package]]
 name = "sentencepiece"
 version = "0.2.1"
@@ -5064,7 +5069,7 @@ dependencies = [
     { name = "protobuf" },
     { name = "pydantic" },
     { name = "pymupdf" },
-    { name = "sentence-transformers" },
+    { name = "sentence-transformers", extra = ["image"] },
     { name = "sentencepiece" },
     { name = "soundfile" },
     { name = "soxr" },
@@ -5111,7 +5116,7 @@ requires-dist = [
     { name = "protobuf" },
     { name = "pydantic", specifier = ">=2.0" },
     { name = "pymupdf", specifier = ">=1.27.1" },
-    { name = "sentence-transformers", specifier = ">=5.6.0" },
+    { name = "sentence-transformers", extras = ["image"], specifier = ">=5.6.0" },
     { name = "sentencepiece" },
     { name = "soundfile", specifier = ">=0.12" },
     { name = "soxr", specifier = ">=0.3" },
@@ -5518,6 +5523,12 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/51/58/7f843608f2e8421f86bb97060b54649be6239ec612b82bf9d41e65c26c00/transformers-5.9.0.tar.gz", hash = "sha256:25997cb8fa6053533171634b6162d7df54346530ec2aa9b42bb834e63668c842", size = 8642240, upload-time = "2026-05-20T14:50:49.278Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/02/ca/2eaa5359f2ccb8c2e1656bc26305ad0cf438aa392ce4b29ae67a315c186e/transformers-5.9.0-py3-none-any.whl", hash = "sha256:1d19509bcff7028ebc6b277d71caa712e8353778463d38764237d14b42b52788", size = 10787648, upload-time = "2026-05-20T14:50:45.337Z" },
+]
+
+[package.optional-dependencies]
+vision = [
+    { name = "pillow" },
+    { name = "torchvision" },
 ]
 
 [[package]]
