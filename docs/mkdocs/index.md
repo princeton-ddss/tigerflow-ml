@@ -40,7 +40,7 @@ hide:
 - [Transcription](tasks/transcribe.md) — Transcribe audio to text
 - [Object Detection](tasks/detect.md) — Detect objects in images and videos
 - [Chat](tasks/chat.md) - Apply a chat prompt to text or image documents
-- [Embed](tasks/embed.md) — Embed text or images
+- [Embed](tasks/embed.md) — Embed text, images, or audio
 
 ## Installation
 

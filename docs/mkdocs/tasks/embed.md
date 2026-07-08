@@ -1,6 +1,6 @@
 # Embed
 
-Embed text or images using HuggingFace sentence-transformers models.
+Embed text, images, or audio using HuggingFace sentence-transformers models.
 
 ## Parameters
 
@@ -24,6 +24,8 @@ Embed text or images using HuggingFace sentence-transformers models.
 - Text files (`.txt`, `.text`, `.md`, `.log`, `.rtf`)
 - Image files (`.jpg`, `.jpeg`, `.png`, `.tiff`, `.tif`, `.bmp`, `.heic`, `.heif`)
 - PDF files (`.pdf`) — each page is rendered to an image and embedded
+- Audio files (`.wav`, `.flac`, `.ogg`, `.aiff`, `.aif`, `.mp3`) — decoded, averaged to
+  mono, and resampled to the rate the model expects
 
 ## Output Format
 
@@ -33,10 +35,11 @@ NumPy binary (`.npy`).
 - With `--per-line`, each non-empty line of a text file is embedded independently, producing a 2-D array of shape `(n_lines, dim)`.
 - A single image (or single-page PDF) produces a 1-D array of shape `(dim,)`.
 - A multi-page PDF produces a 2-D array of shape `(n_pages, dim)`, one row per page.
+- A single audio file produces a 1-D array of shape `(dim,)`.
 
 ## Models
 
-Any HuggingFace model compatible with the [sentence-transformers](https://sbert.net) library, including plain text encoder models. Embedding image or PDF input requires a multi-modal model (e.g. CLIP-style) that supports image encoding.
+Any HuggingFace model compatible with the [sentence-transformers](https://sbert.net) library, including plain text encoder models. Embedding image or PDF input requires a multi-modal model (e.g. CLIP-style) that supports image encoding. Embedding audio requires an audio-capable model (e.g. `wav2vec2`, `HuBERT`, `WavLM`, a Whisper encoder, or CLAP) — the audio is automatically resampled to whatever rate that model's feature extractor expects.
 
 ## Examples
 
@@ -124,6 +127,33 @@ way, with one row of output per page.
 === "Output (.npy)"
 
     A single vector of shape `(512,)`.
+
+### Embed audio
+
+Use an audio-capable model to embed a sound file. The file is decoded, averaged to
+mono, and resampled to the model's expected sampling rate before encoding.
+
+=== "Config"
+
+    ```yaml title="config.yaml"
+    tasks:
+      - name: embed
+        kind: local
+        module: tigerflow_ml.text.embed.local
+        input_ext: .mp3
+        output_ext: .npy
+        params:
+          model: openai/whisper-tiny
+          allow-fetch: True
+    ```
+
+=== "Input"
+
+    An audio recording, e.g. `clip.mp3`.
+
+=== "Output (.npy)"
+
+    A single vector of shape `(384,)`.
 
 ### Run on HPC with Slurm
 
