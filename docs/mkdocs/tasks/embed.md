@@ -1,6 +1,6 @@
 # Embed
 
-Embed text using HuggingFace sentence-transformers models.
+Embed text or images using HuggingFace sentence-transformers models.
 
 ## Parameters
 
@@ -13,6 +13,7 @@ Embed text using HuggingFace sentence-transformers models.
 | `--allow-fetch`     | `--no-allow-fetch` | Allow downloads from HuggingFace Hub (network access required)                                                     |
 | `--seed`            | `42`               | The seed to set for more reproducible behavior                                                                     |
 | `--encode-kwargs`   | `{}`               | Additional kwargs for SentenceTransformer's `encode()` (e.g. `{'prompt':'query: '}`). Supplied values override task defaults. |
+| `--batch-size`      | `32`               | Number of pages per batch when embedding a multi-page PDF                                                          |
 | `--normalize`       | `--no-normalize`   | Whether to normalize returned vectors to have length 1                                                             |
 | `--truncate-dim`    |                    | The dimension to truncate sentence embeddings to                                                                   |
 | `--use-encode-document` | `--no-use-encode-document` | Use SentenceTransformer's `encode_document()` instead of `encode()`. See [SentenceTransformer's documentation](https://sbert.net/docs/package_reference/sentence_transformer/model.html#sentence_transformers.sentence_transformer.model.SentenceTransformer.encode_document) for more information. |
@@ -21,15 +22,20 @@ Embed text using HuggingFace sentence-transformers models.
 
 ## Supported Input Formats
 
-Text files (`.txt`, `.text`, `.md`, `.log`, `.rtf`)
+- Text files (`.txt`, `.text`, `.md`, `.log`, `.rtf`)
+- Image files (`.jpg`, `.jpeg`, `.png`, `.tiff`, `.tif`, `.bmp`, `.heic`, `.heif`)
+- PDF files (`.pdf`) — each page is rendered to an image and embedded
 
 ## Output Format
 
 NumPy binary (`.npy`).
 
+- A single image (or single-page PDF) produces a 1-D array of shape `(dim,)`.
+- A multi-page PDF produces a 2-D array of shape `(n_pages, dim)`, one row per page.
+
 ## Models
 
-Any HuggingFace model compatible with the [sentence-transformers](https://sbert.net) library, including plain encoder models.
+Any HuggingFace model compatible with the [sentence-transformers](https://sbert.net) library, including plain text encoder models. Embedding image or PDF input requires a multi-modal model (e.g. CLIP-style) that supports image encoding.
 
 ## Examples
 
@@ -58,6 +64,33 @@ Any HuggingFace model compatible with the [sentence-transformers](https://sbert.
 === "Output (.npy)"
 
     A single vector of shape `(384,)`.
+
+### Embed an image
+
+Use a multi-modal (CLIP-style) model to embed images. PDFs are supported the same
+way, with one row of output per page.
+
+=== "Config"
+
+    ```yaml title="config.yaml"
+    tasks:
+      - name: embed
+        kind: local
+        module: tigerflow_ml.text.embed.local
+        input_ext: .jpg
+        output_ext: .npy
+        params:
+          model: sentence-transformers/clip-ViT-B-32
+          allow-fetch: True
+    ```
+
+=== "Input"
+
+    An image file, e.g. `photo.jpg`.
+
+=== "Output (.npy)"
+
+    A single vector of shape `(512,)`.
 
 ### Run on HPC with Slurm
 

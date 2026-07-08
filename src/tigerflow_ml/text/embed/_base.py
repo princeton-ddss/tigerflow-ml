@@ -66,7 +66,7 @@ class _EmbedBase:
                 "multi-page pdfs as images",
                 min=1,
             ),
-        ] = 100
+        ] = 32
 
     @staticmethod
     def setup(context: SetupContext):
