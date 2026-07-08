@@ -182,7 +182,16 @@ class _EmbedBase:
     def _embed_audio(
         context: SetupContext, input_file: Path, encode_kwargs: dict[str, Any]
     ):
-        sampling_rate = context.embedder[0].processor.feature_extractor.sampling_rate
+        try:
+            sampling_rate = context.embedder[
+                0
+            ].processor.feature_extractor.sampling_rate
+        except (AttributeError, IndexError) as e:
+            raise RuntimeError(
+                "Could not determine the expected audio sampling rate for "
+                f"'{context.model}'. This model may not expose a standard audio "
+                "feature extractor (processor.feature_extractor.sampling_rate). "
+            ) from e
         audio = load_audio(input_file=input_file, sampling_rate=sampling_rate)
         if audio.size == 0:
             raise EmptyFileError(f"{input_file} is empty")
