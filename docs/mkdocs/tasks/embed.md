@@ -1,6 +1,6 @@
 # Embed
 
-Embed text, images, or audio using HuggingFace sentence-transformers models.
+Embed text, images, audio, or video using HuggingFace sentence-transformers models.
 
 ## Parameters
 
@@ -13,7 +13,8 @@ Embed text, images, or audio using HuggingFace sentence-transformers models.
 | `--allow-fetch`     | `--no-allow-fetch` | Allow downloads from HuggingFace Hub (network access required)                                                     |
 | `--seed`            | `42`               | The seed to set for more reproducible behavior                                                                     |
 | `--per-line`        | `--no-per-line`    | Embed each non-empty line of the input file independently, producing one vector per line instead of a single vector for the whole file (text input only) |
-| `--batch-size`      | `32`               | Number of lines encoded per batch when `--per-line` is set, or number of pages per batch when embedding a multi-page PDF |
+| `--batch-size`      | `32`               | Number of lines encoded per batch when `--per-line` is set, number of pages per batch for a multi-page PDF, or number of frames per batch for video |
+| `--sample-fps`      | `1.0`              | Frames per second to sample from video. Set to `0` to process every frame (video input only) |
 | `--prompt`          |                    | Raw text prepended to each input before encoding (e.g. `query: `). Mutually exclusive with `--prompt-name`         |
 | `--prompt-name`     |                    | Name of a prompt predefined in the model's config (e.g. `query` or `passage` for e5/bge models). Mutually exclusive with `--prompt` |
 | `--normalize`       | `--no-normalize`   | Whether to normalize returned vectors to have length 1                                                             |
@@ -26,6 +27,8 @@ Embed text, images, or audio using HuggingFace sentence-transformers models.
 - PDF files (`.pdf`) — each page is rendered to an image and embedded
 - Audio files (`.wav`, `.flac`, `.ogg`, `.aiff`, `.aif`, `.mp3`) — decoded, averaged to
   mono, and resampled to the rate the model expects
+- Video files (`.mp4`, `.avi`, `.mov`, `.mkv`, `.webm`, `.flv`, `.wmv`) — sampled to
+  frames at `--sample-fps` and each frame is embedded
 
 ## Output Format
 
@@ -36,10 +39,11 @@ NumPy binary (`.npy`).
 - A single image (or single-page PDF) produces a 1-D array of shape `(dim,)`.
 - A multi-page PDF produces a 2-D array of shape `(n_pages, dim)`, one row per page.
 - A single audio file produces a 1-D array of shape `(dim,)`.
+- A video producing more than one sampled frame outputs a 2-D array of shape `(n_frames, dim)`, one row per frame; a video that samples down to a single frame outputs a 1-D array of shape `(dim,)`.
 
 ## Models
 
-Any HuggingFace model compatible with the [sentence-transformers](https://sbert.net) library, including plain text encoder models. Embedding image or PDF input requires a multi-modal model (e.g. CLIP-style) that supports image encoding. Embedding audio requires an audio-capable model (e.g. `wav2vec2`, `HuBERT`, `WavLM`, a Whisper encoder, or CLAP) — the audio is automatically resampled to whatever rate that model's feature extractor expects.
+Any HuggingFace model compatible with the [sentence-transformers](https://sbert.net) library, including plain text encoder models works for text input. Embedding image or PDF input requires a multi-modal model (e.g. CLIP-style) that supports image encoding. Video is embedded as a sequence of sampled frames through the same image-capable models used for image input — there's no dedicated "video model" requirement, so any CLIP-style model works, at the cost of not modeling motion/temporal information across frames. Embedding audio requires an audio-capable model (e.g. `wav2vec2`, `HuBERT`, `WavLM`, a Whisper encoder, or CLAP) — the audio is automatically resampled to whatever rate that model's feature extractor expects.
 
 ## Examples
 
@@ -154,6 +158,35 @@ mono, and resampled to the model's expected sampling rate before encoding.
 === "Output (.npy)"
 
     A single vector of shape `(384,)`.
+
+### Embed video
+
+Video is sampled to frames at `--sample-fps` and each frame is embedded with the same
+multi-modal model used for images.
+
+=== "Config"
+
+    ```yaml title="config.yaml"
+    tasks:
+      - name: embed
+        kind: local
+        module: tigerflow_ml.text.embed.local
+        input_ext: .mp4
+        output_ext: .npy
+        params:
+          model: sentence-transformers/clip-ViT-B-32
+          sample-fps: 1.0
+          allow-fetch: True
+    ```
+
+=== "Input"
+
+    A video file, e.g. `clip.mp4` (roughly 30 seconds).
+
+=== "Output (.npy)"
+
+    An array of shape `(31, 512)` — one row per sampled frame (`--sample-fps 1.0`
+    samples roughly one frame per second of video).
 
 ### Run on HPC with Slurm
 
