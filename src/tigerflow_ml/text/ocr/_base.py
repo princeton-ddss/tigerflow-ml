@@ -152,42 +152,11 @@ class _OCRBase:
                 for image in image_batch
             ]
             output = context.LLM.chat(messages, **context.chat_kwargs)
-            completions.extend(o.outputs[0] for o in output)
+            for completion in (o.outputs[0] for o in output):
+                page = len(completions) + 1
+                _check_completion(context, completion, page, output_format)
+                completions.append(completion)
             logger.info(f"    Processed {len(completions)}/{total} pages")
-
-        for page, completion in enumerate(completions, start=1):
-            if completion.finish_reason == "length":
-                if page > 1:
-                    msg = (
-                        f"    Output truncated at {context.max_tokens} tokens (page"
-                        f" {page}) — increase --max-tokens and/or --max_model_len"
-                        " for a complete result"
-                    )
-                else:
-                    msg = (
-                        f"    Output truncated at {context.max_tokens} tokens — "
-                        "increase --max-tokens and/or --max_model_len for a "
-                        "complete result"
-                    )
-                logger.warning(msg)
-            elif completion.finish_reason != "stop":
-                if page > 1:
-                    msg = (
-                        "Unexpected finish reason on page "
-                        f"{page}: {completion.finish_reason!r}"
-                    )
-                else:
-                    msg = f"Unexpected finish reason: {completion.finish_reason!r}"
-                raise RuntimeError(msg)
-            if output_format == OutputFormat.JSON:
-                completion.text = strip_markdown_from_json(completion.text)
-            if not completion.text.strip():  # empty model output
-                if page > 1:
-                    msg = f"    Model output empty on page {page}"
-                else:
-                    msg = "    Model output empty"
-                logger.warning(msg)
-            _validate_output_format(completion.text, output_format)
 
         output_text = _format_output(
             outputs=(c.text for c in completions), output_format=output_format
@@ -195,6 +164,45 @@ class _OCRBase:
 
         with open(output_file, "w", encoding="utf-8") as f:
             f.write(output_text)
+
+
+def _check_completion(
+    context: SetupContext, completion, page: int, output_format: OutputFormat
+) -> None:
+    """Validate a single page's completion, raising/warning as soon as it's
+    available rather than after the whole (possibly hundreds-of-pages)
+    document has been generated."""
+    if completion.finish_reason == "length":
+        if page > 1:
+            msg = (
+                f"    Output truncated at {context.max_tokens} tokens (page"
+                f" {page}) — increase --max-tokens and/or --max_model_len"
+                " for a complete result"
+            )
+        else:
+            msg = (
+                f"    Output truncated at {context.max_tokens} tokens — "
+                "increase --max-tokens and/or --max_model_len for a "
+                "complete result"
+            )
+        logger.warning(msg)
+    elif completion.finish_reason != "stop":
+        if page > 1:
+            msg = (
+                f"Unexpected finish reason on page {page}: {completion.finish_reason!r}"
+            )
+        else:
+            msg = f"Unexpected finish reason: {completion.finish_reason!r}"
+        raise RuntimeError(msg)
+    if output_format == OutputFormat.JSON:
+        completion.text = strip_markdown_from_json(completion.text)
+    if not completion.text.strip():  # empty model output
+        if page > 1:
+            msg = f"    Model output empty on page {page}"
+        else:
+            msg = "    Model output empty"
+        logger.warning(msg)
+    _validate_output_format(completion.text, output_format=output_format, page=page)
 
 
 def _format_message(
@@ -236,7 +244,9 @@ def _determine_output_format(path: Path) -> OutputFormat:
     return format
 
 
-def _validate_output_format(output: str, output_format: OutputFormat) -> None:
+def _validate_output_format(
+    output: str, output_format: OutputFormat, page: int
+) -> None:
     """Raise error if model output doesn't match specified output format"""
     if output_format == OutputFormat.TEXT:
         # no validation required
@@ -245,12 +255,21 @@ def _validate_output_format(output: str, output_format: OutputFormat) -> None:
         try:
             json.loads(output)
         except json.JSONDecodeError as e:
-            raise ValueError(
-                "Model did not return a valid json output."
-                " Try refining your prompt or save to a different format."
-                f" See line {e.lineno} column {e.colno} (char {e.pos}):"
-                f" {output!r}"
-            ) from e
+            if page > 1:
+                msg = (
+                    f"Model did not return a valid json output for page {page}."
+                    " Try refining your prompt or save to a different format."
+                    f" See line {e.lineno} column {e.colno} (char {e.pos}):"
+                    f" {output!r}"
+                )
+            else:
+                msg = (
+                    f"Model did not return a valid json output."
+                    " Try refining your prompt or save to a different format."
+                    f" See line {e.lineno} column {e.colno} (char {e.pos}):"
+                    f" {output!r}"
+                )
+            raise ValueError(msg) from e
     else:
         raise ValueError(f" Unsupported output format: {output_format}")
 
