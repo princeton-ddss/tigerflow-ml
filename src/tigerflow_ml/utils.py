@@ -2,6 +2,7 @@
 
 import ast
 import json
+from collections.abc import Iterator
 from enum import Enum
 from pathlib import Path
 from typing import TYPE_CHECKING, cast
@@ -105,8 +106,12 @@ _IMG_EXTENSIONS = [
 ]
 
 
-def load_images(path: Path, max_images: int | None = None) -> list["Image.Image"]:
+def load_images(path: Path, max_images: int | None = None) -> Iterator["Image.Image"]:
     """Load images from a file. Supports image files and PDFs.
+
+    PDF pages are rendered lazily, one at a time, so callers that consume
+    the result incrementally (e.g. in batches) don't hold every page of a
+    large PDF in memory at once.
 
     Args:
         path: Path to the file to read.
@@ -114,7 +119,7 @@ def load_images(path: Path, max_images: int | None = None) -> list["Image.Image"
             Defaults to None (returns all).
 
     Returns:
-        A list of PIL images of length <= max_images.
+        An iterator of PIL images of length <= max_images.
 
     Raises:
         ValueError: If max_images is less than 1
@@ -135,23 +140,54 @@ def load_images(path: Path, max_images: int | None = None) -> list["Image.Image"
         raise ValueError(f"max_images must be greater than 0. Received {max_images}")
 
     if path.suffix.lower() == ".pdf":
-        import pymupdf
-
-        limit = max_images if max_images is not None else float("inf")
-        images = []
-        with pymupdf.open(path) as doc:
-            for count, page in enumerate(doc, start=1):
-                if count > limit:
-                    break
-                pix = page.get_pixmap()
-                image = Image.frombytes("RGB", (pix.width, pix.height), pix.samples)
-                images.append(image)
-        return images
+        return _iter_pdf_pages(path, max_images)
 
     image = Image.open(path)
     if image.mode != "RGB":
         image = image.convert("RGB")
-    return [image]
+    return iter([image])
+
+
+def count_images(path: Path, max_images: int | None = None) -> int:
+    """Count how many images `load_images` would yield.
+
+    Args:
+        path: Path to the file to read.
+        max_images: The maximum number of images `load_images` would return
+            if input is a PDF. Defaults to None (no cap).
+    """
+    if path.suffix.lower() == ".pdf":
+        import pymupdf
+
+        with pymupdf.open(path) as doc:
+            total = len(doc)
+        return total if max_images is None else min(total, max_images)
+    return 1
+
+
+def _iter_pdf_pages(path: Path, max_images: int | None) -> Iterator["Image.Image"]:
+    import pymupdf
+    from PIL import Image
+
+    limit = max_images if max_images is not None else float("inf")
+    with pymupdf.open(path) as doc:
+        for count, page in enumerate(doc, start=1):
+            if count > limit:
+                break
+            pix = page.get_pixmap()
+            yield Image.frombytes("RGB", (pix.width, pix.height), pix.samples)
+
+
+def batched(iterable: Iterator, n: int) -> Iterator[list]:
+    """Yield successive lists of up to n items from iterable."""
+    batch: list = []
+    for item in iterable:
+        batch.append(item)
+        if len(batch) == n:
+            yield batch
+            batch = []
+    if batch:
+        yield batch
 
 
 def parse_kwargs(value: str | dict, *, name: str = "kwargs") -> dict:

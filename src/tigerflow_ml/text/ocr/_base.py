@@ -16,6 +16,8 @@ from tigerflow.utils import SetupContext
 
 from tigerflow_ml.params import VLLMParams
 from tigerflow_ml.utils import (
+    batched,
+    count_images,
     load_images,
     parse_kwargs,
     process_response_schema,
@@ -60,6 +62,14 @@ class _OCRBase:
                 )
             ),
         ] = None
+
+        batch_size: Annotated[
+            int,
+            typer.Option(
+                help="Number of PDF pages sent to the model per chat() call.",
+                min=1,
+            ),
+        ] = 20
 
     @staticmethod
     def setup(context: SetupContext):
@@ -128,21 +138,23 @@ class _OCRBase:
 
     @staticmethod
     def run(context: SetupContext, input_file: Path, output_file: Path):
-        images = load_images(input_file)
-        logger.info(f"    Loaded {len(images)} image(s)")
         output_format = _determine_output_format(output_file)
+        total = count_images(input_file)
 
-        messages = []
-        for image in images:
-            message = _format_message(
-                image=image,
-                prompt=context.prompt,
-                system_message=context.system_message,
-            )
-            messages.append(message)
+        completions = []
+        for image_batch in batched(load_images(input_file), context.batch_size):
+            messages = [
+                _format_message(
+                    image=image,
+                    prompt=context.prompt,
+                    system_message=context.system_message,
+                )
+                for image in image_batch
+            ]
+            output = context.LLM.chat(messages, **context.chat_kwargs)
+            completions.extend(o.outputs[0] for o in output)
+            logger.info(f"    Processed {len(completions)}/{total} pages")
 
-        output = context.LLM.chat(messages, **context.chat_kwargs)
-        completions = [o.outputs[0] for o in output]
         for page, completion in enumerate(completions, start=1):
             if completion.finish_reason == "length":
                 if page > 1:
