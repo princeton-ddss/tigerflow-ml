@@ -339,6 +339,12 @@ class TestStripMarkdownFromJson:
         result = strip_markdown_from_json("```\n[1, 2, 3]\n```")
         assert result == "[1, 2, 3]"
 
+    def test_trailing_text_is_stripped(self):
+        result = result = strip_markdown_from_json(
+            '```\n{"key": "value"}\n```##Extra text'
+        )
+        assert result == '{"key": "value"}'
+
 
 class TestProcessResponseSchema:
     def _call(self, schema_type, schema_value):

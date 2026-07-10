@@ -412,7 +412,9 @@ def get_model_context_window(config: "PretrainedConfig") -> int | None:
 
 
 def strip_markdown_from_json(json_str: str) -> str:
-    """If str starts with ```json, strip this markdown formatting from beginning and end
+    """If str starts with ```json, strip this markdown formatting from beginning
+    and end. Also discards any trailing text after the first complete JSON
+    value.
 
     Args:
         json_str: The string that should be valid json
@@ -424,4 +426,12 @@ def strip_markdown_from_json(json_str: str) -> str:
         stripped = stripped.removeprefix("```json").removeprefix("```")
         stripped = stripped.removesuffix("```")
         stripped = stripped.strip()
+
+    decoder = json.JSONDecoder()
+    try:
+        obj, end = decoder.raw_decode(stripped)
+    except json.JSONDecodeError:
+        return stripped
+    if stripped[end:].strip():
+        return json.dumps(obj)
     return stripped
