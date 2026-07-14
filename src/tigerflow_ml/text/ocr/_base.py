@@ -63,13 +63,13 @@ class _OCRBase:
             ),
         ] = None
 
-        batch_size: Annotated[
+        buffer_size: Annotated[
             int,
             typer.Option(
-                help="Number of PDF pages sent to the model per chat() call.",
+                help="Number of PDF pages loaded in memory as images at one time",
                 min=1,
             ),
-        ] = 20
+        ] = 100
 
     @staticmethod
     def setup(context: SetupContext):
@@ -142,7 +142,7 @@ class _OCRBase:
         total = count_images(input_file)
 
         completions = []
-        for image_batch in batched(load_images(input_file), context.batch_size):
+        for image_batch in batched(load_images(input_file), context.buffer_size):
             messages = [
                 _format_message(
                     image=image,
