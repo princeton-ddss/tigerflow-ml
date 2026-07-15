@@ -151,6 +151,7 @@ class _OCRBase:
                 )
                 for image in image_batch
             ]
+            _check_gpu_memory_for_batch(image_batch, context.buffer_size)
             output = context.LLM.chat(messages, **context.chat_kwargs)
             for completion in (o.outputs[0] for o in output):
                 page = len(completions) + 1
@@ -164,6 +165,32 @@ class _OCRBase:
 
         with open(output_file, "w", encoding="utf-8") as f:
             f.write(output_text)
+
+
+def _check_gpu_memory_for_batch(image_batch: list, batch_size: int) -> None:
+    """Raise before sending `image_batch` to the model if it's unlikely to
+    fit in free GPU memory.
+    """
+    import torch
+
+    if not torch.cuda.is_available():
+        return
+
+    total_free_bytes = 0
+    for i in range(torch.cuda.device_count()):
+        free_bytes, _total_bytes = torch.cuda.mem_get_info(i)
+        total_free_bytes += free_bytes
+
+    total_pixels = sum(img.width * img.height for img in image_batch)
+    needed_bytes = total_pixels * 3 * 64
+
+    if needed_bytes > (total_free_bytes * 0.9):
+        raise RuntimeError(
+            f"Estimated GPU memory for a batch of {len(image_batch)} page(s) "
+            f"(~{needed_bytes / 1e9:.2f} GB) exceeds estimated free GPU memory "
+            f"(~{total_free_bytes / 1e9:.2f} GB). Try lowering --buffer-size "
+            f"(currently {batch_size})."
+        )
 
 
 def _check_completion(
