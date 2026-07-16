@@ -42,7 +42,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-vllm = [ "vllm>=0.19.1,<0.22"]
+vllm = [ "vllm>=0.19.1,<0.26"]
 
 [project.urls]
 Repository = "https://github.com/princeton-ddss/tigerflow-ml"
