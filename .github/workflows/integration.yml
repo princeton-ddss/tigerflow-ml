@@ -41,7 +41,7 @@ jobs:
   integration:
     runs-on: [self-hosted, 2xH100]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           # Belt and suspenders: never check out a non-main ref on the
           # self-hosted runner, even if the trigger somehow changes.

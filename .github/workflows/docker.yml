@@ -15,7 +15,7 @@ jobs:
       # On a release, build from the tagged commit so the image contents match
       # the released version (the version bump is committed before tagging).
       # For a manual smoke test (workflow_dispatch), ref is empty -> default branch.
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ github.event.release.tag_name }}
 
