@@ -15,6 +15,7 @@ from tigerflow_ml.utils import (
     load_images,
     parse_kwargs,
     process_response_schema,
+    raise_model_load_error,
     read_text_file_strict,
 )
 
@@ -89,14 +90,9 @@ class _ChatBase:
                 revision=context.revision,
             )
         except OSError as e:
-            if not context.allow_fetch:
-                logger.error(f"Model '{context.model}' not found in cache.")
-                logger.error(
-                    "  Run with --allow-fetch to download, or pre-download with:"
-                )
-                logger.error(f"    hf download {context.model}")
-                raise typer.Exit(1)
-            raise RuntimeError(f"Failed to download '{context.model}': {e}") from e
+            raise_model_load_error(
+                context.model, context.cache_dir, context.allow_fetch, e
+            )
 
         from vllm import LLM, SamplingParams  # type: ignore
 

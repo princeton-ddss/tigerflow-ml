@@ -104,7 +104,7 @@ class _DetectBase:
             MODEL_FOR_ZERO_SHOT_OBJECT_DETECTION_MAPPING_NAMES,
         )
 
-        from tigerflow_ml.utils import get_model_config
+        from tigerflow_ml.utils import get_model_config, raise_model_load_error
 
         set_seed(context.seed)
 
@@ -152,12 +152,9 @@ class _DetectBase:
                 model_kwargs={"cache_dir": context.cache_dir or None},
             )
         except OSError as e:
-            if not context.allow_fetch:
-                raise RuntimeError(
-                    f"'{context.model}' not found in cache ({context.cache_dir}). "
-                    "Run with --allow_fetch or download manually."
-                ) from e
-            raise
+            raise_model_load_error(
+                context.model, context.cache_dir, context.allow_fetch, e
+            )
 
         if context.compile:
             try:

@@ -2,6 +2,7 @@
 
 import ast
 import json
+import os
 from enum import Enum
 from pathlib import Path
 from typing import TYPE_CHECKING, cast
@@ -232,6 +233,27 @@ def process_response_schema(
         return StructuredOutputsParams(grammar=schema_value)
 
 
+def raise_model_load_error(
+    model: str, cache_dir: str | None, allow_fetch: bool, cause: OSError
+):
+    """
+    Convert a failed model/config load's OSError into an actionable error.
+    """
+    if "SLURM_JOB_ID" in os.environ:
+        raise RuntimeError(
+            f"'{model}' not found in cache ({cache_dir}). "
+            "Compute nodes have no internet access -- pre-download "
+            "the model on a login node (or check "
+            "--cache-dir), then rerun."
+        ) from cause
+    if not allow_fetch:
+        raise RuntimeError(
+            f"'{model}' not found in cache ({cache_dir}). "
+            "Run with --allow-fetch or download manually."
+        ) from cause
+    raise cause  # off-node + allow_fetch: bad repo id or transient network
+
+
 def get_model_config(
     model: str,
     allow_fetch: bool = False,
@@ -251,10 +273,11 @@ def get_model_config(
         The model's PretrainedConfig (architecture, vocab size, etc.).
 
     Raises:
-        FileNotFoundError: If the config cannot be found in the cache dir and
-            --allow-fetch is False
-        ModelConfigParsingError: If the config cannot be loaded or parsed, wrapping
-            any underlying error.
+        RuntimeError: If the config cannot be found in the cache dir and
+            --allow-fetch is False, or the job is running on a Slurm compute
+            node (which has no internet access).
+        ModelConfigParsingError: If the config cannot be loaded or parsed for
+            reasons other than the cases above, wrapping any underlying error.
     """
     from transformers import AutoConfig
 
@@ -266,14 +289,7 @@ def get_model_config(
             revision=revision,
         )
     except OSError as e:
-        if not allow_fetch:
-            raise FileNotFoundError(
-                f"Config for '{model}' not found in cache ({cache_dir}). "
-                "Run with --allow_fetch to download, or manually with: "
-                f"hf download {model}"
-            ) from e
-
-        raise ModelConfigParsingError(f"Failed to load model config: {e}") from e
+        raise_model_load_error(model, cache_dir, allow_fetch, e)
     except Exception as e:
         raise ModelConfigParsingError(f"Failed to load model config: {e}") from e
 

@@ -95,9 +95,9 @@ class TestSetup:
         with pytest.raises(ValueError, match="max_tokens"):
             _ChatBase.setup(context)
 
-    def test_model_not_found_without_allow_fetch_exits(self):
+    def test_model_not_found_without_allow_fetch_raises(self):
         context = _make_context(allow_fetch=False)
-        with pytest.raises(RuntimeError, match="1"):
+        with pytest.raises(RuntimeError, match="test-model.*not found in cache"):
             _ChatBase.setup(context)
 
 

@@ -25,6 +25,8 @@ from typing import TYPE_CHECKING, Any
 from pydantic import BaseModel
 from tigerflow.logconfig import logger
 
+from tigerflow_ml.utils import raise_model_load_error
+
 if TYPE_CHECKING:
     import numpy as np
     from transformers import (
@@ -315,12 +317,7 @@ def load_whisper(
             device_map=device,
         )
     except OSError as e:
-        if local_files_only:
-            raise RuntimeError(
-                f"'{model}' not found in cache ({cache_dir}). "
-                "Run with --allow-fetch or download manually."
-            ) from e
-        raise
+        raise_model_load_error(model, cache_dir, allow_fetch, e)
 
     # from_pretrained() returns the model already in inference mode and all
     # generation runs under torch.no_grad(), so switching modes is redundant.

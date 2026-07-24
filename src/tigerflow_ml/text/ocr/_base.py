@@ -19,6 +19,7 @@ from tigerflow_ml.utils import (
     load_images,
     parse_kwargs,
     process_response_schema,
+    raise_model_load_error,
     strip_markdown_from_json,
 )
 
@@ -78,12 +79,9 @@ class _OCRBase:
                 revision=context.revision,
             )
         except OSError as e:
-            if not context.allow_fetch:
-                raise RuntimeError(
-                    f"'{context.model}' not found in cache ({context.cache_dir}). "
-                    "Run with --allow_fetch or download manually."
-                ) from e
-            raise
+            raise_model_load_error(
+                context.model, context.cache_dir, context.allow_fetch, e
+            )
 
         tp = torch.cuda.device_count() or 1
 
