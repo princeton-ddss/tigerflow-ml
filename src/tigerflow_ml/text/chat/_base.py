@@ -208,15 +208,31 @@ def _run_chat(context: SetupContext, message: Any) -> str:
         output = context.LLM.chat(message, **context.chat_kwargs)
     except ValueError as e:
         msg = str(e).lower()
-        if "max_model_len" in msg or "too long" in msg:
-            raise ValueError(
-                f"Input exceeds max-model-len={context.max_model_len} — "
-                "increase --max-model-len or reduce the file size"
-            ) from e
+        if (
+            "max_model_len" in msg
+            or "maximum context length" in msg
+            or "too long" in msg
+        ):
+            if not context.max_model_len:
+                err = (
+                    "Input exceeds max-model-len. Change models or reduce the file size"
+                )
+            else:
+                err = (
+                    f"Input exceeds max-model-len ({context.max_model_len}). "
+                    "Increase --max-model-len or reduce the file size"
+                )
+            raise ValueError(err) from e
         raise
 
     try:
         result = output[0].outputs[0]
+        prompt_tokens = output[0].prompt_token_ids
+        output_tokens = output[0].outputs[0].token_ids
+        logger.info(
+            f"  Inference successful! Prompt tokens: {len(prompt_tokens)}; "
+            f"Output tokens: {len(output_tokens)}"
+        )
     except IndexError:
         raise RuntimeError(
             f"{context.model} returned an empty output for the message: {message}"
