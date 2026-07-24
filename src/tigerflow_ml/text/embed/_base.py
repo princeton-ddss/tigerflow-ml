@@ -1,3 +1,5 @@
+import math
+from collections.abc import Iterator
 from pathlib import Path
 from typing import TYPE_CHECKING, Annotated, Any
 
@@ -15,7 +17,8 @@ from tigerflow_ml.utils import (
 )
 
 if TYPE_CHECKING:
-    from PIL import Image
+    from PIL import Image as PILImage
+
 
 _TEXT_EXTENSIONS = [".txt", ".text", ".md", ".log", ".rtf"]
 _AUDIO_EXTENSIONS = [".wav", ".flac", ".ogg", ".aiff", ".aif", ".mp3"]
@@ -226,19 +229,19 @@ class _EmbedBase:
     def _embed_video(
         context: SetupContext, input_file: Path, encode_kwargs: dict[str, Any]
     ):
-        video_frames = load_video_frames(input_file, sample_fps=context.sample_fps)
-        if len(video_frames) == 0:
-            raise EmptyFileError(f"No frames extracted from {input_file}")
-        if len(video_frames) == 1:
-            logger.warning(f"Only one frame extracted from {input_file}")
-            embeddings = context.embedder.encode(video_frames[0], **encode_kwargs)
-        else:
-            embeddings = context.embedder.encode(
-                video_frames, batch_size=context.batch_size, **encode_kwargs
-            )
 
+        embeddings = []
+
+        for batch in _batched(
+            _iter_frames(input_file, context.sample_fps), context.batch_size
+        ):
+            images = [img for _, _, img in batch]
+            logger.info(f"      Embedding {len(images)} frames...")
+            embedding = context.embedder.encode(images, **encode_kwargs)
+            embeddings.append(embedding)
+        embeddings = np.vstack(embeddings)
         logger.info(
-            f"   Embedded {len(video_frames)} frame(s) with shape {embeddings.shape}"
+            f"   Embedded {embeddings.shape[0]} frame(s) with shape {embeddings.shape}"
         )
         return embeddings
 
@@ -256,9 +259,22 @@ def load_audio(input_file: Path, sampling_rate: int = 16000) -> np.ndarray:
     return np.ascontiguousarray(array, dtype=np.float32)
 
 
-def load_video_frames(video_path: Path, sample_fps: float) -> list["Image.Image"]:
-    import math
+def _batched(iterable: Iterator, n: int) -> Iterator[list]:
+    """Yield successive lists of up to n items from iterable."""
+    batch: list = []
+    for item in iterable:
+        batch.append(item)
+        if len(batch) == n:
+            yield batch
+            batch = []
+    if batch:
+        yield batch
 
+
+def _iter_frames(
+    video_path: Path, sample_fps: float
+) -> Iterator[tuple[int, float, "PILImage.Image"]]:
+    """Yield (frame_number, timestamp_seconds, PIL.Image) sampled from a video."""
     import cv2
     from PIL import Image
 
@@ -266,11 +282,13 @@ def load_video_frames(video_path: Path, sample_fps: float) -> list["Image.Image"
     if not cap.isOpened():
         msg = f"Could not open video: {video_path}"
         raise ValueError(msg)
+
     try:
         video_fps = cap.get(cv2.CAP_PROP_FPS)
         if not video_fps or math.isnan(video_fps):
             msg = f"Could not determine FPS for video: {video_path}"
             raise ValueError(msg)
+
         if sample_fps > 0:
             if sample_fps > video_fps:
                 logger.warning(
@@ -280,18 +298,18 @@ def load_video_frames(video_path: Path, sample_fps: float) -> list["Image.Image"
             frame_interval = max(1, int(video_fps / sample_fps))
         else:
             frame_interval = 1
+
         frame_num = 0
-        frames = []
         while True:
             ret, frame = cap.read()
             if not ret:
                 break
 
             if frame_num % frame_interval == 0:
+                timestamp = frame_num / video_fps
                 rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                frames.append(Image.fromarray(rgb))
+                yield (frame_num, timestamp, Image.fromarray(rgb))
 
             frame_num += 1
     finally:
         cap.release()
-    return frames
