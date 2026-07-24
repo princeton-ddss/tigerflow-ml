@@ -1,5 +1,6 @@
 """Tests for the shared utils module."""
 
+from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
@@ -19,6 +20,8 @@ from tigerflow_ml.utils import (
     read_text_file_with_fallback,
     strip_markdown_from_json,
 )
+
+FIXTURES_DIR = Path(__file__).parent / "fixtures"
 
 
 class TestEncodingFallbackChain:
@@ -205,15 +208,6 @@ def _make_image_file(path, mode="RGB", color="red", size=(10, 10)):
     return path
 
 
-def _make_heic_file(path, size=(10, 10)):
-    import pillow_heif
-    from PIL import Image
-
-    pillow_heif.register_heif_opener()
-    Image.new("RGB", size, color="red").save(path, format="HEIF")
-    return path
-
-
 def _make_pdf_file(path, num_pages=1):
     import pymupdf
 
@@ -261,9 +255,8 @@ class TestLoadImages:
         with pytest.raises(ValueError, match="max_images must be greater than 0"):
             load_images(tmp_path / "test.pdf", max_images=-1)
 
-    def test_loads_heic_image(self, tmp_path):
-        path = _make_heic_file(tmp_path / "test.heic")
-        images = load_images(path)
+    def test_loads_heic_image(self):
+        images = load_images(FIXTURES_DIR / "sample.heic")
         assert len(images) == 1
         assert images[0].mode == "RGB"
 
