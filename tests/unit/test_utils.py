@@ -268,9 +268,9 @@ class TestLoadImages:
         assert images[0].mode == "RGB"
 
     def test_only_supports_img_and_pdf_extensions(self, tmp_path):
-        from tigerflow_ml.utils import _IMG_EXTENSIONS
+        from tigerflow_ml.utils import IMG_EXTENSIONS
 
-        for ext in _IMG_EXTENSIONS:
+        for ext in IMG_EXTENSIONS:
             file = "test" + ext
             if ext in (".heic", ".heif"):
                 continue

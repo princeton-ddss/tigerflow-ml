@@ -11,13 +11,14 @@ from tigerflow.utils import SetupContext
 
 from tigerflow_ml.params import VLLMParams
 from tigerflow_ml.utils import (
+    IMG_EXTENSIONS,
+    load_images,
     parse_kwargs,
     process_response_schema,
     read_text_file_strict,
 )
 
 _TEXT_EXTENSIONS = [".txt", ".text", ".md", ".log", ".rtf"]
-_IMG_EXTENSIONS = [".jpg", ".jpeg", ".png", ".tiff", ".tif", ".bmp"]
 
 
 class _ChatBase:
@@ -149,7 +150,12 @@ class _ChatBase:
 
         if input_file.suffix.lower() in _TEXT_EXTENSIONS:
             result = _ChatBase._process_text_file(context, input_file)
-        elif input_file.suffix.lower() in _IMG_EXTENSIONS:
+        elif input_file.suffix.lower() in IMG_EXTENSIONS:
+            if input_file.suffix.lower() == ".pdf":
+                raise ValueError(
+                    f"File extension {input_file.suffix} not currently supported - "
+                    "raise an issue on Github"
+                )
             result = _ChatBase._process_img_file(context, input_file)
         else:
             raise ValueError(
@@ -175,7 +181,7 @@ class _ChatBase:
     def _process_img_file(context: SetupContext, input_file: Path) -> str:
         import PIL.Image
 
-        image = PIL.Image.open(input_file).convert("RGB")
+        image = load_images(path=input_file)[0]
 
         if context.max_image_pixels is not None:
             original_size = image.size
