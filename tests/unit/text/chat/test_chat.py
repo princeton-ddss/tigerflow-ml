@@ -180,7 +180,7 @@ class TestBuildImgMessage:
         content = self._user_content(
             _build_img_message("Describe", image, system_message=None)
         )
-        assert content[0]["type"] == "image_url"
+        assert content[0]["type"] == "image_pil"
         assert content[1]["type"] == "text"
 
     def test_system_message_is_first(self, image):
@@ -192,25 +192,6 @@ class TestBuildImgMessage:
         messages = _build_img_message("Describe", image, system_message=None)
         assert len(messages) == 1
         assert messages[0]["role"] == "user"
-
-    def test_base64_url_is_valid_png(self, image):
-        content = self._user_content(
-            _build_img_message("Describe", image, system_message=None)
-        )
-        url = next(c for c in content if c["type"] == "image_url")["image_url"]["url"]
-        assert url.startswith("data:image/png;base64,")
-        raw = base64.b64decode(url.removeprefix("data:image/png;base64,"))
-        decoded = PIL.Image.open(io.BytesIO(raw))
-        assert decoded.format == "PNG"
-
-    def test_base64_image_has_correct_dimensions(self, image):
-        content = self._user_content(
-            _build_img_message("Describe", image, system_message=None)
-        )
-        url = next(c for c in content if c["type"] == "image_url")["image_url"]["url"]
-        raw = base64.b64decode(url.removeprefix("data:image/png;base64,"))
-        decoded = PIL.Image.open(io.BytesIO(raw))
-        assert decoded.size == (64, 48)
 
 
 class TestBuildAudioMessage:

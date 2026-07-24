@@ -16,7 +16,7 @@ Analyze text, image, audio, or video files using vLLM compatible HuggingFace cha
 | `--max-model-len`     |                           | Maximum sequence length (input + output tokens) passed to vLLM. Set this for large-context models to avoid OOM. |
 | `--max-image-pixels`  |                           | Maximum image dimension in pixels (width or height). Larger images are downscaled while preserving aspect ratio. |
 | `--audio-sampling-rate` | `16000`                 | Sampling rate (Hz) audio inputs are resampled to before being sent to the model. |
-| `--video-sample-fps`  |                           | Frame rate (fps) video inputs are resampled to before being sent to the model. Frames are dropped to hit this rate; the resampled video has no audio track. Defaults to no resampling. |
+| `--video-sample-fps`  |                           | Frame rate (fps) video inputs are resampled to before being sent to the model. Frames are dropped to hit this rate. Defaults to no resampling. |
 | `--temperature`       | `0`                       | The model temperature. Lower numbers make models more deterministic |
 | `--response-schema`   |                           | Constrain the model's output format using vllm structured outputs. Format: `<type>=<value>`. Types: `choice` (list of strings), `json` (JSON schema dict), `regex` (regular expression), `grammar` (EBNF/GBNF grammar string). |
 | `--seed`              | `42`                      | The seed to set for more reproducible behavior                 |
@@ -27,7 +27,7 @@ Analyze text, image, audio, or video files using vLLM compatible HuggingFace cha
 
 ## Supported Input Formats
 
-Text files, images, audio, and video files are supported (depends on the `--model` being compatible with vLLM's `image_url`/`audio_url`/`video_url` chat content types)
+Text files, images, audio, and video files are supported (depends on the `--model` being compatible with vLLM's `image_pil`/`audio_url`/`video_url` chat content types)
 
 ## Output Format
 

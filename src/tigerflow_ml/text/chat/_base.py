@@ -325,15 +325,8 @@ def _build_txt_message(
 def _build_img_message(
     prompt: str, image, system_message: str | None
 ) -> list[dict[str, Any]]:
-    import base64
-    import io
-
-    buf = io.BytesIO()
-    image.save(buf, format="PNG")
-    b64 = base64.b64encode(buf.getvalue()).decode("utf-8")
-
     user_content: list[dict[str, Any]] = [
-        {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{b64}"}},
+        {"type": "image_pil", "image_pil": image},
         {"type": "text", "text": prompt},
     ]
 
