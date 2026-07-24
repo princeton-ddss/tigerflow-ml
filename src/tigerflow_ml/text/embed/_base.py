@@ -1,5 +1,7 @@
+import math
+from collections.abc import Iterator
 from pathlib import Path
-from typing import Annotated, Any
+from typing import TYPE_CHECKING, Annotated, Any
 
 import numpy as np
 import typer
@@ -14,8 +16,13 @@ from tigerflow_ml.utils import (
     read_text_file_strict,
 )
 
+if TYPE_CHECKING:
+    from PIL import Image as PILImage
+
+
 _TEXT_EXTENSIONS = [".txt", ".text", ".md", ".log", ".rtf"]
 _AUDIO_EXTENSIONS = [".wav", ".flac", ".ogg", ".aiff", ".aif", ".mp3"]
+_VIDEO_EXTENSIONS = [".mp4", ".avi", ".mov", ".mkv", ".webm", ".flv", ".wmv"]
 
 
 class _EmbedBase:
@@ -35,10 +42,20 @@ class _EmbedBase:
             int,
             typer.Option(
                 help="Number of lines encoded per batch when --per-line is set, "
-                "or number of pages per batch if embedding pdfs",
+                "number of pages per batch if embedding pdfs, or number of "
+                "frames if embedding videos",
                 min=1,
             ),
         ] = 32
+
+        sample_fps: Annotated[
+            float,
+            typer.Option(
+                help="Frames per second to sample from video. "
+                "Set to 0 to process every frame.",
+                min=0,
+            ),
+        ] = 1.0
 
         prompt: Annotated[
             str | None,
@@ -134,6 +151,10 @@ class _EmbedBase:
             embeddings = _EmbedBase._embed_audio(
                 context=context, input_file=input_file, encode_kwargs=encode_kwargs
             )
+        elif input_file.suffix.lower() in _VIDEO_EXTENSIONS:
+            embeddings = _EmbedBase._embed_video(
+                context=context, input_file=input_file, encode_kwargs=encode_kwargs
+            )
         else:
             raise ValueError(
                 f"File extension {input_file.suffix} not currently supported - "
@@ -204,6 +225,26 @@ class _EmbedBase:
         )
         return embeddings
 
+    @staticmethod
+    def _embed_video(
+        context: SetupContext, input_file: Path, encode_kwargs: dict[str, Any]
+    ):
+
+        embeddings = []
+
+        for batch in _batched(
+            _iter_frames(input_file, context.sample_fps), context.batch_size
+        ):
+            images = [img for _, _, img in batch]
+            logger.info(f"      Embedding {len(images)} frames...")
+            embedding = context.embedder.encode(images, **encode_kwargs)
+            embeddings.append(embedding)
+        embeddings = np.vstack(embeddings)
+        logger.info(
+            f"   Embedded {embeddings.shape[0]} frame(s) with shape {embeddings.shape}"
+        )
+        return embeddings
+
 
 def load_audio(input_file: Path, sampling_rate: int = 16000) -> np.ndarray:
     """Delete once PR #176 merged (will be in shared utils)"""
@@ -216,3 +257,59 @@ def load_audio(input_file: Path, sampling_rate: int = 16000) -> np.ndarray:
     if sr != sampling_rate:
         array = soxr.resample(array, sr, sampling_rate)
     return np.ascontiguousarray(array, dtype=np.float32)
+
+
+def _batched(iterable: Iterator, n: int) -> Iterator[list]:
+    """Yield successive lists of up to n items from iterable."""
+    batch: list = []
+    for item in iterable:
+        batch.append(item)
+        if len(batch) == n:
+            yield batch
+            batch = []
+    if batch:
+        yield batch
+
+
+def _iter_frames(
+    video_path: Path, sample_fps: float
+) -> Iterator[tuple[int, float, "PILImage.Image"]]:
+    """Yield (frame_number, timestamp_seconds, PIL.Image) sampled from a video."""
+    import cv2
+    from PIL import Image
+
+    cap = cv2.VideoCapture(str(video_path))
+    if not cap.isOpened():
+        msg = f"Could not open video: {video_path}"
+        raise ValueError(msg)
+
+    try:
+        video_fps = cap.get(cv2.CAP_PROP_FPS)
+        if not video_fps or math.isnan(video_fps):
+            msg = f"Could not determine FPS for video: {video_path}"
+            raise ValueError(msg)
+
+        if sample_fps > 0:
+            if sample_fps > video_fps:
+                logger.warning(
+                    f"Requested sample_fps ({sample_fps}) exceeds video fps "
+                    f"({video_fps:.2f}); sampling every frame."
+                )
+            frame_interval = max(1, int(video_fps / sample_fps))
+        else:
+            frame_interval = 1
+
+        frame_num = 0
+        while True:
+            ret, frame = cap.read()
+            if not ret:
+                break
+
+            if frame_num % frame_interval == 0:
+                timestamp = frame_num / video_fps
+                rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                yield (frame_num, timestamp, Image.fromarray(rgb))
+
+            frame_num += 1
+    finally:
+        cap.release()
