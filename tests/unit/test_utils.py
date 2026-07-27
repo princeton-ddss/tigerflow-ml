@@ -10,6 +10,8 @@ from tigerflow_ml.utils import (
     EmptyFileError,
     ModelConfigParsingError,
     SchemaType,
+    batched,
+    count_images,
     get_model_config,
     get_model_context_window,
     get_tokenizer,
@@ -228,29 +230,29 @@ def _make_pdf_file(path, num_pages=1):
 class TestLoadImages:
     def test_converts_non_rgb_image_to_rgb(self, tmp_path):
         path = _make_image_file(tmp_path / "test.png", mode="L", color=128)
-        images = load_images(path)
+        images = list(load_images(path))
         assert len(images) == 1
         assert images[0].mode == "RGB"
 
     def test_max_images_ignored_for_single_image_file(self, tmp_path):
         path = _make_image_file(tmp_path / "test.png")
-        images = load_images(path, max_images=5)
+        images = list(load_images(path, max_images=5))
         assert len(images) == 1
 
     def test_loads_all_pdf_pages_by_default(self, tmp_path):
         path = _make_pdf_file(tmp_path / "test.pdf", num_pages=3)
-        images = load_images(path)
+        images = list(load_images(path))
         assert len(images) == 3
         assert all(image.mode == "RGB" for image in images)
 
     def test_max_images_limits_pdf_pages(self, tmp_path):
         path = _make_pdf_file(tmp_path / "test.pdf", num_pages=5)
-        images = load_images(path, max_images=2)
+        images = list(load_images(path, max_images=2))
         assert len(images) == 2
 
     def test_max_images_larger_than_page_count_returns_all(self, tmp_path):
         path = _make_pdf_file(tmp_path / "test.pdf", num_pages=2)
-        images = load_images(path, max_images=10)
+        images = list(load_images(path, max_images=10))
         assert len(images) == 2
 
     def test_max_images_zero_raises(self, tmp_path):
@@ -263,7 +265,7 @@ class TestLoadImages:
 
     def test_loads_heic_image(self, tmp_path):
         path = _make_heic_file(tmp_path / "test.heic")
-        images = load_images(path)
+        images = list(load_images(path))
         assert len(images) == 1
         assert images[0].mode == "RGB"
 
@@ -276,10 +278,41 @@ class TestLoadImages:
                 continue
             else:
                 path = _make_image_file(tmp_path / file)
-            images = load_images(path)
+            images = list(load_images(path))
             assert len(images) == 1
         with pytest.raises(ValueError, match="not a valid file type"):
             load_images(tmp_path / "test.txt")
+
+
+class TestCountImages:
+    def test_counts_pdf_pages_without_max_images(self, tmp_path):
+        path = _make_pdf_file(tmp_path / "test.pdf", num_pages=5)
+        assert count_images(path) == 5
+
+    def test_counts_pdf_pages_capped_by_max_images(self, tmp_path):
+        path = _make_pdf_file(tmp_path / "test.pdf", num_pages=5)
+        assert count_images(path, max_images=2) == 2
+
+    def test_max_images_larger_than_page_count_returns_page_count(self, tmp_path):
+        path = _make_pdf_file(tmp_path / "test.pdf", num_pages=2)
+        assert count_images(path, max_images=10) == 2
+
+    def test_single_image_file_counts_as_one(self, tmp_path):
+        path = _make_image_file(tmp_path / "test.png")
+        assert count_images(path) == 1
+
+
+class TestBatched:
+    def test_splits_into_full_batches(self):
+        result = list(batched(iter(range(6)), 2))
+        assert result == [[0, 1], [2, 3], [4, 5]]
+
+    def test_last_batch_may_be_partial(self):
+        result = list(batched(iter(range(5)), 2))
+        assert result == [[0, 1], [2, 3], [4]]
+
+    def test_empty_iterable_yields_nothing(self):
+        assert list(batched(iter([]), 3)) == []
 
 
 class TestStripMarkdownFromJson:

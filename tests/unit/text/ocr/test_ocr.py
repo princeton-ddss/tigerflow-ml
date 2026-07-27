@@ -13,35 +13,43 @@ from tigerflow_ml.text.ocr._base import (
 
 class TestValidateOutputFormat:
     def test_txt_plain_string_passes(self):
-        _validate_output_format("hello world", OutputFormat.TEXT)
+        _validate_output_format("hello world", OutputFormat.TEXT, page=1)
 
     def test_txt_empty_string_passes(self):
-        _validate_output_format("", OutputFormat.TEXT)
+        _validate_output_format("", OutputFormat.TEXT, page=1)
 
     def test_txt_with_headers_passes(self):
-        _validate_output_format("# Title\n\nSome text\n\n## Section", OutputFormat.TEXT)
+        _validate_output_format(
+            "# Title\n\nSome text\n\n## Section", OutputFormat.TEXT, page=1
+        )
 
     def test_valid_json_object_passes(self):
-        _validate_output_format('{"key": "value"}', OutputFormat.JSON)
+        _validate_output_format('{"key": "value"}', OutputFormat.JSON, page=1)
 
     def test_valid_json_array_passes(self):
-        _validate_output_format('[{"page": 1, "text": "hello"}]', OutputFormat.JSON)
+        _validate_output_format(
+            '[{"page": 1, "text": "hello"}]', OutputFormat.JSON, page=1
+        )
 
     def test_invalid_json_raises(self):
         with pytest.raises(ValueError):
-            _validate_output_format("not json at all", OutputFormat.JSON)
+            _validate_output_format("not json at all", OutputFormat.JSON, page=1)
 
     def test_truncated_json_raises(self):
         with pytest.raises(ValueError):
-            _validate_output_format('{"key": "val', OutputFormat.JSON)
+            _validate_output_format('{"key": "val', OutputFormat.JSON, page=1)
 
     def test_empty_string_raises(self):
         with pytest.raises(ValueError):
-            _validate_output_format("", OutputFormat.JSON)
+            _validate_output_format("", OutputFormat.JSON, page=1)
 
     def test_unknown_format_raises(self):
         with pytest.raises(ValueError):
-            _validate_output_format("some output", "unknown_format")  # type: ignore[arg-type]
+            _validate_output_format("some output", "unknown_format", page=1)  # type: ignore[arg-type]
+
+    def test_error_includes_page_num_when_greater_than_1(self):
+        with pytest.raises(ValueError, match="for page 3"):
+            _validate_output_format('{"key": "val', OutputFormat.JSON, page=3)
 
 
 class TestFormatOutput:
