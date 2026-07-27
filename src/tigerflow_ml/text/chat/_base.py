@@ -181,7 +181,7 @@ class _ChatBase:
     def _process_img_file(context: SetupContext, input_file: Path) -> str:
         import PIL.Image
 
-        image = load_images(path=input_file)[0]
+        image = next(load_images(path=input_file, max_images=1))
 
         if context.max_image_pixels is not None:
             original_size = image.size
