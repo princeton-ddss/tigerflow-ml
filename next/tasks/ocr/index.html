@@ -932,6 +932,11 @@
 <td>Prompt for image-text-to-text models</td>
 </tr>
 <tr>
+<td><code>--buffer-size</code></td>
+<td><code>100</code></td>
+<td>Number of PDF pages loaded in memory at a time. Bounds peak memory for large, multi-page PDFs; higher values use more memory.</td>
+</tr>
+<tr>
 <td><code>--json-schema</code></td>
 <td></td>
 <td>Constrain the model's output to a JSON schema using vllm structured outputs. Provide the schema as a JSON string, e.g. <code>{"type":"object","properties":{"text":{"type":"string"}},"required":["text"]}</code>. Requires a model that supports structured outputs.</td>
