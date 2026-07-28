@@ -143,17 +143,26 @@ class TestGetModelConfig:
             revision="v1",
         )
 
-    def test_oserror_no_fetch_raises_file_not_found(self):
+    def test_oserror_no_fetch_raises_runtime_error(self):
         with patch("transformers.AutoConfig.from_pretrained", side_effect=OSError):
-            with pytest.raises(FileNotFoundError, match="some/model"):
+            with pytest.raises(RuntimeError, match="some/model"):
                 get_model_config("some/model", allow_fetch=False)
 
-    def test_oserror_allow_fetch_raises_config_parsing_error(self):
+    def test_oserror_allow_fetch_reraises_oserror(self):
         with patch(
             "transformers.AutoConfig.from_pretrained",
             side_effect=OSError("network error"),
         ):
-            with pytest.raises(ModelConfigParsingError):
+            with pytest.raises(OSError, match="network error"):
+                get_model_config("some/model", allow_fetch=True)
+
+    def test_oserror_on_slurm_node_raises_no_internet_message(self, monkeypatch):
+        monkeypatch.setenv("SLURM_JOB_ID", "12345")
+        with patch(
+            "transformers.AutoConfig.from_pretrained",
+            side_effect=OSError("network error"),
+        ):
+            with pytest.raises(RuntimeError, match="Compute nodes have no internet"):
                 get_model_config("some/model", allow_fetch=True)
 
     def test_unexpected_exception_raises_config_parsing_error(self):
