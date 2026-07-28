@@ -16,6 +16,8 @@ from tigerflow.utils import SetupContext
 
 from tigerflow_ml.params import VLLMParams
 from tigerflow_ml.utils import (
+    batched,
+    count_images,
     load_images,
     parse_kwargs,
     process_response_schema,
@@ -61,6 +63,14 @@ class _OCRBase:
                 )
             ),
         ] = None
+
+        buffer_size: Annotated[
+            int,
+            typer.Option(
+                help="Number of PDF pages loaded in memory as images at one time",
+                min=1,
+            ),
+        ] = 100
 
     @staticmethod
     def setup(context: SetupContext):
@@ -126,54 +136,26 @@ class _OCRBase:
 
     @staticmethod
     def run(context: SetupContext, input_file: Path, output_file: Path):
-        images = load_images(input_file)
-        logger.info(f"    Loaded {len(images)} image(s)")
         output_format = _determine_output_format(output_file)
+        total = count_images(input_file)
 
-        messages = []
-        for image in images:
-            message = _format_message(
-                image=image,
-                prompt=context.prompt,
-                system_message=context.system_message,
-            )
-            messages.append(message)
-
-        output = context.LLM.chat(messages, **context.chat_kwargs)
-        completions = [o.outputs[0] for o in output]
-        for page, completion in enumerate(completions, start=1):
-            if completion.finish_reason == "length":
-                if page > 1:
-                    msg = (
-                        f"    Output truncated at {context.max_tokens} tokens (page"
-                        f" {page}) — increase --max-tokens and/or --max_model_len"
-                        " for a complete result"
-                    )
-                else:
-                    msg = (
-                        f"    Output truncated at {context.max_tokens} tokens — "
-                        "increase --max-tokens and/or --max_model_len for a "
-                        "complete result"
-                    )
-                logger.warning(msg)
-            elif completion.finish_reason != "stop":
-                if page > 1:
-                    msg = (
-                        "Unexpected finish reason on page "
-                        f"{page}: {completion.finish_reason!r}"
-                    )
-                else:
-                    msg = f"Unexpected finish reason: {completion.finish_reason!r}"
-                raise RuntimeError(msg)
-            if output_format == OutputFormat.JSON:
-                completion.text = strip_markdown_from_json(completion.text)
-            if not completion.text.strip():  # empty model output
-                if page > 1:
-                    msg = f"    Model output empty on page {page}"
-                else:
-                    msg = "    Model output empty"
-                logger.warning(msg)
-            _validate_output_format(completion.text, output_format)
+        completions = []
+        for image_batch in batched(load_images(input_file), context.buffer_size):
+            messages = [
+                _format_message(
+                    image=image,
+                    prompt=context.prompt,
+                    system_message=context.system_message,
+                )
+                for image in image_batch
+            ]
+            _check_gpu_memory_for_batch(image_batch, context.buffer_size)
+            output = context.LLM.chat(messages, **context.chat_kwargs)
+            for completion in (o.outputs[0] for o in output):
+                page = len(completions) + 1
+                _check_completion(context, completion, page, output_format)
+                completions.append(completion)
+            logger.info(f"    Processed {len(completions)}/{total} pages")
 
         output_text = _format_output(
             outputs=(c.text for c in completions), output_format=output_format
@@ -181,6 +163,71 @@ class _OCRBase:
 
         with open(output_file, "w", encoding="utf-8") as f:
             f.write(output_text)
+
+
+def _check_gpu_memory_for_batch(image_batch: list, batch_size: int) -> None:
+    """Raise before sending `image_batch` to the model if it's unlikely to
+    fit in free GPU memory.
+    """
+    import torch
+
+    if not torch.cuda.is_available():
+        return
+
+    total_free_bytes = 0
+    for i in range(torch.cuda.device_count()):
+        free_bytes, _total_bytes = torch.cuda.mem_get_info(i)
+        total_free_bytes += free_bytes
+
+    total_pixels = sum(img.width * img.height for img in image_batch)
+    needed_bytes = total_pixels * 3 * 64
+
+    if needed_bytes > (total_free_bytes * 0.9):
+        raise RuntimeError(
+            f"Estimated GPU memory for a batch of {len(image_batch)} page(s) "
+            f"(~{needed_bytes / 1e9:.2f} GB) exceeds estimated free GPU memory "
+            f"(~{total_free_bytes / 1e9:.2f} GB). Try lowering --buffer-size "
+            f"(currently {batch_size})."
+        )
+
+
+def _check_completion(
+    context: SetupContext, completion, page: int, output_format: OutputFormat
+) -> None:
+    """Validate a single page's completion, raising/warning as soon as it's
+    available rather than after the whole (possibly hundreds-of-pages)
+    document has been generated."""
+    if completion.finish_reason == "length":
+        if page > 1:
+            msg = (
+                f"    Output truncated at {context.max_tokens} tokens (page"
+                f" {page}) — increase --max-tokens and/or --max_model_len"
+                " for a complete result"
+            )
+        else:
+            msg = (
+                f"    Output truncated at {context.max_tokens} tokens — "
+                "increase --max-tokens and/or --max_model_len for a "
+                "complete result"
+            )
+        logger.warning(msg)
+    elif completion.finish_reason != "stop":
+        if page > 1:
+            msg = (
+                f"Unexpected finish reason on page {page}: {completion.finish_reason!r}"
+            )
+        else:
+            msg = f"Unexpected finish reason: {completion.finish_reason!r}"
+        raise RuntimeError(msg)
+    if output_format == OutputFormat.JSON:
+        completion.text = strip_markdown_from_json(completion.text)
+    if not completion.text.strip():  # empty model output
+        if page > 1:
+            msg = f"    Model output empty on page {page}"
+        else:
+            msg = "    Model output empty"
+        logger.warning(msg)
+    _validate_output_format(completion.text, output_format=output_format, page=page)
 
 
 def _format_message(
@@ -222,7 +269,9 @@ def _determine_output_format(path: Path) -> OutputFormat:
     return format
 
 
-def _validate_output_format(output: str, output_format: OutputFormat) -> None:
+def _validate_output_format(
+    output: str, output_format: OutputFormat, page: int
+) -> None:
     """Raise error if model output doesn't match specified output format"""
     if output_format == OutputFormat.TEXT:
         # no validation required
@@ -231,12 +280,21 @@ def _validate_output_format(output: str, output_format: OutputFormat) -> None:
         try:
             json.loads(output)
         except json.JSONDecodeError as e:
-            raise ValueError(
-                "Model did not return a valid json output."
-                " Try refining your prompt or save to a different format."
-                f" See line {e.lineno} column {e.colno} (char {e.pos}):"
-                f" {output!r}"
-            ) from e
+            if page > 1:
+                msg = (
+                    f"Model did not return a valid json output for page {page}."
+                    " Try refining your prompt or save to a different format."
+                    f" See line {e.lineno} column {e.colno} (char {e.pos}):"
+                    f" {output!r}"
+                )
+            else:
+                msg = (
+                    f"Model did not return a valid json output."
+                    " Try refining your prompt or save to a different format."
+                    f" See line {e.lineno} column {e.colno} (char {e.pos}):"
+                    f" {output!r}"
+                )
+            raise ValueError(msg) from e
     else:
         raise ValueError(f" Unsupported output format: {output_format}")
 

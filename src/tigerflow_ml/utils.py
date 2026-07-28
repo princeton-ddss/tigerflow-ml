@@ -3,10 +3,12 @@
 import ast
 import json
 import os
+from collections.abc import Iterator
 from enum import Enum
 from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
+import numpy as np
 from tigerflow.logconfig import logger
 
 if TYPE_CHECKING:
@@ -106,8 +108,12 @@ IMG_EXTENSIONS = [
 ]
 
 
-def load_images(path: Path, max_images: int | None = None) -> list["Image.Image"]:
+def load_images(path: Path, max_images: int | None = None) -> Iterator["Image.Image"]:
     """Load images from a file. Supports image files and PDFs.
+
+    PDF pages are rendered lazily, one at a time, so callers that consume
+    the result incrementally (e.g. in batches) don't hold every page of a
+    large PDF in memory at once.
 
     Args:
         path: Path to the file to read.
@@ -115,7 +121,7 @@ def load_images(path: Path, max_images: int | None = None) -> list["Image.Image"
             Defaults to None (returns all).
 
     Returns:
-        A list of PIL images of length <= max_images.
+        An iterator of PIL images of length <= max_images.
 
     Raises:
         ValueError: If max_images is less than 1
@@ -136,23 +142,149 @@ def load_images(path: Path, max_images: int | None = None) -> list["Image.Image"
         raise ValueError(f"max_images must be greater than 0. Received {max_images}")
 
     if path.suffix.lower() == ".pdf":
-        import pymupdf
-
-        limit = max_images if max_images is not None else float("inf")
-        images = []
-        with pymupdf.open(path) as doc:
-            for count, page in enumerate(doc, start=1):
-                if count > limit:
-                    break
-                pix = page.get_pixmap()
-                image = Image.frombytes("RGB", (pix.width, pix.height), pix.samples)
-                images.append(image)
-        return images
+        return _iter_pdf_pages(path, max_images)
 
     image = Image.open(path)
     if image.mode != "RGB":
         image = image.convert("RGB")
-    return [image]
+    return iter([image])
+
+
+def count_images(path: Path, max_images: int | None = None) -> int:
+    """Count how many images `load_images` would yield.
+
+    Args:
+        path: Path to the file to read.
+        max_images: The maximum number of images `load_images` would return
+            if input is a PDF. Defaults to None (no cap).
+    """
+    if path.suffix.lower() == ".pdf":
+        import pymupdf
+
+        with pymupdf.open(path) as doc:
+            total = len(doc)
+        return total if max_images is None else min(total, max_images)
+    return 1
+
+
+def _iter_pdf_pages(path: Path, max_images: int | None) -> Iterator["Image.Image"]:
+    import pymupdf
+    from PIL import Image
+
+    limit = max_images if max_images is not None else float("inf")
+    with pymupdf.open(path) as doc:
+        for count, page in enumerate(doc, start=1):
+            if count > limit:
+                break
+            pix = page.get_pixmap()
+            yield Image.frombytes("RGB", (pix.width, pix.height), pix.samples)
+
+
+def batched(iterable: Iterator, n: int) -> Iterator[list]:
+    """Yield successive lists of up to n items from iterable."""
+    batch: list = []
+    for item in iterable:
+        batch.append(item)
+        if len(batch) == n:
+            yield batch
+            batch = []
+    if batch:
+        yield batch
+
+
+def load_audio(input_file: Path, sampling_rate: int = 16000) -> np.ndarray:
+    """Load an audio file as a mono float32 array at the given sampling rate.
+
+    Decodes with ``soundfile``, averages channels to mono, and resamples with
+    ``soxr`` if needed.
+
+    Args:
+        input_file: Path to the audio file.
+        sampling_rate: Target sampling rate in Hz.
+
+    Returns:
+        A 1-D float32 array of samples at ``sampling_rate``.
+    """
+    import soundfile as sf
+    import soxr
+
+    array, sr = sf.read(str(input_file), dtype="float32", always_2d=False)
+    if array.ndim > 1:
+        array = array.mean(axis=1)
+    if sr != sampling_rate:
+        array = soxr.resample(array, sr, sampling_rate)
+    return np.ascontiguousarray(array, dtype=np.float32)
+
+
+def load_video(input_file: Path, sample_fps: float | None = None) -> bytes:
+    """Load a video file as MP4 bytes, optionally subsampled to a lower fps.
+
+    Note that resampling re-encodes the video with OpenCV, which drops any
+    audio track the source file may have.
+
+    Args:
+        input_file: Path to the video file.
+        sample_fps: If set and lower than the source fps, frames are dropped
+            so the output plays back at this rate. Defaults to None (returns
+            the original bytes unchanged). Must be positive.
+
+    Returns:
+        MP4-encoded video bytes.
+    """
+    if sample_fps is None:
+        return input_file.read_bytes()
+    if sample_fps <= 0:
+        raise ValueError(f"sample_fps must be positive, got {sample_fps}")
+
+    import math
+    import tempfile
+
+    import cv2
+
+    cap = cv2.VideoCapture(str(input_file))
+    if not cap.isOpened():
+        cap.release()
+        raise ValueError(f"Could not open video: {input_file}")
+
+    try:
+        source_fps = cap.get(cv2.CAP_PROP_FPS)
+        if not source_fps or math.isnan(source_fps):
+            raise ValueError(f"Could not determine FPS for video: {input_file}")
+        if sample_fps >= source_fps:
+            return input_file.read_bytes()
+
+        width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+        height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        step = source_fps / sample_fps
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            out_path = Path(tmp_dir) / "resampled.mp4"
+            fourcc = cv2.VideoWriter_fourcc(*"mp4v")  # type: ignore
+            writer = cv2.VideoWriter(str(out_path), fourcc, sample_fps, (width, height))
+            if not writer.isOpened():
+                raise RuntimeError(f"Could not open video writer for: {input_file}")
+            try:
+                next_frame = 0.0
+                frame_idx = 0
+                ok, frame = cap.read()
+                while ok:
+                    if frame_idx >= next_frame:
+                        writer.write(frame)
+                        next_frame += step
+                    frame_idx += 1
+                    ok, frame = cap.read()
+            finally:
+                writer.release()
+
+            logger.info(
+                "  Resampled video from {:.2f} fps to {:.2f} fps "
+                "(audio track, if any, is dropped)",
+                source_fps,
+                sample_fps,
+            )
+            return out_path.read_bytes()
+    finally:
+        cap.release()
 
 
 def parse_kwargs(value: str | dict, *, name: str = "kwargs") -> dict:
@@ -392,7 +524,9 @@ def get_model_context_window(config: "PretrainedConfig") -> int | None:
 
 
 def strip_markdown_from_json(json_str: str) -> str:
-    """If str starts with ```json, strip this markdown formatting from beginning and end
+    """If str starts with ```json, strip this markdown formatting from beginning
+    and end. Also discards any trailing text after the first complete JSON
+    value.
 
     Args:
         json_str: The string that should be valid json
@@ -404,4 +538,12 @@ def strip_markdown_from_json(json_str: str) -> str:
         stripped = stripped.removeprefix("```json").removeprefix("```")
         stripped = stripped.removesuffix("```")
         stripped = stripped.strip()
+
+    decoder = json.JSONDecoder()
+    try:
+        obj, end = decoder.raw_decode(stripped)
+    except json.JSONDecodeError:
+        return stripped
+    if stripped[end:].strip():
+        return json.dumps(obj)
     return stripped

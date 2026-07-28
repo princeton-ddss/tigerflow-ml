@@ -23,6 +23,7 @@ from tigerflow.logconfig import logger
 from tigerflow.utils import SetupContext
 
 from tigerflow_ml.params import HFParams
+from tigerflow_ml.utils import batched
 
 _VIDEO_EXTENSIONS = {".mp4", ".avi", ".mov", ".mkv", ".webm", ".flv", ".wmv"}
 
@@ -281,7 +282,7 @@ def _run_video_batched(context: SetupContext, input_file: Path) -> list[_FramedO
     device = model.device
 
     output: list[_FramedOutput] = []
-    for batch in _batched(
+    for batch in batched(
         _iter_frames(input_file, context.sample_fps), context.batch_size
     ):
         images = [img for _, _, img in batch]
@@ -333,18 +334,6 @@ def _box_to_dict(box) -> dict:
         "xmax": round(xmax),
         "ymax": round(ymax),
     }
-
-
-def _batched(iterable: Iterator, n: int) -> Iterator[list]:
-    """Yield successive lists of up to n items from iterable."""
-    batch: list = []
-    for item in iterable:
-        batch.append(item)
-        if len(batch) == n:
-            yield batch
-            batch = []
-    if batch:
-        yield batch
 
 
 def _iter_frames(

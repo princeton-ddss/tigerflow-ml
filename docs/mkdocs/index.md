@@ -39,7 +39,7 @@ hide:
 - [Translation](tasks/translate.md) — Translate text documents
 - [Transcription](tasks/transcribe.md) — Transcribe audio to text
 - [Object Detection](tasks/detect.md) — Detect objects in images and videos
-- [Chat](tasks/chat.md) - Apply a chat prompt to text or image documents
+- [Chat](tasks/chat.md) - Apply a chat prompt to text, image, audio, or video documents
 
 ## Installation
 

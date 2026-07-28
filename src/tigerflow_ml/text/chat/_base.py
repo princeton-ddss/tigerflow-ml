@@ -5,6 +5,7 @@ Apply a chat prompt to input texts using Hugging Face models.
 from pathlib import Path
 from typing import Annotated, Any
 
+import numpy as np
 import typer
 from tigerflow.logconfig import logger
 from tigerflow.utils import SetupContext
@@ -12,7 +13,9 @@ from tigerflow.utils import SetupContext
 from tigerflow_ml.params import VLLMParams
 from tigerflow_ml.utils import (
     IMG_EXTENSIONS,
+    load_audio,
     load_images,
+    load_video,
     parse_kwargs,
     process_response_schema,
     raise_model_load_error,
@@ -20,6 +23,8 @@ from tigerflow_ml.utils import (
 )
 
 _TEXT_EXTENSIONS = [".txt", ".text", ".md", ".log", ".rtf"]
+_AUDIO_EXTENSIONS = [".wav", ".flac", ".ogg", ".aiff", ".aif", ".mp3"]
+_VIDEO_EXTENSIONS = [".mp4", ".avi", ".mov", ".mkv", ".webm", ".flv", ".wmv"]
 
 
 class _ChatBase:
@@ -40,6 +45,23 @@ class _ChatBase:
             typer.Option(
                 help="Maximum image dimension in pixels (width or height). "
                 "Larger images are downscaled while preserving aspect ratio."
+            ),
+        ] = None
+
+        audio_sampling_rate: Annotated[
+            int,
+            typer.Option(
+                help="Sampling rate (Hz) audio inputs are resampled to before "
+                "being sent to the model."
+            ),
+        ] = 16000
+
+        video_sample_fps: Annotated[
+            float | None,
+            typer.Option(
+                help="Frame rate (fps) video inputs are resampled to before "
+                "being sent to the model. Frames are dropped to hit this rate. "
+                "Defaults to None (no resampling).",
             ),
         ] = None
 
@@ -153,6 +175,10 @@ class _ChatBase:
                     "raise an issue on Github"
                 )
             result = _ChatBase._process_img_file(context, input_file)
+        elif input_file.suffix.lower() in _AUDIO_EXTENSIONS:
+            result = _ChatBase._process_audio_file(context, input_file)
+        elif input_file.suffix.lower() in _VIDEO_EXTENSIONS:
+            result = _ChatBase._process_video_file(context, input_file)
         else:
             raise ValueError(
                 f"File extension {input_file.suffix} not currently supported - "
@@ -177,7 +203,7 @@ class _ChatBase:
     def _process_img_file(context: SetupContext, input_file: Path) -> str:
         import PIL.Image
 
-        image = load_images(path=input_file)[0]
+        image = next(load_images(path=input_file, max_images=1))
 
         if context.max_image_pixels is not None:
             original_size = image.size
@@ -194,6 +220,27 @@ class _ChatBase:
         message = _build_img_message(
             prompt=context.prompt,
             image=image,
+            system_message=context.system_message,
+        )
+        return _run_chat(context, message)
+
+    @staticmethod
+    def _process_audio_file(context: SetupContext, input_file: Path) -> str:
+        audio_data = load_audio(input_file, sampling_rate=context.audio_sampling_rate)
+        message = _build_audio_message(
+            prompt=context.prompt,
+            audio_data=audio_data,
+            sampling_rate=context.audio_sampling_rate,
+            system_message=context.system_message,
+        )
+        return _run_chat(context, message)
+
+    @staticmethod
+    def _process_video_file(context: SetupContext, input_file: Path) -> str:
+        video_bytes = load_video(input_file, sample_fps=context.video_sample_fps)
+        message = _build_video_message(
+            prompt=context.prompt,
+            video_bytes=video_bytes,
             system_message=context.system_message,
         )
         return _run_chat(context, message)
@@ -274,15 +321,53 @@ def _build_txt_message(
 def _build_img_message(
     prompt: str, image, system_message: str | None
 ) -> list[dict[str, Any]]:
+    user_content: list[dict[str, Any]] = [
+        {"type": "image_pil", "image_pil": image},
+        {"type": "text", "text": prompt},
+    ]
+
+    if system_message:
+        return [
+            {"role": "system", "content": system_message},
+            {"role": "user", "content": user_content},
+        ]
+    return [{"role": "user", "content": user_content}]
+
+
+def _build_audio_message(
+    prompt: str, audio_data: np.ndarray, sampling_rate: int, system_message: str | None
+) -> list[dict[str, Any]]:
     import base64
     import io
 
+    import soundfile as sf
+
     buf = io.BytesIO()
-    image.save(buf, format="PNG")
+    sf.write(buf, audio_data, sampling_rate, format="WAV")
     b64 = base64.b64encode(buf.getvalue()).decode("utf-8")
 
     user_content: list[dict[str, Any]] = [
-        {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{b64}"}},
+        {"type": "audio_url", "audio_url": {"url": f"data:audio/wav;base64,{b64}"}},
+        {"type": "text", "text": prompt},
+    ]
+
+    if system_message:
+        return [
+            {"role": "system", "content": system_message},
+            {"role": "user", "content": user_content},
+        ]
+    return [{"role": "user", "content": user_content}]
+
+
+def _build_video_message(
+    prompt: str, video_bytes: bytes, system_message: str | None
+) -> list[dict[str, Any]]:
+    import base64
+
+    b64 = base64.b64encode(video_bytes).decode("utf-8")
+
+    user_content: list[dict[str, Any]] = [
+        {"type": "video_url", "video_url": {"url": f"data:video/mp4;base64,{b64}"}},
         {"type": "text", "text": prompt},
     ]
 

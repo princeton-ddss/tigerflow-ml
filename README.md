@@ -25,7 +25,7 @@ pip install tigerflow-ml[vllm]
 |------------------|---------------------------------------|-----------------------------------|
 | OCR              | Extract text from images and PDFs     | `ocr` / `ocr-local`               |
 | Translation      | Translate text documents              | `translate` / `translate-local`   |
-| Chat             | Apply a chat prompt to images or text | `chat` / `chat-local`             |
+| Chat             | Apply a chat prompt to text, images, audio, or video | `chat` / `chat-local`             |
 | Transcription    | Transcribe audio to text              | `transcribe` / `transcribe-local` |
 | Object Detection | Detect objects in images and videos   | `detect` / `detect-local`         |
 
