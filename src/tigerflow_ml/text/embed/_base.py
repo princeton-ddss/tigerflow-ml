@@ -16,6 +16,14 @@ class _EmbedBase:
     """Embed inputs using Hugging Face sentence-transformers models."""
 
     class Params(HFParams):
+        use_encode_document: Annotated[
+            bool,
+            typer.Option(
+                help="Whether to use SentenceTransformer's encode_document() "
+                "method instead of the regular encode()."
+            ),
+        ] = False
+
         normalize: Annotated[
             bool,
             typer.Option(
@@ -103,6 +111,9 @@ class _EmbedBase:
     ):
         content = read_text_file_strict(input_file)
 
-        embeddings = context.embedder.encode_document(content, **encode_kwargs)
+        if context.use_encode_document:
+            embeddings = context.embedder.encode_document(content, **encode_kwargs)
+        else:
+            embeddings = context.embedder.encode(content, **encode_kwargs)
         logger.info(f"   Embedded 1 document with shape {embeddings.shape}")
         return embeddings

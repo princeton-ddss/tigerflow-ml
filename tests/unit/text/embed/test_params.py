@@ -6,3 +6,4 @@ def test_embed_defaults():
     assert p.normalize is False
     assert p.truncate_dim is None
     assert p.encode_kwargs == "{}"
+    assert p.use_encode_document is False

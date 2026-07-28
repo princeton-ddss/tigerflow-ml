@@ -15,6 +15,7 @@ Embed text using HuggingFace sentence-transformers models.
 | `--encode-kwargs`   | `{}`               | Additional kwargs for SentenceTransformer's `encode()` (e.g. `{'prompt':'query: '}`). Supplied values override task defaults. |
 | `--normalize`       | `--no-normalize`   | Whether to normalize returned vectors to have length 1                                                             |
 | `--truncate-dim`    |                    | The dimension to truncate sentence embeddings to                                                                   |
+| `--use-encode-document` | `--no-use-encode-document` | Use SentenceTransformer's `encode_document()` instead of `encode()`. See [SentenceTransformer's documentation](https://sbert.net/docs/package_reference/sentence_transformer/model.html#sentence_transformers.sentence_transformer.model.SentenceTransformer.encode_document) for more information. |
 
 ## Supported Input Formats
 

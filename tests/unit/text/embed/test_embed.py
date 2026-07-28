@@ -21,6 +21,7 @@ def _make_context(**kwargs):
         encode_kwargs="{}",
         normalize=False,
         truncate_dim=None,
+        use_encode_document=False,
     )
     defaults.update(kwargs)
     return SimpleNamespace(**defaults)
@@ -37,7 +38,7 @@ class TestRun:
     def _run(self, tmp_path, content, **context_kwargs):
         context = _make_context(**context_kwargs)
         context.embedder = MagicMock()
-        context.embedder.encode.return_value = np.zeros((3, 4))
+        context.embedder.encode.return_value = np.zeros(4)
         context.embedder.encode_document.return_value = np.zeros(4)
 
         # Mirrors the resolution _EmbedBase.setup() performs on context.encode_kwargs.
@@ -77,19 +78,10 @@ class TestRun:
         with pytest.raises(EmptyFileError):
             _EmbedBase.run(context, input_file, output_file)
 
-    def test_whole_file_uses_encode_document(self, tmp_path):
-        context, output_file = self._run(tmp_path, "hello world")
-
-        context.embedder.encode_document.assert_called_once()
-        context.embedder.encode.assert_not_called()
-        args, _ = context.embedder.encode_document.call_args
-        assert args[0] == "hello world"
-        assert output_file.exists()
-
     def test_encode_kwargs_omit_unset_optional_fields(self, tmp_path):
         context, _ = self._run(tmp_path, "hello")
 
-        _, kwargs = context.embedder.encode_document.call_args
+        _, kwargs = context.embedder.encode.call_args
         assert "truncate_dim" not in kwargs
         assert kwargs["normalize_embeddings"] is False
 
@@ -101,7 +93,7 @@ class TestRun:
             normalize=True,
         )
 
-        _, kwargs = context.embedder.encode_document.call_args
+        _, kwargs = context.embedder.encode.call_args
         assert kwargs["truncate_dim"] == 128
         assert kwargs["normalize_embeddings"] is True
 
@@ -110,3 +102,23 @@ class TestRun:
 
         loaded = np.load(output_file)
         assert loaded.shape == (4,)
+
+    def test_uses_encode_by_default(self, tmp_path):
+        context, output_file = self._run(tmp_path, "hello world")
+
+        context.embedder.encode.assert_called_once()
+        context.embedder.encode_document.assert_not_called()
+        args, _ = context.embedder.encode.call_args
+        assert args[0] == "hello world"
+        assert output_file.exists()
+
+    def test_uses_encode_document_when_set(self, tmp_path):
+        context, output_file = self._run(
+            tmp_path, "hello world", use_encode_document=True
+        )
+
+        context.embedder.encode_document.assert_called_once()
+        context.embedder.encode.assert_not_called()
+        args, _ = context.embedder.encode_document.call_args
+        assert args[0] == "hello world"
+        assert output_file.exists()
