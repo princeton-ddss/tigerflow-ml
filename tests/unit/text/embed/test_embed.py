@@ -7,7 +7,7 @@ import numpy as np
 import pytest
 
 from tigerflow_ml.text.embed._base import _EmbedBase
-from tigerflow_ml.utils import EmptyFileError
+from tigerflow_ml.utils import EmptyFileError, parse_kwargs
 
 
 def _make_context(**kwargs):
@@ -18,8 +18,7 @@ def _make_context(**kwargs):
         device="auto",
         allow_fetch=False,
         seed=42,
-        prompt=None,
-        prompt_name=None,
+        encode_kwargs="{}",
         normalize=False,
         truncate_dim=None,
     )
@@ -28,11 +27,6 @@ def _make_context(**kwargs):
 
 
 class TestSetup:
-    def test_prompt_and_prompt_name_mutually_exclusive(self):
-        context = _make_context(prompt="query: ", prompt_name="query")
-        with pytest.raises(ValueError, match="mutually exclusive"):
-            _EmbedBase.setup(context)
-
     def test_model_not_found_without_allow_fetch_raises(self):
         context = _make_context(allow_fetch=False)
         with pytest.raises(RuntimeError, match="not found in cache"):
@@ -45,6 +39,16 @@ class TestRun:
         context.embedder = MagicMock()
         context.embedder.encode.return_value = np.zeros((3, 4))
         context.embedder.encode_document.return_value = np.zeros(4)
+
+        # Mirrors the resolution _EmbedBase.setup() performs on context.encode_kwargs.
+        user_encode_kwargs = parse_kwargs(context.encode_kwargs)
+        context.encode_kwargs = {
+            "normalize_embeddings": context.normalize,
+            "show_progress_bar": False,
+        }
+        if context.truncate_dim is not None:
+            context.encode_kwargs["truncate_dim"] = context.truncate_dim
+        context.encode_kwargs.update(user_encode_kwargs)
 
         input_file = tmp_path / "input.txt"
         input_file.write_text(content)
@@ -86,8 +90,6 @@ class TestRun:
         context, _ = self._run(tmp_path, "hello")
 
         _, kwargs = context.embedder.encode_document.call_args
-        assert "prompt" not in kwargs
-        assert "prompt_name" not in kwargs
         assert "truncate_dim" not in kwargs
         assert kwargs["normalize_embeddings"] is False
 
@@ -95,16 +97,13 @@ class TestRun:
         context, _ = self._run(
             tmp_path,
             "hello",
-            prompt="query: ",
             truncate_dim=128,
             normalize=True,
         )
 
         _, kwargs = context.embedder.encode_document.call_args
-        assert kwargs["prompt"] == "query: "
         assert kwargs["truncate_dim"] == 128
         assert kwargs["normalize_embeddings"] is True
-        assert "prompt_name" not in kwargs
 
     def test_output_written_as_npy(self, tmp_path):
         _, output_file = self._run(tmp_path, "hello world")

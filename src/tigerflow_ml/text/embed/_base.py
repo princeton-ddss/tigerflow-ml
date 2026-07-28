@@ -7,7 +7,7 @@ from tigerflow.logconfig import logger
 from tigerflow.utils import SetupContext
 
 from tigerflow_ml.params import HFParams
-from tigerflow_ml.utils import read_text_file_strict
+from tigerflow_ml.utils import parse_kwargs, read_text_file_strict
 
 _TEXT_EXTENSIONS = [".txt", ".text", ".md", ".log", ".rtf"]
 
@@ -16,23 +16,6 @@ class _EmbedBase:
     """Embed inputs using Hugging Face sentence-transformers models."""
 
     class Params(HFParams):
-        prompt: Annotated[
-            str | None,
-            typer.Option(
-                help="Raw text prepended to each input before encoding (e.g. "
-                "'query: '). Mutually exclusive with --prompt-name."
-            ),
-        ] = None
-
-        prompt_name: Annotated[
-            str | None,
-            typer.Option(
-                help="Name of a prompt predefined in the model's config (e.g. "
-                "'query' or 'passage' for e5/bge models). Mutually exclusive "
-                "with --prompt."
-            ),
-        ] = None
-
         normalize: Annotated[
             bool,
             typer.Option(
@@ -45,13 +28,18 @@ class _EmbedBase:
             typer.Option(help="The dimension to truncate sentence embeddings to."),
         ] = None
 
+        encode_kwargs: Annotated[
+            str,
+            typer.Option(
+                help="Additional kwargs for SentenceTransformer's encode() "
+                "(e.g., {'prompt':'query: '}). Supplied values override task defaults."
+            ),
+        ] = "{}"
+
     @staticmethod
     def setup(context: SetupContext):
         import torch
         from sentence_transformers import SentenceTransformer
-
-        if context.prompt is not None and context.prompt_name is not None:
-            raise ValueError("--prompt and --prompt-name are mutually exclusive")
 
         device = context.device
         if context.device == "auto":
@@ -78,6 +66,16 @@ class _EmbedBase:
             f"   Embedding dimension: {context.embedder.get_embedding_dimension()}"
         )
 
+        user_encode_kwargs = parse_kwargs(context.encode_kwargs)
+        context.encode_kwargs = {
+            "normalize_embeddings": context.normalize,
+            "show_progress_bar": False,
+        }
+        if context.truncate_dim is not None:
+            context.encode_kwargs["truncate_dim"] = context.truncate_dim
+        context.encode_kwargs.update(user_encode_kwargs)
+        logger.info(f"   encode_kwargs={context.encode_kwargs}")
+
     @staticmethod
     def run(context: SetupContext, input_file: Path, output_file: Path):
         if output_file.suffix.lower() != ".npy":
@@ -86,21 +84,11 @@ class _EmbedBase:
                 "save to a .npy file."
             )
 
-        encode_kwargs = {
-            "normalize_embeddings": context.normalize,
-            "show_progress_bar": False,
-        }
-        if context.prompt is not None:
-            encode_kwargs["prompt"] = context.prompt
-        if context.prompt_name is not None:
-            encode_kwargs["prompt_name"] = context.prompt_name
-        if context.truncate_dim is not None:
-            encode_kwargs["truncate_dim"] = context.truncate_dim
-        logger.info(f"   Encode kwargs: {encode_kwargs}")
-
         if input_file.suffix.lower() in _TEXT_EXTENSIONS:
             embeddings = _EmbedBase._embed_text(
-                context=context, input_file=input_file, encode_kwargs=encode_kwargs
+                context=context,
+                input_file=input_file,
+                encode_kwargs=context.encode_kwargs,
             )
         else:
             raise ValueError(

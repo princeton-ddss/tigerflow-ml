@@ -4,16 +4,15 @@ Embed text using HuggingFace sentence-transformers models.
 
 ## Parameters
 
-| Parameter          | Default            | Description                                                                                                      |
+| Parameter          | Default            | Description                                                                                                         |
 |---------------------|--------------------|--------------------------------------------------------------------------------------------------------------------|
 | `--model`           |                    | HuggingFace model repo ID                                                                                          |
 | `--revision`        | `main`             | Model revision (branch, tag, or commit hash)                                                                       |
 | `--cache-dir`       |                    | HuggingFace cache directory for model files                                                                        |
-| `--device`          | `auto`             | Device to use (`cuda`, `cpu`, or `auto`)                                                                            |
+| `--device`          | `auto`             | Device to use (`cuda`, `cpu`, or `auto`)                                                                           |
 | `--allow-fetch`     | `--no-allow-fetch` | Allow downloads from HuggingFace Hub (network access required)                                                     |
 | `--seed`            | `42`               | The seed to set for more reproducible behavior                                                                     |
-| `--prompt`          |                    | Raw text prepended to each input before encoding (e.g. `query: `). Mutually exclusive with `--prompt-name`         |
-| `--prompt-name`     |                    | Name of a prompt predefined in the model's config (e.g. `query` or `passage` for e5/bge models). Mutually exclusive with `--prompt` |
+| `--encode-kwargs`   | `{}`               | Additional kwargs for SentenceTransformer's `encode()` (e.g. `{'prompt':'query: '}`). Supplied values override task defaults. |
 | `--normalize`       | `--no-normalize`   | Whether to normalize returned vectors to have length 1                                                             |
 | `--truncate-dim`    |                    | The dimension to truncate sentence embeddings to                                                                   |
 
@@ -76,7 +75,6 @@ tasks:
       time: 04:00:00
     params:
       model: BAAI/bge-base-en-v1.5
-      per_line: True
-      batch_size: 64
+      encode-kwargs: {"prompt":"query: "}
       cache_dir: ~/path/to/model/hub
 ```
