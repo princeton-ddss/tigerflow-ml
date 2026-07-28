@@ -17,8 +17,8 @@
       "device": "auto"
     },
     "chat": {
-      "model": "google/gemma-3-1b-it",
-      "prompt": "Summarize the following text in one sentence: {text}"
+      "model": "google/gemma-4-E2B-it",
+      "prompt": "Summarize this in one sentence:"
     }
   },
   "slurm": {
