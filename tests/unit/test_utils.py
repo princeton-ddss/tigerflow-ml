@@ -3,6 +3,7 @@
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
+import numpy as np
 import pytest
 
 from tigerflow_ml.utils import (
@@ -15,7 +16,9 @@ from tigerflow_ml.utils import (
     get_model_config,
     get_model_context_window,
     get_tokenizer,
+    load_audio,
     load_images,
+    load_video,
     process_response_schema,
     read_text_file_strict,
     read_text_file_with_fallback,
@@ -313,6 +316,124 @@ class TestBatched:
 
     def test_empty_iterable_yields_nothing(self):
         assert list(batched(iter([]), 3)) == []
+
+
+def _make_audio_file(path, duration=1.0, sr=8000, channels=1, freq=440):
+    import numpy as np
+    import soundfile as sf
+
+    t = np.linspace(0, duration, int(duration * sr), endpoint=False)
+    tone = (0.1 * np.sin(2 * np.pi * freq * t)).astype(np.float32)
+    if channels > 1:
+        tone = np.stack([tone] * channels, axis=1)
+    sf.write(path, tone, sr)
+    return path
+
+
+class TestLoadAudio:
+    def test_downmixes_stereo_to_mono(self, tmp_path):
+        path = _make_audio_file(tmp_path / "test.wav", sr=16000, channels=2)
+        array = load_audio(path, sampling_rate=16000)
+        assert array.ndim == 1
+
+    def test_returns_float32(self, tmp_path):
+        path = _make_audio_file(tmp_path / "test.wav", sr=16000)
+        array = load_audio(path, sampling_rate=16000)
+        assert array.dtype == np.float32
+
+    def test_no_resample_when_rate_matches(self, tmp_path):
+        path = _make_audio_file(tmp_path / "test.wav", duration=1.0, sr=16000)
+        array = load_audio(path, sampling_rate=16000)
+        assert len(array) == 16000
+
+    def test_resamples_to_target_rate(self, tmp_path):
+        path = _make_audio_file(tmp_path / "test.wav", duration=1.0, sr=8000)
+        array = load_audio(path, sampling_rate=16000)
+        assert abs(len(array) - 16000) == 0
+
+    def test_default_sampling_rate_is_16khz(self, tmp_path):
+        path = _make_audio_file(tmp_path / "test.wav", duration=1.0, sr=8000)
+        array = load_audio(path)
+        assert abs(len(array) - 16000) == 0
+
+    def test_nonexistent_file_raises(self, tmp_path):
+        with pytest.raises(Exception):
+            load_audio(tmp_path / "nonexistent.wav")
+
+
+def _make_video_file(path, num_frames=10, fps=10.0, size=(32, 24)):
+    import cv2
+    import numpy as np
+
+    width, height = size
+    fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+    writer = cv2.VideoWriter(str(path), fourcc, fps, (width, height))
+    try:
+        for i in range(num_frames):
+            frame = np.full((height, width, 3), i % 256, dtype=np.uint8)
+            writer.write(frame)
+    finally:
+        writer.release()
+    return path
+
+
+def _read_back(video_bytes, tmp_path, name="roundtrip.mp4"):
+    import cv2
+
+    out_path = tmp_path / name
+    out_path.write_bytes(video_bytes)
+    cap = cv2.VideoCapture(str(out_path))
+    try:
+        fps = cap.get(cv2.CAP_PROP_FPS)
+        frame_count = cap.get(cv2.CAP_PROP_FRAME_COUNT)
+    finally:
+        cap.release()
+    return fps, frame_count
+
+
+class TestLoadVideo:
+    def test_no_resample_when_sample_fps_is_none(self, tmp_path):
+        path = _make_video_file(tmp_path / "test.mp4", num_frames=10, fps=10.0)
+        result = load_video(path, sample_fps=None)
+        assert result == path.read_bytes()
+
+    def test_no_resample_when_sample_fps_above_source(self, tmp_path):
+        path = _make_video_file(tmp_path / "test.mp4", num_frames=10, fps=10.0)
+        result = load_video(path, sample_fps=30.0)
+        assert result == path.read_bytes()
+
+    def test_downsamples_frame_count(self, tmp_path):
+        path = _make_video_file(tmp_path / "test.mp4", num_frames=10, fps=10.0)
+        result = load_video(path, sample_fps=5.0)
+        fps, frame_count = _read_back(result, tmp_path)
+        assert abs(fps - 5.0) < 0.1
+        assert frame_count < 10
+
+    def test_zero_sample_fps_raises(self, tmp_path):
+        path = _make_video_file(tmp_path / "test.mp4", num_frames=10, fps=10.0)
+        with pytest.raises(ValueError, match="positive"):
+            load_video(path, sample_fps=0)
+
+    def test_negative_sample_fps_raises(self, tmp_path):
+        path = _make_video_file(tmp_path / "test.mp4", num_frames=10, fps=10.0)
+        with pytest.raises(ValueError, match="positive"):
+            load_video(path, sample_fps=-5.0)
+
+    def test_unopenable_file_raises(self, tmp_path):
+        path = tmp_path / "bad.mp4"
+        path.write_bytes(b"not a real video")
+        with pytest.raises(ValueError, match="Could not open video"):
+            load_video(path, sample_fps=5.0)
+
+    def test_nan_fps_raises(self, tmp_path):
+        path = _make_video_file(tmp_path / "test.mp4", num_frames=10, fps=10.0)
+        with patch("cv2.VideoCapture") as mock_capture:
+            mock_cap = MagicMock()
+            mock_cap.isOpened.return_value = True
+            mock_cap.get.return_value = float("nan")
+            mock_capture.return_value = mock_cap
+            with pytest.raises(ValueError, match="Could not determine FPS"):
+                load_video(path, sample_fps=5.0)
 
 
 class TestStripMarkdownFromJson:
