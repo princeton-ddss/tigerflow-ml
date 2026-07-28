@@ -22,12 +22,18 @@ def _make_context(**kwargs):
         normalize=False,
         truncate_dim=None,
         use_encode_document=False,
+        use_encode_query=False,
     )
     defaults.update(kwargs)
     return SimpleNamespace(**defaults)
 
 
 class TestSetup:
+    def test_use_query_and_use_document_mutually_exclusive(self):
+        context = _make_context(use_encode_document=True, use_encode_query=True)
+        with pytest.raises(ValueError, match="mutually exclusive"):
+            _EmbedBase.setup(context)
+
     def test_model_not_found_without_allow_fetch_raises(self):
         context = _make_context(allow_fetch=False)
         with pytest.raises(RuntimeError, match="not found in cache"):
@@ -39,7 +45,8 @@ class TestRun:
         context = _make_context(**context_kwargs)
         context.embedder = MagicMock()
         context.embedder.encode.return_value = np.zeros(4)
-        context.embedder.encode_document.return_value = np.zeros(4)
+        context.embedder.encode_document.return_value = np.zeros(5)
+        context.embedder.encode_query.return_value = np.zeros(6)
 
         # Mirrors the resolution _EmbedBase.setup() performs on context.encode_kwargs.
         user_encode_kwargs = parse_kwargs(context.encode_kwargs)
@@ -108,6 +115,8 @@ class TestRun:
 
         context.embedder.encode.assert_called_once()
         context.embedder.encode_document.assert_not_called()
+        context.embedder.encode_query.assert_not_called()
+
         args, _ = context.embedder.encode.call_args
         assert args[0] == "hello world"
         assert output_file.exists()
@@ -119,6 +128,19 @@ class TestRun:
 
         context.embedder.encode_document.assert_called_once()
         context.embedder.encode.assert_not_called()
+        context.embedder.encode_query.assert_not_called()
+
         args, _ = context.embedder.encode_document.call_args
+        assert args[0] == "hello world"
+        assert output_file.exists()
+
+    def test_uses_encode_query_when_set(self, tmp_path):
+        context, output_file = self._run(tmp_path, "hello world", use_encode_query=True)
+
+        context.embedder.encode_query.assert_called_once()
+        context.embedder.encode.assert_not_called()
+        context.embedder.encode_document.assert_not_called()
+
+        args, _ = context.embedder.encode_query.call_args
         assert args[0] == "hello world"
         assert output_file.exists()
