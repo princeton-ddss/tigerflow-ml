@@ -18,8 +18,6 @@ def _make_context(**kwargs):
         device="auto",
         allow_fetch=False,
         seed=42,
-        per_line=False,
-        batch_size=32,
         prompt=None,
         prompt_name=None,
         normalize=False,
@@ -84,20 +82,6 @@ class TestRun:
         assert args[0] == "hello world"
         assert output_file.exists()
 
-    def test_per_line_uses_encode_with_batch_size(self, tmp_path):
-        context, _ = self._run(
-            tmp_path,
-            "line one\n\nline two\n  \nline three",
-            per_line=True,
-            batch_size=8,
-        )
-
-        context.embedder.encode.assert_called_once()
-        context.embedder.encode_document.assert_not_called()
-        args, kwargs = context.embedder.encode.call_args
-        assert args[0] == ["line one", "line two", "line three"]
-        assert kwargs["batch_size"] == 8
-
     def test_encode_kwargs_omit_unset_optional_fields(self, tmp_path):
         context, _ = self._run(tmp_path, "hello")
 
@@ -127,9 +111,3 @@ class TestRun:
 
         loaded = np.load(output_file)
         assert loaded.shape == (4,)
-
-    def test_per_line_output_written_as_npy(self, tmp_path):
-        _, output_file = self._run(tmp_path, "one\ntwo\nthree", per_line=True)
-
-        loaded = np.load(output_file)
-        assert loaded.shape == (3, 4)

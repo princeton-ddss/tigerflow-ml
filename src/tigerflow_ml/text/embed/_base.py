@@ -16,23 +16,6 @@ class _EmbedBase:
     """Embed inputs using Hugging Face sentence-transformers models."""
 
     class Params(HFParams):
-        per_line: Annotated[
-            bool,
-            typer.Option(
-                help="Embed each non-empty line of the input file independently, "
-                "producing one vector per line instead of a single vector for the "
-                "whole file."
-            ),
-        ] = False
-
-        batch_size: Annotated[
-            int,
-            typer.Option(
-                help="Number of lines encoded per batch when --per-line is set.",
-                min=1,
-            ),
-        ] = 32
-
         prompt: Annotated[
             str | None,
             typer.Option(
@@ -131,15 +114,7 @@ class _EmbedBase:
         context: SetupContext, input_file: Path, encode_kwargs: dict[str, Any]
     ):
         content = read_text_file_strict(input_file)
-        if context.per_line:
-            texts = [line.strip() for line in content.splitlines() if line.strip()]
-            embeddings = context.embedder.encode(
-                texts, batch_size=context.batch_size, **encode_kwargs
-            )
-            logger.info(
-                f"   Embedded {len(texts)} line(s) with shape {embeddings.shape}"
-            )
-        else:
-            embeddings = context.embedder.encode_document(content, **encode_kwargs)
-            logger.info(f"   Embedded 1 document with shape {embeddings.shape}")
+
+        embeddings = context.embedder.encode_document(content, **encode_kwargs)
+        logger.info(f"   Embedded 1 document with shape {embeddings.shape}")
         return embeddings
