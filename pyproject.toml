@@ -39,6 +39,7 @@ dependencies = [
     "soundfile>=0.12",
     "soxr>=0.3",
     "pillow-heif>=1.4.0",
+    "sentence-transformers>=5.6.0",
 ]
 
 [project.optional-dependencies]
@@ -78,6 +79,8 @@ detect = "tigerflow_ml.image.detect.slurm:Detect"
 detect-local = "tigerflow_ml.image.detect.local:Detect"
 chat = "tigerflow_ml.text.chat.slurm:Chat"
 chat-local = "tigerflow_ml.text.chat.local:Chat"
+embed = "tigerflow_ml.text.embed.slurm:Embed"
+embed-local = "tigerflow_ml.text.embed.local:Embed"
 
 [build-system]
 requires = ["hatchling"]

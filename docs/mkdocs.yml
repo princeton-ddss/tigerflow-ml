@@ -65,3 +65,4 @@ nav:
       - Transcription: tasks/transcribe.md
       - Object Detection: tasks/detect.md
       - Chat: tasks/chat.md
+      - Embed: tasks/embed.md

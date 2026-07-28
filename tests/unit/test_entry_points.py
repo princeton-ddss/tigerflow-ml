@@ -17,6 +17,8 @@ def test_entry_points_registered():
         "detect-local",
         "chat",
         "chat-local",
+        "embed",
+        "embed-local",
     }
     assert expected.issubset(names), f"Missing entry points: {expected - names}"
 
