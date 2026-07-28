@@ -25,7 +25,7 @@ from typing import TYPE_CHECKING, Any
 from pydantic import BaseModel
 from tigerflow.logconfig import logger
 
-from tigerflow_ml.utils import raise_model_load_error
+from tigerflow_ml.utils import load_audio, raise_model_load_error
 
 if TYPE_CHECKING:
     import numpy as np
@@ -430,30 +430,6 @@ def _flatten_sequences(predicted_ids: Any) -> list[list[int]]:
     return sequences
 
 
-def load_audio(input_file: Path) -> np.ndarray:
-    """Load an audio file as a 16kHz mono float32 array.
-
-    Decodes with ``soundfile``, averages channels to mono, and resamples to
-    16kHz with ``soxr`` if needed.
-
-    Args:
-        input_file: Path to the audio file.
-
-    Returns:
-        A 1-D float32 array of samples at 16kHz.
-    """
-    import numpy as np
-    import soundfile as sf
-    import soxr
-
-    array, sr = sf.read(str(input_file), dtype="float32", always_2d=False)
-    if array.ndim > 1:
-        array = array.mean(axis=1)
-    if sr != SAMPLING_RATE:
-        array = soxr.resample(array, sr, SAMPLING_RATE)
-    return np.ascontiguousarray(array, dtype=np.float32)
-
-
 def transcribe_audio(
     input_file: Path,
     whisper: WhisperForConditionalGeneration,
@@ -482,7 +458,7 @@ def transcribe_audio(
     Returns:
         A ``TranscriptionResult`` holding the per-window transcriptions.
     """
-    array = load_audio(input_file)
+    array = load_audio(input_file, sampling_rate=SAMPLING_RATE)
     duration = len(array) / SAMPLING_RATE
     logger.info(f"Audio duration: {duration:.1f}s")
 
@@ -538,7 +514,7 @@ def transcribe_audio_native(
     """
     import torch
 
-    array = load_audio(input_file)
+    array = load_audio(input_file, sampling_rate=SAMPLING_RATE)
     duration = len(array) / SAMPLING_RATE
     logger.info(f"Audio duration: {duration:.1f}s (native long-form)")
 
