@@ -814,7 +814,7 @@
 
 
 <h1 id="chat">Chat<a class="headerlink" href="#chat" title="Permanent link">&para;</a></h1>
-<p>Analyze text or image files using vLLM compatible HuggingFace chat models.</p>
+<p>Analyze text, image, audio, or video files using vLLM compatible HuggingFace chat models.</p>
 <h2 id="parameters">Parameters<a class="headerlink" href="#parameters" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
@@ -871,6 +871,16 @@
 <td>Maximum image dimension in pixels (width or height). Larger images are downscaled while preserving aspect ratio.</td>
 </tr>
 <tr>
+<td><code>--audio-sampling-rate</code></td>
+<td><code>16000</code></td>
+<td>Sampling rate (Hz) audio inputs are resampled to before being sent to the model.</td>
+</tr>
+<tr>
+<td><code>--video-sample-fps</code></td>
+<td></td>
+<td>Frame rate (fps) video inputs are resampled to before being sent to the model. Frames are dropped to hit this rate. Defaults to no resampling.</td>
+</tr>
+<tr>
 <td><code>--temperature</code></td>
 <td><code>0</code></td>
 <td>The model temperature. Lower numbers make models more deterministic</td>
@@ -903,7 +913,7 @@
 </tbody>
 </table>
 <h2 id="supported-input-formats">Supported Input Formats<a class="headerlink" href="#supported-input-formats" title="Permanent link">&para;</a></h2>
-<p>Text files (.txt, .text, .md, .log, .rtf) and images (.jpg, .jpeg, .png, .tiff, .tif, .bmp)</p>
+<p>Text files, images, audio, and video files are supported (depends on the <code>--model</code> being compatible with vLLM's <code>image_pil</code>/<code>audio_url</code>/<code>video_url</code> chat content types)</p>
 <h2 id="output-format">Output Format<a class="headerlink" href="#output-format" title="Permanent link">&para;</a></h2>
 <p>Plain text (.txt).</p>
 <h2 id="models">Models<a class="headerlink" href="#models" title="Permanent link">&para;</a></h2>
