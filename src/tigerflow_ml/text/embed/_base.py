@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Annotated, Any
+from typing import Annotated
 
 import numpy as np
 import typer
@@ -23,6 +23,14 @@ class _EmbedBase:
                 "method instead of the regular encode()."
             ),
         ] = False
+
+        use_encode_query: Annotated[
+            bool,
+            typer.Option(
+                help="Whether to use SentenceTransformer's encode_query() "
+                "method instead of the regular encode()."
+            ),
+        ]
 
         normalize: Annotated[
             bool,
@@ -48,6 +56,11 @@ class _EmbedBase:
     def setup(context: SetupContext):
         import torch
         from sentence_transformers import SentenceTransformer
+
+        if context.use_encode_document and context.use_encode_query:
+            raise ValueError(
+                "--use-encode-document and --use-encode-query are mutually exclusive"
+            )
 
         device = context.device
         if context.device == "auto":
@@ -96,7 +109,6 @@ class _EmbedBase:
             embeddings = _EmbedBase._embed_text(
                 context=context,
                 input_file=input_file,
-                encode_kwargs=context.encode_kwargs,
             )
         else:
             raise ValueError(
@@ -106,14 +118,16 @@ class _EmbedBase:
         np.save(output_file, embeddings)
 
     @staticmethod
-    def _embed_text(
-        context: SetupContext, input_file: Path, encode_kwargs: dict[str, Any]
-    ):
+    def _embed_text(context: SetupContext, input_file: Path):
         content = read_text_file_strict(input_file)
 
         if context.use_encode_document:
-            embeddings = context.embedder.encode_document(content, **encode_kwargs)
+            embeddings = context.embedder.encode_document(
+                content, **context.encode_kwargs
+            )
+        elif context.use_encode_query:
+            embeddings = context.embedder.encode_query(content, **context.encode_kwargs)
         else:
-            embeddings = context.embedder.encode(content, **encode_kwargs)
+            embeddings = context.embedder.encode(content, **context.encode_kwargs)
         logger.info(f"   Embedded 1 document with shape {embeddings.shape}")
         return embeddings
