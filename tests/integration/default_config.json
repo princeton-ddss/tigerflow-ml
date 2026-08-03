@@ -18,7 +18,12 @@
     },
     "chat": {
       "model": "google/gemma-4-E2B-it",
-      "prompt": "Summarize this in one sentence:"
+      "prompt": "Summarize this in one sentence:",
+      "llm_kwargs": {
+        "enforce_eager": true,
+        "enable_prefix_caching": false,
+        "max_num_seqs": 1
+      }
     }
   },
   "slurm": {
