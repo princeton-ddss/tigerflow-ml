@@ -11,10 +11,10 @@ from tigerflow_ml.audio.transcribe.transcriber import (
     BatchIterator,
     Transcription,
     _flatten_sequences,
-    load_audio,
     load_whisper,
     merge_overlapping,
 )
+from tigerflow_ml.utils import load_audio
 
 _FIXTURE = (
     Path(__file__).parents[3] / "integration" / "fixtures" / "transcribe" / "sample.wav"
@@ -41,12 +41,12 @@ class TestLoadAudioErrors:
         bad = tmp_path / "not-audio.wav"
         bad.write_bytes(b"this is not a wav file")
         with pytest.raises(Exception):
-            load_audio(bad)
+            load_audio(bad, sampling_rate=SAMPLING_RATE)
 
 
 class TestLoadAudio:
     def test_returns_mono_float32_at_16khz(self):
-        array = load_audio(_FIXTURE)
+        array = load_audio(_FIXTURE, sampling_rate=SAMPLING_RATE)
         assert array.dtype == np.float32
         assert array.ndim == 1
         # ~2.5s fixture at 16kHz.
