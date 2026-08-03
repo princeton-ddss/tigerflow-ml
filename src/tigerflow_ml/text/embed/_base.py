@@ -30,7 +30,7 @@ class _EmbedBase:
                 help="Whether to use SentenceTransformer's encode_query() "
                 "method instead of the regular encode()."
             ),
-        ]
+        ] = False
 
         normalize: Annotated[
             bool,
