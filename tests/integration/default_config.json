@@ -17,11 +17,13 @@
       "device": "auto"
     },
     "chat": {
-      "model": "google/gemma-3-1b-it",
-      "prompt": "Summarize the following text in one sentence: {text}"
-    },
-    "embed": {
-      "model": "sentence-transformers/all-MiniLM-L6-v2"
+      "model": "google/gemma-4-E2B-it",
+      "prompt": "Summarize this in one sentence:",
+      "llm_kwargs": {
+        "enforce_eager": true,
+        "enable_prefix_caching": false,
+        "max_num_seqs": 1
+      }
     }
   },
   "slurm": {

@@ -16,6 +16,8 @@ Embed text using HuggingFace sentence-transformers models.
 | `--normalize`       | `--no-normalize`   | Whether to normalize returned vectors to have length 1                                                             |
 | `--truncate-dim`    |                    | The dimension to truncate sentence embeddings to                                                                   |
 | `--use-encode-document` | `--no-use-encode-document` | Use SentenceTransformer's `encode_document()` instead of `encode()`. See [SentenceTransformer's documentation](https://sbert.net/docs/package_reference/sentence_transformer/model.html#sentence_transformers.sentence_transformer.model.SentenceTransformer.encode_document) for more information. |
+| `--use-encode-query` | `--no-use-encode-query` | Use SentenceTransformer's `encode_query()` instead of `encode()`. See [SentenceTransformer's documentation](https://sbert.net/docs/package_reference/sentence_transformer/model.html#sentence_transformers.sentence_transformer.model.SentenceTransformer.encode_query) for more information. |
+
 
 ## Supported Input Formats
 
