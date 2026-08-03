@@ -24,6 +24,9 @@
         "enable_prefix_caching": false,
         "max_num_seqs": 1
       }
+    },
+    "embed": {
+      "model": "sentence-transformers/all-MiniLM-L6-v2"
     }
   },
   "slurm": {
