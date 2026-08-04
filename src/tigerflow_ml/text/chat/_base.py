@@ -12,7 +12,10 @@ from tigerflow.utils import SetupContext
 
 from tigerflow_ml.params import VLLMParams
 from tigerflow_ml.utils import (
+    AUDIO_EXTENSIONS,
     IMG_EXTENSIONS,
+    TEXT_EXTENSIONS,
+    VIDEO_EXTENSIONS,
     load_audio,
     load_images,
     load_video,
@@ -21,10 +24,6 @@ from tigerflow_ml.utils import (
     raise_model_load_error,
     read_text_file_strict,
 )
-
-_TEXT_EXTENSIONS = [".txt", ".text", ".md", ".log", ".rtf"]
-_AUDIO_EXTENSIONS = [".wav", ".flac", ".ogg", ".aiff", ".aif", ".mp3"]
-_VIDEO_EXTENSIONS = [".mp4", ".avi", ".mov", ".mkv", ".webm", ".flv", ".wmv"]
 
 
 class _ChatBase:
@@ -166,7 +165,7 @@ class _ChatBase:
     @staticmethod
     def run(context: SetupContext, input_file: Path, output_file: Path):
 
-        if input_file.suffix.lower() in _TEXT_EXTENSIONS:
+        if input_file.suffix.lower() in TEXT_EXTENSIONS:
             result = _ChatBase._process_text_file(context, input_file)
         elif input_file.suffix.lower() in IMG_EXTENSIONS:
             if input_file.suffix.lower() == ".pdf":
@@ -175,9 +174,9 @@ class _ChatBase:
                     "raise an issue on Github"
                 )
             result = _ChatBase._process_img_file(context, input_file)
-        elif input_file.suffix.lower() in _AUDIO_EXTENSIONS:
+        elif input_file.suffix.lower() in AUDIO_EXTENSIONS:
             result = _ChatBase._process_audio_file(context, input_file)
-        elif input_file.suffix.lower() in _VIDEO_EXTENSIONS:
+        elif input_file.suffix.lower() in VIDEO_EXTENSIONS:
             result = _ChatBase._process_video_file(context, input_file)
         else:
             raise ValueError(

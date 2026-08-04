@@ -7,9 +7,7 @@ from tigerflow.logconfig import logger
 from tigerflow.utils import SetupContext
 
 from tigerflow_ml.params import HFParams
-from tigerflow_ml.utils import parse_kwargs, read_text_file_strict
-
-_TEXT_EXTENSIONS = [".txt", ".text", ".md", ".log", ".rtf"]
+from tigerflow_ml.utils import TEXT_EXTENSIONS, parse_kwargs, read_text_file_strict
 
 
 class _EmbedBase:
@@ -105,7 +103,7 @@ class _EmbedBase:
                 "save to a .npy file."
             )
 
-        if input_file.suffix.lower() in _TEXT_EXTENSIONS:
+        if input_file.suffix.lower() in TEXT_EXTENSIONS:
             embeddings = _EmbedBase._embed_text(
                 context=context,
                 input_file=input_file,
