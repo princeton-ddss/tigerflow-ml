@@ -1,7 +1,5 @@
 """Integration tests for OCR task."""
 
-import copy
-
 import pytest
 
 from tigerflow_ml.text.ocr._base import _OCRBase
@@ -41,7 +39,7 @@ def test_run(
     update_snapshots,
 ):
     for input_file in get_input_files(ocr_dir):
-        if input_file.stem == "resume":  # skip json input
+        if input_file.stem == "resume":  # covered by test_ocr_json_schema.py
             continue
         output_file = make_output_path(input_file, ".txt")
         _OCRBase.run(default_context, input_file, output_file)
@@ -54,18 +52,3 @@ def test_run(
             update_snapshots,
             threshold=0.9,
         )
-
-    json_ctx = copy.copy(default_context)  # shallow clone
-    json_ctx.prompt = "Extract all text from this image in valid json format"
-    json_input = ocr_dir / "resume.jpeg"
-    output_file = make_output_path(json_input, ".json")
-    _OCRBase.run(json_ctx, json_input, output_file)
-
-    text = output_file.read_text(encoding="utf-8")
-    assert_or_update_snapshot(
-        text,
-        f"ocr/{json_input.stem}.txt",
-        snapshot_dir,
-        update_snapshots,
-        threshold=0.9,
-    )
