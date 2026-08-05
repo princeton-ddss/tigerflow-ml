@@ -23,9 +23,7 @@ from tigerflow.logconfig import logger
 from tigerflow.utils import SetupContext
 
 from tigerflow_ml.params import HFParams
-from tigerflow_ml.utils import batched
-
-_VIDEO_EXTENSIONS = {".mp4", ".avi", ".mov", ".mkv", ".webm", ".flv", ".wmv"}
+from tigerflow_ml.utils import VIDEO_EXTENSIONS, batched
 
 
 class Dtype(str, Enum):
@@ -179,7 +177,7 @@ class _DetectBase:
     def run(context: SetupContext, input_file: Path, output_file: Path):
         logger.info(f"Processing: {input_file}")
 
-        is_video = input_file.suffix.lower() in _VIDEO_EXTENSIONS
+        is_video = input_file.suffix.lower() in VIDEO_EXTENSIONS
         if is_video:
             output = _run_video(context, input_file)
         else:

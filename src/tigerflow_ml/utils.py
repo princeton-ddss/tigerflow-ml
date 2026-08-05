@@ -16,6 +16,21 @@ if TYPE_CHECKING:
     from transformers import PretrainedConfig, PreTrainedTokenizerBase
     from vllm.sampling_params import StructuredOutputsParams  # type: ignore
 
+TEXT_EXTENSIONS = {".txt", ".text", ".md", ".log", ".rtf"}
+IMG_EXTENSIONS = {
+    ".jpg",
+    ".jpeg",
+    ".png",
+    ".tiff",
+    ".tif",
+    ".bmp",
+    ".pdf",
+    ".heic",
+    ".heif",
+}
+AUDIO_EXTENSIONS = {".wav", ".flac", ".ogg", ".aiff", ".aif", ".mp3"}
+VIDEO_EXTENSIONS = {".mp4", ".avi", ".mov", ".mkv", ".webm", ".flv", ".wmv"}
+
 
 class EmptyFileError(Exception):
     """Raised when an input file is empty"""
@@ -93,19 +108,6 @@ def read_text_file_strict(path: Path) -> str:
     if not content.strip():
         raise EmptyFileError(f"File is empty: {path}")
     return content
-
-
-IMG_EXTENSIONS = [
-    ".jpg",
-    ".jpeg",
-    ".png",
-    ".tiff",
-    ".tif",
-    ".bmp",
-    ".pdf",
-    ".heic",
-    ".heif",
-]
 
 
 def load_images(path: Path, max_images: int | None = None) -> Iterator["Image.Image"]:
