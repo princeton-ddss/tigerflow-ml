@@ -83,7 +83,7 @@ class _EmbedBase:
             device = "cuda" if torch.cuda.is_available() else "cpu"
 
         torch.manual_seed(context.seed)
-
+        logger.info(f"   Loading model {context.model}...")
         try:
             context.embedder = SentenceTransformer(
                 context.model,
@@ -91,6 +91,7 @@ class _EmbedBase:
                 cache_folder=context.cache_dir,
                 device=device,
                 local_files_only=not context.allow_fetch,
+                trust_remote_code=True,
             )
         except OSError as e:
             if not context.allow_fetch:

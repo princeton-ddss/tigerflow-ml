@@ -109,6 +109,8 @@ tasks:
       gpus: 1
       memory: 16G
       time: 04:00:00
+    setup_commands:
+      - export HF_HUB_OFFLINE=1
     params:
       model: BAAI/bge-base-en-v1.5
       encode-kwargs: {"prompt":"query: "}
