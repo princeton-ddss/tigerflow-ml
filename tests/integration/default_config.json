@@ -2,22 +2,27 @@
   "tasks": {
     "ocr": {
       "model": "Qwen/Qwen2.5-VL-3B-Instruct",
+      "revision": "66285546d2b821cf421d4f5eb2576359d3770cd3",
       "prompt": "Extract all text from this image in plain text format."
     },
     "translate": {
       "model": "google/gemma-3-1b-it",
+      "revision": "dcc83ea841ab6100d6b47a070329e1ba4cf78752",
       "device": "auto"
     },
     "transcribe": {
       "model": "openai/whisper-large-v3",
+      "revision": "06f233fe06e710322aca913c1bc4249a0d71fce1",
       "device": "auto"
     },
     "detect": {
       "model": "PekingU/rtdetr_r50vd",
+      "revision": "df939e661d8c52e80608d1ec566561aabd25a4e7",
       "device": "auto"
     },
     "chat": {
       "model": "google/gemma-4-E2B-it",
+      "revision": "3e22461f65e89153144f8adb70e3b8c2cc9845a7",
       "prompt": "Summarize this in one sentence:",
       "llm_kwargs": {
         "enforce_eager": true,
@@ -26,7 +31,8 @@
       }
     },
     "embed": {
-      "model": "sentence-transformers/all-MiniLM-L6-v2"
+      "model": "sentence-transformers/all-MiniLM-L6-v2",
+      "revision": "1110a243fdf4706b3f48f1d95db1a4f5529b4d41"
     }
   },
   "slurm": {

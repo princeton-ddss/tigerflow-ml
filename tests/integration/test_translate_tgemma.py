@@ -22,6 +22,7 @@ def tgemma_context(make_context):
         _TranslateBase.Params,
         "translate",
         model="Infomaniak-AI/vllm-translategemma-4b-it",
+        revision="cb3e0b2504f0db832982cca7fafd3ea4aaf777a0",
     )
     _TranslateBase.setup(ctx)
     yield ctx

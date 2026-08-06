@@ -29,6 +29,7 @@ def zero_shot_context(make_context):
         _DetectBase.Params,
         "detect",
         model="google/owlv2-base-patch16-ensemble",
+        revision="cfd3195ba4ea9592eec887ded089f4c08eff231d",
         labels="whale,cat,dog,person,car,bird",
     )
     _DetectBase.setup(ctx)
@@ -133,6 +134,7 @@ def test_zero_shot_requires_labels(make_context):
         _DetectBase.Params,
         "detect",
         model="google/owlv2-base-patch16-ensemble",
+        revision="cfd3195ba4ea9592eec887ded089f4c08eff231d",
         labels="",
     )
     with pytest.raises(ValueError, match="requires --labels"):
