@@ -1,0 +1,82 @@
+[
+  {
+    "name": "John Doe",
+    "contact": "Full Address, City, State, ZIP, Phone Number, E-mail",
+    "objective": "Design apparel print for an innovative retail company",
+    "education": [
+      {
+        "organization": "University of Minnesota",
+        "location": "City, State",
+        "title": "Bachelor of Science in Graphic Design",
+        "dates": "May 2011",
+        "bullets": [
+          "Cumulative GPA 3.93, Dean's List",
+          "Twin Cities Iron Range Scholarship"
+        ]
+      }
+    ],
+    "work_experience": [
+      {
+        "organization": "American Eagle",
+        "location": "City, State",
+        "title": "Sales Associate",
+        "dates": "July 2009 - present",
+        "bullets": [
+          "Collaborated with the store merchandiser creating displays to attract clientele",
+          "Use my trend awareness to assist customers in their shopping experience",
+          "Thereby help manage every piece of merchandise for inventory control",
+          "Process input to increase my product knowledge"
+        ]
+      },
+      {
+        "organization": "Planet Beach",
+        "location": "City, State",
+        "title": "Spa Consultant",
+        "dates": "Aug. 2008 - present",
+        "bullets": [
+          "Sell retail and membership to meet company sales goals",
+          "Build organizational skills by single handedly running all operating procedures",
+          "Communicate with clients to fulfill their wants and needs",
+          "Attend promotional events to market our services",
+          "Handle customer complaints and provide solutions",
+          "Received employee of the month award twice"
+        ]
+      },
+      {
+        "organization": "Heartbreaker",
+        "location": "City, State",
+        "title": "Sales Associate",
+        "dates": "May 2008 - Aug. 2008",
+        "bullets": [
+          "Stocked the sales floor with fast fashion inventory",
+          "Matched down item allowing me to see unsuccessful merchandise in a retail market",
+          "Offered advice and assistance to each goal"
+        ]
+      },
+      {
+        "organization": "Victoria's Secret",
+        "location": "City, State",
+        "title": "Fashion Representative",
+        "dates": "Jan. 2006 - Feb. 2009",
+        "bullets": [
+          "Applied my merchandising skills by assisting in the training of coworkers",
+          "Set up mannequins and displays in order to entice future customers",
+          "Provided superior customer service by helping with consumer decisions",
+          "Took seasonal inventory"
+        ]
+      }
+    ],
+    "volunteer_experience": [
+      {
+        "organization": "Target Corporation",
+        "location": "City, State",
+        "title": "Brand Ambassador",
+        "dates": "August 2009",
+        "bullets": [
+          "Represented Periscopes Marketing and Target Inc. at a college event",
+          "Engaged University of Minnesota freshman in the Target brand experience"
+        ]
+      }
+    ]
+  }
+]
