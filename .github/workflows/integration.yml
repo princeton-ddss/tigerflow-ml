@@ -61,7 +61,14 @@ jobs:
       - name: Install dependencies
         run: uv sync --locked --group test --extra vllm
 
+      - name: Log GPU state (pre-test)
+        run: nvidia-smi
+
       - name: Run integration tests
         env:
           TIGERFLOW_ML_INTEGRATION_TESTS: "1"
         run: uv run pytest tests/integration/
+
+      - name: Log GPU state (post-test)
+        if: always()
+        run: nvidia-smi

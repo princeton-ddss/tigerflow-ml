@@ -46,6 +46,8 @@ shared or scratch location.
 
 import json
 import os
+import subprocess
+import sys
 import tempfile
 from pathlib import Path
 
@@ -261,6 +263,58 @@ def make_output_path(output_dir):
         return output_dir / name
 
     return _make
+
+
+def _run_nvidia_smi(*args: str) -> str:
+    """Return nvidia-smi output, or a short error string if unavailable."""
+    try:
+        result = subprocess.run(
+            ["nvidia-smi", *args],
+            capture_output=True,
+            text=True,
+            timeout=15,
+        )
+        return result.stdout.strip() or result.stderr.strip()
+    except FileNotFoundError:
+        return "nvidia-smi not found"
+    except subprocess.TimeoutExpired:
+        return "nvidia-smi timed out"
+
+
+@pytest.fixture(scope="session", autouse=True)
+def _log_gpu_session():
+    """Log full nvidia-smi output at the start and end of the integration
+    test session."""
+    print(
+        f"\n[GPU state — session start]\n{_run_nvidia_smi()}",
+        file=sys.__stdout__,
+        flush=True,
+    )
+    yield
+    print(
+        f"\n[GPU state — session end]\n{_run_nvidia_smi()}",
+        file=sys.__stdout__,
+        flush=True,
+    )
+
+
+@pytest.fixture(autouse=True)
+def _log_gpu_per_test(request):
+    """Log GPU utilization and running compute processes before each test."""
+    util = _run_nvidia_smi(
+        "--query-gpu=index,name,utilization.gpu,memory.used,memory.free",
+        "--format=csv,noheader",
+    )
+    procs = _run_nvidia_smi(
+        "--query-compute-apps=gpu_uuid,pid,name,used_gpu_memory",
+        "--format=csv,noheader",
+    )
+    print(
+        f"\n[GPU before {request.node.name}]"
+        f"\n  util:  {util}"
+        f"\n  procs: {procs or 'none'}",
+        flush=True,
+    )
 
 
 @pytest.fixture(scope="session")
