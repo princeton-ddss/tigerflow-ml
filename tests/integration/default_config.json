@@ -31,8 +31,8 @@
       }
     },
     "embed": {
-      "model": "sentence-transformers/all-MiniLM-L6-v2",
-      "revision": "1110a243fdf4706b3f48f1d95db1a4f5529b4d41"
+      "model": "sentence-transformers/clip-ViT-B-32",
+      "revision": "327ab6726d33c0e22f920c83f2ff9e4bd38ca37f"
     }
   },
   "slurm": {
