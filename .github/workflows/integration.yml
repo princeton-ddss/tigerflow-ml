@@ -63,7 +63,12 @@ jobs:
 
       - name: Log GPU state (pre-test)
         continue-on-error: true
-        run: nvidia-smi
+        run: |
+          nvidia-smi
+          echo "--- NVIDIA device files ---"
+          ls -la /dev/nvidia* 2>&1 || echo "No /dev/nvidia* found"
+          echo "--- Current user and groups ---"
+          id
 
       - name: Run integration tests
         env:
