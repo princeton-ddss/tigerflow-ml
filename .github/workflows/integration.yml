@@ -64,7 +64,7 @@ jobs:
       - name: Log GPU state (pre-test)
         continue-on-error: true
         run: |
-          nvidia-smi
+          nvidia-smi || true
           echo "--- NVIDIA device files ---"
           ls -la /dev/nvidia* 2>&1 || echo "No /dev/nvidia* found"
           echo "--- Current user and groups ---"
@@ -78,4 +78,4 @@ jobs:
       - name: Log GPU state (post-test)
         if: always()
         continue-on-error: true
-        run: nvidia-smi
+        run: nvidia-smi || true
