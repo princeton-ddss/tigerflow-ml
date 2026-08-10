@@ -64,19 +64,9 @@ jobs:
       - name: Log GPU state (pre-test)
         continue-on-error: true
         run: |
-          uv run python - << 'PYEOF'
-          import subprocess, torch
-          r = subprocess.run(['nvidia-smi'], capture_output=True, text=True)
-          if r.returncode == 0:
-              print(r.stdout)
-          else:
-              print('nvidia-smi unavailable, using torch:')
-              print('CUDA available:', torch.cuda.is_available())
-              for i in range(torch.cuda.device_count()):
-                  p = torch.cuda.get_device_properties(i)
-                  print(f'GPU {i}: {p.name}, {p.total_memory // 2**30} GB total')
-          PYEOF
-
+          hostname
+          whoami
+          nvidia-smi || true
       - name: Run integration tests
         env:
           TIGERFLOW_ML_INTEGRATION_TESTS: "1"
@@ -86,15 +76,6 @@ jobs:
         if: always()
         continue-on-error: true
         run: |
-          uv run python - << 'PYEOF'
-          import subprocess, torch
-          r = subprocess.run(['nvidia-smi'], capture_output=True, text=True)
-          if r.returncode == 0:
-              print(r.stdout)
-          else:
-              print('nvidia-smi unavailable, using torch:')
-              print('CUDA available:', torch.cuda.is_available())
-              for i in range(torch.cuda.device_count()):
-                  p = torch.cuda.get_device_properties(i)
-                  print(f'GPU {i}: {p.name}, {p.total_memory // 2**30} GB total')
-          PYEOF
+          hostname
+          whoami
+          nvidia-smi || true
