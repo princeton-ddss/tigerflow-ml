@@ -64,11 +64,18 @@ jobs:
       - name: Log GPU state (pre-test)
         continue-on-error: true
         run: |
-          nvidia-smi || true
-          echo "--- NVIDIA device files ---"
-          ls -la /dev/nvidia* 2>&1 || echo "No /dev/nvidia* found"
-          echo "--- Current user and groups ---"
-          id
+          uv run python - << 'PYEOF'
+          import subprocess, torch
+          r = subprocess.run(['nvidia-smi'], capture_output=True, text=True)
+          if r.returncode == 0:
+              print(r.stdout)
+          else:
+              print('nvidia-smi unavailable, using torch:')
+              print('CUDA available:', torch.cuda.is_available())
+              for i in range(torch.cuda.device_count()):
+                  p = torch.cuda.get_device_properties(i)
+                  print(f'GPU {i}: {p.name}, {p.total_memory // 2**30} GB total')
+          PYEOF
 
       - name: Run integration tests
         env:
@@ -78,4 +85,16 @@ jobs:
       - name: Log GPU state (post-test)
         if: always()
         continue-on-error: true
-        run: nvidia-smi || true
+        run: |
+          uv run python - << 'PYEOF'
+          import subprocess, torch
+          r = subprocess.run(['nvidia-smi'], capture_output=True, text=True)
+          if r.returncode == 0:
+              print(r.stdout)
+          else:
+              print('nvidia-smi unavailable, using torch:')
+              print('CUDA available:', torch.cuda.is_available())
+              for i in range(torch.cuda.device_count()):
+                  p = torch.cuda.get_device_properties(i)
+                  print(f'GPU {i}: {p.name}, {p.total_memory // 2**30} GB total')
+          PYEOF

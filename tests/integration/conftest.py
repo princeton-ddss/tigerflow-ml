@@ -266,7 +266,7 @@ def make_output_path(output_dir):
 
 
 def _run_nvidia_smi(*args: str) -> str:
-    """Return nvidia-smi output, or a short error string if unavailable."""
+    """Return nvidia-smi output, falling back to torch CUDA info if unavailable."""
     try:
         result = subprocess.run(
             ["nvidia-smi", *args],
@@ -274,11 +274,23 @@ def _run_nvidia_smi(*args: str) -> str:
             text=True,
             timeout=15,
         )
-        return result.stdout.strip() or result.stderr.strip()
-    except FileNotFoundError:
-        return "nvidia-smi not found"
-    except subprocess.TimeoutExpired:
-        return "nvidia-smi timed out"
+        if result.returncode == 0:
+            return result.stdout.strip()
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        pass
+
+    try:
+        import torch
+
+        if not torch.cuda.is_available():
+            return "nvidia-smi unavailable; CUDA not available"
+        lines = ["nvidia-smi unavailable; torch CUDA info:"]
+        for i in range(torch.cuda.device_count()):
+            p = torch.cuda.get_device_properties(i)
+            lines.append(f"  GPU {i}: {p.name}, {p.total_memory // 2**30} GB total")
+        return "\n".join(lines)
+    except Exception as e:
+        return f"nvidia-smi unavailable; torch query failed: {e}"
 
 
 @pytest.fixture(scope="session", autouse=True)
