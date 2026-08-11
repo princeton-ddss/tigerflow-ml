@@ -7,7 +7,16 @@ from tigerflow.logconfig import logger
 from tigerflow.utils import SetupContext
 
 from tigerflow_ml.params import HFParams
-from tigerflow_ml.utils import TEXT_EXTENSIONS, parse_kwargs, read_text_file_strict
+from tigerflow_ml.utils import (
+    IMG_EXTENSIONS,
+    TEXT_EXTENSIONS,
+    EmptyFileError,
+    batched,
+    count_images,
+    load_images,
+    parse_kwargs,
+    read_text_file_strict,
+)
 
 
 class _EmbedBase:
@@ -50,6 +59,15 @@ class _EmbedBase:
             ),
         ] = "{}"
 
+        batch_size: Annotated[
+            int,
+            typer.Option(
+                help="The number of pages to encode in one batch if encoding"
+                "multi-page pdfs as images",
+                min=1,
+            ),
+        ] = 32
+
     @staticmethod
     def setup(context: SetupContext):
         import torch
@@ -65,7 +83,7 @@ class _EmbedBase:
             device = "cuda" if torch.cuda.is_available() else "cpu"
 
         torch.manual_seed(context.seed)
-
+        logger.info(f"   Loading model {context.model}...")
         try:
             context.embedder = SentenceTransformer(
                 context.model,
@@ -73,6 +91,7 @@ class _EmbedBase:
                 cache_folder=context.cache_dir,
                 device=device,
                 local_files_only=not context.allow_fetch,
+                trust_remote_code=True,
             )
         except OSError as e:
             if not context.allow_fetch:
@@ -108,6 +127,11 @@ class _EmbedBase:
                 context=context,
                 input_file=input_file,
             )
+        elif input_file.suffix.lower() in IMG_EXTENSIONS:
+            embeddings = _EmbedBase._embed_image(
+                context=context,
+                input_file=input_file,
+            )
         else:
             raise ValueError(
                 f"File extension {input_file.suffix} not currently supported - "
@@ -128,4 +152,23 @@ class _EmbedBase:
         else:
             embeddings = context.embedder.encode(content, **context.encode_kwargs)
         logger.info(f"   Embedded 1 document with shape {embeddings.shape}")
+        return embeddings
+
+    @staticmethod
+    def _embed_image(context: SetupContext, input_file: Path):
+        total = count_images(input_file)
+        if total == 0:
+            raise EmptyFileError(f"{input_file} is empty")
+        if total == 1:
+            image = next(load_images(input_file))
+            embeddings = context.embedder.encode(image, **context.encode_kwargs)
+            logger.info(f"   Embedded image with shape {embeddings.shape}")
+        else:  # multi-page
+            embeddings = np.concatenate(
+                [
+                    context.embedder.encode(batch, **context.encode_kwargs)
+                    for batch in batched(load_images(input_file), context.batch_size)
+                ]
+            )
+            logger.info(f"   Embedded {total} page(s) with shape {embeddings.shape}")
         return embeddings
