@@ -659,6 +659,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#embed-an-image" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Embed an image
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#run-on-hpc-with-slurm" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -784,6 +795,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#embed-an-image" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Embed an image
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#run-on-hpc-with-slurm" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -820,7 +842,7 @@
 
 
 <h1 id="embed">Embed<a class="headerlink" href="#embed" title="Permanent link">&para;</a></h1>
-<p>Embed text using HuggingFace sentence-transformers models.</p>
+<p>Embed text or images using HuggingFace sentence-transformers models.</p>
 <h2 id="parameters">Parameters<a class="headerlink" href="#parameters" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
@@ -867,6 +889,11 @@
 <td>Additional kwargs for SentenceTransformer's <code>encode()</code> (e.g. <code>{'prompt':'query: '}</code>). Supplied values override task defaults.</td>
 </tr>
 <tr>
+<td><code>--batch-size</code></td>
+<td><code>32</code></td>
+<td>Number of pages per batch when embedding a multi-page PDF</td>
+</tr>
+<tr>
 <td><code>--normalize</code></td>
 <td><code>--no-normalize</code></td>
 <td>Whether to normalize returned vectors to have length 1</td>
@@ -889,11 +916,19 @@
 </tbody>
 </table>
 <h2 id="supported-input-formats">Supported Input Formats<a class="headerlink" href="#supported-input-formats" title="Permanent link">&para;</a></h2>
-<p>Text files (<code>.txt</code>, <code>.text</code>, <code>.md</code>, <code>.log</code>, <code>.rtf</code>)</p>
+<ul>
+<li>Text files (<code>.txt</code>, <code>.text</code>, <code>.md</code>, <code>.log</code>, <code>.rtf</code>)</li>
+<li>Image files (<code>.jpg</code>, <code>.jpeg</code>, <code>.png</code>, <code>.tiff</code>, <code>.tif</code>, <code>.bmp</code>, <code>.heic</code>, <code>.heif</code>)</li>
+<li>PDF files (<code>.pdf</code>) — each page is rendered to an image and embedded</li>
+</ul>
 <h2 id="output-format">Output Format<a class="headerlink" href="#output-format" title="Permanent link">&para;</a></h2>
 <p>NumPy binary (<code>.npy</code>).</p>
+<ul>
+<li>A single image (or single-page PDF) produces a 1-D array of shape <code>(dim,)</code>.</li>
+<li>A multi-page PDF produces a 2-D array of shape <code>(n_pages, dim)</code>, one row per page.</li>
+</ul>
 <h2 id="models">Models<a class="headerlink" href="#models" title="Permanent link">&para;</a></h2>
-<p>Any HuggingFace model compatible with the <a href="https://sbert.net">sentence-transformers</a> library, including plain encoder models.</p>
+<p>Any HuggingFace model compatible with the <a href="https://sbert.net">sentence-transformers</a> library, including plain text encoder models. Embedding image or PDF input requires a multi-modal model (e.g. CLIP-style) that supports image encoding.</p>
 <h2 id="examples">Examples<a class="headerlink" href="#examples" title="Permanent link">&para;</a></h2>
 <h3 id="embed-a-document">Embed a document<a class="headerlink" href="#embed-a-document" title="Permanent link">&para;</a></h3>
 <div class="tabbed-set tabbed-alternate" data-tabs="1:3"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><input id="__tabbed_1_3" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">Config</label><label for="__tabbed_1_2">Input (.txt)</label><label for="__tabbed_1_3">Output (.npy)</label></div>
@@ -919,6 +954,31 @@
 </div>
 </div>
 </div>
+<h3 id="embed-an-image">Embed an image<a class="headerlink" href="#embed-an-image" title="Permanent link">&para;</a></h3>
+<p>Use a multi-modal (CLIP-style) model to embed images. PDFs are supported the same
+way, with one row of output per page.</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="2:3"><input checked="checked" id="__tabbed_2_1" name="__tabbed_2" type="radio" /><input id="__tabbed_2_2" name="__tabbed_2" type="radio" /><input id="__tabbed_2_3" name="__tabbed_2" type="radio" /><div class="tabbed-labels"><label for="__tabbed_2_1">Config</label><label for="__tabbed_2_2">Input</label><label for="__tabbed_2_3">Output (.npy)</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="highlight"><span class="filename">config.yaml</span><pre><span></span><code><span class="nt">tasks</span><span class="p">:</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">embed</span>
+<span class="w">    </span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">local</span>
+<span class="w">    </span><span class="nt">module</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">tigerflow_ml.text.embed.local</span>
+<span class="w">    </span><span class="nt">input_ext</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">.jpg</span>
+<span class="w">    </span><span class="nt">output_ext</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">.npy</span>
+<span class="w">    </span><span class="nt">params</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">model</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">sentence-transformers/clip-ViT-B-32</span>
+<span class="w">      </span><span class="nt">allow-fetch</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">True</span>
+</code></pre></div>
+</div>
+<div class="tabbed-block">
+<p>An image file, e.g. <code>photo.jpg</code>.</p>
+</div>
+<div class="tabbed-block">
+<p>A single vector of shape <code>(512,)</code>.</p>
+</div>
+</div>
+</div>
 <h3 id="run-on-hpc-with-slurm">Run on HPC with Slurm<a class="headerlink" href="#run-on-hpc-with-slurm" title="Permanent link">&para;</a></h3>
 <p>For bulk embedding across large text collections, use the Slurm variant to distribute work across compute nodes:</p>
 <div class="highlight"><span class="filename">config.yaml</span><pre><span></span><code><span class="nt">tasks</span><span class="p">:</span>
@@ -933,6 +993,8 @@
 <span class="w">      </span><span class="nt">gpus</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1</span>
 <span class="w">      </span><span class="nt">memory</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">16G</span>
 <span class="w">      </span><span class="nt">time</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">04:00:00</span>
+<span class="w">    </span><span class="nt">setup_commands</span><span class="p">:</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">export HF_HUB_OFFLINE=1</span>
 <span class="w">    </span><span class="nt">params</span><span class="p">:</span>
 <span class="w">      </span><span class="nt">model</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">BAAI/bge-base-en-v1.5</span>
 <span class="w">      </span><span class="nt">encode-kwargs</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="s">&quot;prompt&quot;</span><span class="p p-Indicator">:</span><span class="s">&quot;query:</span><span class="nv"> </span><span class="s">&quot;</span><span class="p p-Indicator">}</span>
