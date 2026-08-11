@@ -373,17 +373,33 @@ def raise_model_load_error(
     """
     Convert a failed model/config load's OSError into an actionable error.
     """
+    hf_home = os.environ.get("HF_HOME")
+    if os.environ.get("HF_HUB_OFFLINE") not in ("1", "true", "True"):
+        env_hint = (
+            "If the model is in your specified --cache-dir, try setting "
+            "`HF_HUB_OFFLINE=1` and making sure HF_HOME (currently "
+            + (f"{hf_home!r}" if hf_home else "unset")
+            + ") is correctly set."
+        )
+    else:
+        env_hint = (
+            "If the model is in your specified --cache-dir, try making "
+            "sure HF_HOME (currently "
+            + (f"{hf_home!r}" if hf_home else "unset")
+            + ") is correctly set."
+        )
+
     if "SLURM_JOB_ID" in os.environ:
         raise RuntimeError(
             f"'{model}' not found in cache ({cache_dir}). "
             "Compute nodes have no internet access -- pre-download "
             "the model on a login node (or check "
-            "--cache-dir), then rerun."
+            f"--cache-dir), then rerun. {env_hint}"
         ) from cause
     if not allow_fetch:
         raise RuntimeError(
             f"'{model}' not found in cache ({cache_dir}). "
-            "Run with --allow-fetch or download manually."
+            f"Run with --allow-fetch or download manually. {env_hint}"
         ) from cause
     raise cause  # off-node + allow_fetch: bad repo id or transient network
 

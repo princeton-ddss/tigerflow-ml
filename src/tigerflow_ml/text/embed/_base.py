@@ -15,6 +15,7 @@ from tigerflow_ml.utils import (
     count_images,
     load_images,
     parse_kwargs,
+    raise_model_load_error,
     read_text_file_strict,
 )
 
@@ -94,12 +95,9 @@ class _EmbedBase:
                 trust_remote_code=True,
             )
         except OSError as e:
-            if not context.allow_fetch:
-                raise RuntimeError(
-                    f"'{context.model}' not found in cache ({context.cache_dir}). "
-                    "Run with --allow_fetch or download manually."
-                ) from e
-            raise
+            raise_model_load_error(
+                context.model, context.cache_dir, context.allow_fetch, e
+            )
         logger.info(
             f"   Embedding dimension: {context.embedder.get_embedding_dimension()}"
         )
