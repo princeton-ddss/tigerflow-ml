@@ -41,6 +41,17 @@ jobs:
   integration:
     runs-on: [self-hosted, 2xH100]
     steps:
+      - name: Preflight
+        run: |
+          echo "hostname -f:  $(hostname -f)"
+          echo "PATH=$PATH"
+          command -v nvidia-smi || echo "nvidia-smi NOT on PATH"
+          ls -l /usr/bin/nvidia-smi 2>/dev/null || echo "not at /usr/bin/nvidia-smi"
+          # Absolute path: ldconfig lives in /sbin, which a minimal service
+          # PATH may omit — the very condition this step is diagnosing.
+          /sbin/ldconfig -p | grep -c libcuda.so || true
+          ls /dev/nvidia* 2>/dev/null || echo "no device nodes"
+
       - uses: actions/checkout@v7
         with:
           # Belt and suspenders: never check out a non-main ref on the
