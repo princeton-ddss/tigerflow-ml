@@ -41,16 +41,17 @@ jobs:
   integration:
     runs-on: [self-hosted, 2xH100]
     steps:
-      - name: Preflight
+      # della-rse is shared and persistent — no Slurm allocation gives us
+      # exclusive GPUs. Record who else is on the cards, so a failure further
+      # down can be attributed to contention rather than to the change under
+      # test. See default_config.json for the matching memory budget.
+      - name: GPU status
         run: |
-          echo "hostname -f:  $(hostname -f)"
-          echo "PATH=$PATH"
-          command -v nvidia-smi || echo "nvidia-smi NOT on PATH"
-          ls -l /usr/bin/nvidia-smi 2>/dev/null || echo "not at /usr/bin/nvidia-smi"
-          # Absolute path: ldconfig lives in /sbin, which a minimal service
-          # PATH may omit — the very condition this step is diagnosing.
-          /sbin/ldconfig -p | grep -c libcuda.so || true
-          ls /dev/nvidia* 2>/dev/null || echo "no device nodes"
+          echo "node: $(hostname -f)"
+          nvidia-smi --query-gpu=index,name,memory.used,memory.total,utilization.gpu \
+            --format=csv
+          echo "--- processes holding GPU memory ---"
+          nvidia-smi --query-compute-apps=pid,used_memory,process_name --format=csv
 
       - uses: actions/checkout@v7
         with:
