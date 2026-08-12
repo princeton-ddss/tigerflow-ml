@@ -34,7 +34,6 @@ jobs:
         uses: astral-sh/setup-uv@v7
         with:
           version: ${{ env.UV_VERSION }}
-          python-version-file: ".python-version"
 
       - name: Check lockfile is up to date
         run: uv lock --check
@@ -52,7 +51,6 @@ jobs:
           cache-dependency-glob: |
             uv.lock
             pyproject.toml
-          python-version-file: ".python-version"
 
       - name: Install dependencies
         run: uv sync --locked --group lint --no-extra vllm
@@ -103,7 +101,6 @@ jobs:
           cache-dependency-glob: |
             uv.lock
             pyproject.toml
-          python-version-file: ".python-version"
 
       - name: Build the package
         run: uv build
@@ -136,7 +133,6 @@ jobs:
           cache-dependency-glob: |
             uv.lock
             pyproject.toml
-          python-version-file: ".python-version"
 
       - name: Install dependencies
         run: uv sync --locked --group docs

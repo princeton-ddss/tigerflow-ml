@@ -31,7 +31,6 @@ jobs:
           cache-dependency-glob: |
             uv.lock
             pyproject.toml
-          python-version-file: ".python-version"
 
       # The version is bumped in-repo via PR before tagging (the release tag is
       # cut from the bumped commit), so CD only verifies they agree — it never
@@ -75,7 +74,6 @@ jobs:
           cache-dependency-glob: |
             uv.lock
             pyproject.toml
-          python-version-file: ".python-version"
 
       - name: Install dependencies
         run: uv sync --locked --group docs
