@@ -981,7 +981,7 @@ way, with one row of output per page.</p>
 </div>
 <h3 id="run-on-hpc-with-slurm">Run on HPC with Slurm<a class="headerlink" href="#run-on-hpc-with-slurm" title="Permanent link">&para;</a></h3>
 <p>For bulk embedding across large text collections, use the Slurm variant to distribute work across compute nodes:</p>
-<div class="highlight"><span class="filename">config.yaml</span><pre><span></span><code><span class="nt">tasks</span><span class="p">:</span>
+<p><div class="highlight"><span class="filename">config.yaml</span><pre><span></span><code><span class="nt">tasks</span><span class="p">:</span>
 <span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">embed</span>
 <span class="w">    </span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">slurm</span>
 <span class="w">    </span><span class="nt">module</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">tigerflow_ml.text.embed.slurm</span>
@@ -998,8 +998,9 @@ way, with one row of output per page.</p>
 <span class="w">    </span><span class="nt">params</span><span class="p">:</span>
 <span class="w">      </span><span class="nt">model</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">BAAI/bge-base-en-v1.5</span>
 <span class="w">      </span><span class="nt">encode-kwargs</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="s">&quot;prompt&quot;</span><span class="p p-Indicator">:</span><span class="s">&quot;query:</span><span class="nv"> </span><span class="s">&quot;</span><span class="p p-Indicator">}</span>
-<span class="w">      </span><span class="nt">cache_dir</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">~/path/to/model/hub</span>
+<span class="w">      </span><span class="nt">cache-dir</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">~/path/to/model/hub</span>
 </code></pre></div>
+For some models, like <code>BAAI/bge-base-en-v1.5</code>, you may need to set <code>HF_HUB_OFFLINE=1</code>. Compute nodes will never have internet access, so it is safe to set this for any <code>slurm</code> task. If you encounter an error that says your model cannot be found in your specified <code>--cache-dir</code> (even though the model is there), you may also need to set <code>HF_HOME</code>. (This can be done in the same way/place as <code>HF_HUB_OFFLINE</code> in the example above; while <code>--cache-dir</code> needs to point at the <code>hub/</code> directory, <code>HF_HOME</code> should point to the parent directory of <code>hub/</code> )</p>
 
 
 
