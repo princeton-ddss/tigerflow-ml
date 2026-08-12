@@ -114,5 +114,6 @@ tasks:
     params:
       model: BAAI/bge-base-en-v1.5
       encode-kwargs: {"prompt":"query: "}
-      cache_dir: ~/path/to/model/hub
+      cache-dir: ~/path/to/model/hub
 ```
+For some models, like `BAAI/bge-base-en-v1.5`, you may need to set `HF_HUB_OFFLINE=1`. Compute nodes will never have internet access, so it is safe to set this for any `slurm` task. If you encounter an error that says your model cannot be found in your specified `--cache-dir` (even though the model is there), you may also need to set `HF_HOME`. (This can be done in the same way/place as `HF_HUB_OFFLINE` in the example above; while `--cache-dir` needs to point at the `hub/` directory, `HF_HOME` should point to the parent directory of `hub/` )

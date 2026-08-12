@@ -21,6 +21,7 @@ from tigerflow_ml.utils import (
     load_images,
     load_video,
     process_response_schema,
+    raise_model_load_error,
     read_text_file_strict,
     read_text_file_with_fallback,
     strip_markdown_from_json,
@@ -172,6 +173,43 @@ class TestGetModelConfig:
         ):
             with pytest.raises(ModelConfigParsingError, match="bad config"):
                 get_model_config("some/model")
+
+
+class TestRaiseModelLoadError:
+    def test_hf_hub_offline_unset_suggests_setting_it(self, monkeypatch):
+        monkeypatch.delenv("HF_HUB_OFFLINE", raising=False)
+        with pytest.raises(RuntimeError, match="try setting `HF_HUB_OFFLINE=1`"):
+            raise_model_load_error("some/model", "/cache", False, OSError("err"))
+
+    def test_hf_hub_offline_set_does_not_repeat_suggestion(self, monkeypatch):
+        monkeypatch.setenv("HF_HUB_OFFLINE", "1")
+        monkeypatch.delenv("SLURM_JOB_ID", raising=False)
+        with pytest.raises(RuntimeError) as exc_info:
+            raise_model_load_error("some/model", "/cache", False, OSError("err"))
+        message = str(exc_info.value)
+        assert "try setting `HF_HUB_OFFLINE=1`" not in message
+        assert "making sure HF_HOME" in message
+
+    def test_hf_home_value_shown_when_set(self, monkeypatch):
+        monkeypatch.delenv("HF_HUB_OFFLINE", raising=False)
+        monkeypatch.setenv("HF_HOME", "/my/cache")
+        monkeypatch.delenv("SLURM_JOB_ID", raising=False)
+        with pytest.raises(RuntimeError, match=r"currently '/my/cache'"):
+            raise_model_load_error("some/model", "/cache", False, OSError("err"))
+
+    def test_hf_home_shown_as_unset(self, monkeypatch):
+        monkeypatch.delenv("HF_HUB_OFFLINE", raising=False)
+        monkeypatch.delenv("HF_HOME", raising=False)
+        monkeypatch.delenv("SLURM_JOB_ID", raising=False)
+        with pytest.raises(RuntimeError, match="currently unset"):
+            raise_model_load_error("some/model", "/cache", False, OSError("err"))
+
+    def test_allow_fetch_off_node_reraises_cause(self, monkeypatch):
+        monkeypatch.delenv("SLURM_JOB_ID", raising=False)
+        with pytest.raises(OSError, match="network error"):
+            raise_model_load_error(
+                "some/model", "/cache", True, OSError("network error")
+            )
 
 
 class TestGetTokenizer:
