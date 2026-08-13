@@ -13,7 +13,14 @@ from .conftest import assert_or_update_snapshot
 def default_context(make_context):
     import torch
 
-    ctx = make_context(_DetectBase.Params, "detect")
+    ctx = make_context(
+        _DetectBase.Params,
+        "detect",
+        seed=84,
+        threshold=0.35,
+        batch_size=3,
+        sample_fps=1.2,
+    )
     _DetectBase.setup(ctx)
     yield ctx
     del ctx.pipeline
