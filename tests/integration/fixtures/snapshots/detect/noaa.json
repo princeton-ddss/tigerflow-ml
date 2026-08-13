@@ -32,39 +32,13 @@
           "xmax": 630,
           "ymax": 343
         }
-      }
-    ]
-  },
-  {
-    "frame": 24,
-    "timestamp": 0.81,
-    "detections": [
-      {
-        "label": "person",
-        "score": 0.5396,
-        "box": {
-          "xmin": 49,
-          "ymin": 52,
-          "xmax": 273,
-          "ymax": 345
-        }
-      },
-      {
-        "label": "cat",
-        "score": 0.446,
-        "box": {
-          "xmin": 49,
-          "ymin": 52,
-          "xmax": 273,
-          "ymax": 345
-        }
       },
       {
         "label": "sports ball",
-        "score": 0.4077,
+        "score": 0.3108,
         "box": {
-          "xmin": 598,
-          "ymin": 314,
+          "xmin": 600,
+          "ymin": 315,
           "xmax": 626,
           "ymax": 342
         }
@@ -72,33 +46,140 @@
     ]
   },
   {
-    "frame": 48,
-    "timestamp": 1.621,
+    "frame": 29,
+    "timestamp": 0.979,
     "detections": [
       {
         "label": "person",
-        "score": 0.5273,
+        "score": 0.5142,
         "box": {
-          "xmin": 4,
-          "ymin": 47,
-          "xmax": 259,
+          "xmin": 77,
+          "ymin": 52,
+          "xmax": 282,
+          "ymax": 358
+        }
+      },
+      {
+        "label": "sports ball",
+        "score": 0.4602,
+        "box": {
+          "xmin": 592,
+          "ymin": 309,
+          "xmax": 630,
+          "ymax": 343
+        }
+      },
+      {
+        "label": "person",
+        "score": 0.3667,
+        "box": {
+          "xmin": 10,
+          "ymin": 52,
+          "xmax": 280,
+          "ymax": 360
+        }
+      },
+      {
+        "label": "kite",
+        "score": 0.3176,
+        "box": {
+          "xmin": 592,
+          "ymin": 309,
+          "xmax": 630,
+          "ymax": 343
+        }
+      }
+    ]
+  },
+  {
+    "frame": 58,
+    "timestamp": 1.958,
+    "detections": [
+      {
+        "label": "person",
+        "score": 0.8232,
+        "box": {
+          "xmin": 1,
+          "ymin": 10,
+          "xmax": 236,
+          "ymax": 370
+        }
+      },
+      {
+        "label": "sports ball",
+        "score": 0.3884,
+        "box": {
+          "xmin": 593,
+          "ymin": 310,
+          "xmax": 628,
+          "ymax": 343
+        }
+      }
+    ]
+  },
+  {
+    "frame": 87,
+    "timestamp": 2.938,
+    "detections": [
+      {
+        "label": "bird",
+        "score": 0.5664,
+        "box": {
+          "xmin": 1,
+          "ymin": 130,
+          "xmax": 349,
+          "ymax": 360
+        }
+      },
+      {
+        "label": "bird",
+        "score": 0.3682,
+        "box": {
+          "xmin": 0,
+          "ymin": 0,
+          "xmax": 348,
+          "ymax": 360
+        }
+      },
+      {
+        "label": "person",
+        "score": 0.3489,
+        "box": {
+          "xmin": 0,
+          "ymin": 0,
+          "xmax": 348,
+          "ymax": 360
+        }
+      },
+      {
+        "label": "person",
+        "score": 0.3049,
+        "box": {
+          "xmin": 1,
+          "ymin": 130,
+          "xmax": 349,
           "ymax": 360
         }
       }
     ]
   },
   {
-    "frame": 72,
-    "timestamp": 2.431,
-    "detections": []
-  },
-  {
-    "frame": 96,
-    "timestamp": 3.242,
+    "frame": 116,
+    "timestamp": 3.917,
     "detections": [
       {
+        "label": "person",
+        "score": 0.8682,
+        "box": {
+          "xmin": 2,
+          "ymin": 0,
+          "xmax": 406,
+          "ymax": 359
+        }
+      },
+      {
         "label": "sports ball",
-        "score": 0.3792,
+        "score": 0.3606,
         "box": {
           "xmin": 591,
           "ymin": 309,
@@ -107,50 +188,34 @@
         }
       },
       {
-        "label": "person",
-        "score": 0.3665,
+        "label": "kite",
+        "score": 0.3049,
         "box": {
-          "xmin": 0,
-          "ymin": 0,
-          "xmax": 362,
-          "ymax": 360
+          "xmin": 591,
+          "ymin": 309,
+          "xmax": 630,
+          "ymax": 343
         }
       }
     ]
   },
   {
-    "frame": 120,
-    "timestamp": 4.052,
+    "frame": 145,
+    "timestamp": 4.896,
     "detections": [
       {
         "label": "person",
-        "score": 0.6631,
+        "score": 0.6074,
         "box": {
           "xmin": 1,
-          "ymin": 0,
-          "xmax": 424,
+          "ymin": 30,
+          "xmax": 454,
           "ymax": 360
         }
       },
       {
-        "label": "sports ball",
-        "score": 0.3762,
-        "box": {
-          "xmin": 598,
-          "ymin": 314,
-          "xmax": 626,
-          "ymax": 342
-        }
-      }
-    ]
-  },
-  {
-    "frame": 144,
-    "timestamp": 4.862,
-    "detections": [
-      {
         "label": "kite",
-        "score": 0.5835,
+        "score": 0.6011,
         "box": {
           "xmin": 591,
           "ymin": 309,
@@ -159,22 +224,12 @@
         }
       },
       {
-        "label": "person",
-        "score": 0.4619,
-        "box": {
-          "xmin": 1,
-          "ymin": 30,
-          "xmax": 455,
-          "ymax": 360
-        }
-      },
-      {
         "label": "kite",
-        "score": 0.4097,
+        "score": 0.3726,
         "box": {
           "xmin": 1,
           "ymin": 30,
-          "xmax": 455,
+          "xmax": 454,
           "ymax": 360
         }
       }
