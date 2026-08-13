@@ -44,9 +44,8 @@ def test_run(
     update_snapshots,
 ):
     for input_file in get_input_files(chat_dir):
-        ctx = copy.copy(default_context)  # shallow clone
         output_file = make_output_path(input_file, ".txt")
-        _ChatBase.run(ctx, input_file, output_file)
+        _ChatBase.run(default_context, input_file, output_file)
 
         text = output_file.read_text(encoding="utf-8")
         assert_or_update_snapshot(
