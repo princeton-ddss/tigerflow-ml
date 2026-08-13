@@ -16,10 +16,6 @@ def default_context(make_context):
     ctx = make_context(
         _DetectBase.Params,
         "detect",
-        seed=84,
-        threshold=0.35,
-        batch_size=3,
-        sample_fps=1.2,
     )
     _DetectBase.setup(ctx)
     yield ctx
