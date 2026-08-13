@@ -63,6 +63,11 @@ def json_schema_context(make_context):
         _OCRBase.Params,
         "ocr",
         prompt="Extract the contents of this resume as JSON.",
+        system_message="You are a helpful assistant",
+        max_tokens=2000,
+        max_model_len=4000,
+        seed=84,
+        buffer_size=2,
         json_schema=json.dumps(RESUME_SCHEMA),
     )
     _OCRBase.setup(ctx)
