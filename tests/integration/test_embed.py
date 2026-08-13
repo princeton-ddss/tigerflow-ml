@@ -19,7 +19,15 @@ def default_context(make_context):
 
     import torch
 
-    ctx = make_context(_EmbedBase.Params, "embed")
+    ctx = make_context(
+        _EmbedBase.Params,
+        "embed",
+        seed=84,
+        use_encode_document=True,
+        normalize=True,
+        truncate_dim=200,
+        batch_size=30,
+    )
     _EmbedBase.setup(ctx)
     yield ctx
     del ctx.embedder
