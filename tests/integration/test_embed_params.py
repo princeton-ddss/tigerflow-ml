@@ -1,4 +1,11 @@
-"""Integration tests for Embed task."""
+"""Integration test for Embed with:
+    --use-encode-document
+    --normalize
+    --truncate-dim
+
+Note: --use-encode-query is not tested. Presumably, if --use-encode-document works,
+it's counterpart also works
+"""
 
 import numpy as np
 import pytest
@@ -14,7 +21,7 @@ def embed_dir(test_dir):
 
 
 @pytest.fixture(scope="module")
-def default_context(make_context):
+def context(make_context):
     import gc
 
     import torch
@@ -22,6 +29,9 @@ def default_context(make_context):
     ctx = make_context(
         _EmbedBase.Params,
         "embed",
+        use_encode_document=True,
+        normalize=True,
+        truncate_dim=200,
     )
     _EmbedBase.setup(ctx)
     yield ctx
@@ -30,12 +40,12 @@ def default_context(make_context):
     torch.cuda.empty_cache()
 
 
-def test_setup(default_context):
-    assert default_context.embedder is not None
+def test_setup(context):
+    assert context.embedder is not None
 
 
-def test_run(
-    default_context,
+def test_run_params(
+    context,
     embed_dir,
     get_input_files,
     make_output_path,
@@ -44,12 +54,12 @@ def test_run(
 ):
     for input_file in get_input_files(embed_dir):
         output_file = make_output_path(input_file, ".npy")
-        _EmbedBase.run(default_context, input_file, output_file)
+        _EmbedBase.run(context, input_file, output_file)
 
         embedding = np.load(output_file)
         assert_or_update_array_snapshot(
             embedding,
-            f"embed/{input_file.stem}.defaults.npy",
+            f"embed/{input_file.stem}.params.npy",
             snapshot_dir,
             update_snapshots,
             threshold=0.99,
