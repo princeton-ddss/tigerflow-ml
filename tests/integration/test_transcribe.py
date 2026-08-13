@@ -19,7 +19,14 @@ def default_context(make_context):
 
     import torch
 
-    ctx = make_context(_TranscribeBase.Params, "transcribe")
+    ctx = make_context(
+        _TranscribeBase.Params,
+        "transcribe",
+        seed=84,
+        language="en",
+        batch_size=15,
+        overlap_s=5.1,
+    )
     _TranscribeBase.setup(ctx)
     yield ctx
     del ctx.whisper
