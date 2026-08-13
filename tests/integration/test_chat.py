@@ -18,7 +18,13 @@ def default_context(make_context):
 
     import torch
 
-    ctx = make_context(_ChatBase.Params, "chat")
+    ctx = make_context(
+        _ChatBase.Params,
+        "chat",
+        max_image_pixels=300,
+        audio_sampling_rate=16500,
+        video_sampling_fps=25,
+    )
     _ChatBase.setup(ctx)
     yield ctx
     del ctx.LLM

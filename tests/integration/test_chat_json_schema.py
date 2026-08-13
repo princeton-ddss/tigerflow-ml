@@ -42,6 +42,11 @@ def json_schema_context(make_context):
         _ChatBase.Params,
         "chat",
         prompt="Analyze this text to extract the main argument and rights.",
+        system_message="You are a helpful assistant",
+        max_tokens=2000,
+        max_model_len=5000,
+        seed=84,
+        temperature=0.1,
         response_schema=f"json={json.dumps(RESPONSE_SCHEMA)}",
     )
     _ChatBase.setup(ctx)
