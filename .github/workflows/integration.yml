@@ -67,7 +67,6 @@ jobs:
         uses: astral-sh/setup-uv@v7
         with:
           version: ${{ env.UV_VERSION }}
-          python-version-file: ".python-version"
           cache-local-path: ${{ env.UV_CACHE_DIR }}
 
       - name: Install dependencies
