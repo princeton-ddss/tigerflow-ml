@@ -41,6 +41,18 @@ jobs:
   integration:
     runs-on: [self-hosted, 2xH100]
     steps:
+      # della-rse is shared and persistent — no Slurm allocation gives us
+      # exclusive GPUs. Record who else is on the cards, so a failure further
+      # down can be attributed to contention rather than to the change under
+      # test. See default_config.json for the matching memory budget.
+      - name: GPU status
+        run: |
+          echo "node: $(hostname -f)"
+          nvidia-smi --query-gpu=index,name,memory.used,memory.total,utilization.gpu \
+            --format=csv
+          echo "--- processes holding GPU memory ---"
+          nvidia-smi --query-compute-apps=pid,used_memory,process_name --format=csv
+
       - uses: actions/checkout@v7
         with:
           # Belt and suspenders: never check out a non-main ref on the
