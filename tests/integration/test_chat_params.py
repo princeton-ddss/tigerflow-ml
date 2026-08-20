@@ -1,8 +1,8 @@
-"""Integration test for chat with --response-schema structured outputs.
+"""Integration test for chat with :
+--response_schema
+--system_message
+--max_model_len
 
-``response_schema`` is applied in ``setup()`` (it becomes part of
-``sampling_params``), so it can't be toggled on a copied context the way
-``prompt`` can and so is kept in its own module
 """
 
 import json
@@ -42,6 +42,8 @@ def json_schema_context(make_context):
         _ChatBase.Params,
         "chat",
         prompt="Analyze this text to extract the main argument and rights.",
+        system_message="You are a helpful assistant",
+        max_model_len=5000,
         response_schema=f"json={json.dumps(RESPONSE_SCHEMA)}",
     )
     _ChatBase.setup(ctx)

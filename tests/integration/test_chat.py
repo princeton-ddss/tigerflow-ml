@@ -18,7 +18,10 @@ def default_context(make_context):
 
     import torch
 
-    ctx = make_context(_ChatBase.Params, "chat")
+    ctx = make_context(
+        _ChatBase.Params,
+        "chat",
+    )
     _ChatBase.setup(ctx)
     yield ctx
     del ctx.LLM
@@ -45,7 +48,7 @@ def test_run(
         text = output_file.read_text(encoding="utf-8")
         assert_or_update_snapshot(
             text,
-            f"chat/{input_file.stem}.txt",
+            f"chat/{input_file.stem}.defaults.txt",
             snapshot_dir,
             update_snapshots,
             threshold=0.9,

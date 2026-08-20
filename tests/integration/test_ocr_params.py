@@ -1,8 +1,8 @@
-"""Integration test for OCR with --json-schema structured outputs.
+"""Integration test for OCR with:
+--json-schema
+--system-message
+--max-model-len
 
-``json_schema`` is applied in ``setup()`` (it becomes part of
-``sampling_params``), so it can't be toggled on a copied context the way
-``prompt`` can and so is kept in its own module
 """
 
 import json
@@ -63,6 +63,8 @@ def json_schema_context(make_context):
         _OCRBase.Params,
         "ocr",
         prompt="Extract the contents of this resume as JSON.",
+        system_message="You are a helpful assistant",
+        max_model_len=4000,
         json_schema=json.dumps(RESUME_SCHEMA),
     )
     _OCRBase.setup(ctx)

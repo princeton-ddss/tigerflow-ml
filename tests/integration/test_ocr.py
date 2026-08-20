@@ -47,7 +47,7 @@ def test_run(
         text = output_file.read_text(encoding="utf-8")
         assert_or_update_snapshot(
             text,
-            f"ocr/{input_file.stem}.txt",
+            f"ocr/{input_file.stem}.defaults.txt",
             snapshot_dir,
             update_snapshots,
             threshold=0.9,
