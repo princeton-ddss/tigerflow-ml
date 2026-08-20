@@ -1,6 +1,6 @@
 from tigerflow.tasks import SlurmTask
 
-from tigerflow_ml.text.ocr._base import _OCRBase
+from tigerflow_ml.image.ocr._base import _OCRBase
 
 
 class OCR(_OCRBase, SlurmTask):

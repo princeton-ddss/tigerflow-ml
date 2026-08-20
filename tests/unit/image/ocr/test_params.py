@@ -1,4 +1,4 @@
-from tigerflow_ml.text.ocr._base import _OCRBase
+from tigerflow_ml.image.ocr._base import _OCRBase
 
 
 def test_ocr_defaults():

@@ -47,7 +47,7 @@ Any HuggingFace model compatible with the [sentence-transformers](https://sbert.
     tasks:
       - name: embed
         kind: local
-        module: tigerflow_ml.text.embed.local
+        module: tigerflow_ml.multimodal.embed.local
         input_ext: .txt
         output_ext: .npy
         params:
@@ -76,7 +76,7 @@ way, with one row of output per page.
     tasks:
       - name: embed
         kind: local
-        module: tigerflow_ml.text.embed.local
+        module: tigerflow_ml.multimodal.embed.local
         input_ext: .jpg
         output_ext: .npy
         params:
@@ -100,7 +100,7 @@ For bulk embedding across large text collections, use the Slurm variant to distr
 tasks:
   - name: embed
     kind: slurm
-    module: tigerflow_ml.text.embed.slurm
+    module: tigerflow_ml.multimodal.embed.slurm
     input_ext: .txt
     output_ext: .npy
     max_workers: 4

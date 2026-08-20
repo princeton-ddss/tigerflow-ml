@@ -1,6 +1,6 @@
 from tigerflow.tasks import LocalTask
 
-from tigerflow_ml.text.chat._base import _ChatBase
+from tigerflow_ml.multimodal.chat._base import _ChatBase
 
 
 class Chat(_ChatBase, LocalTask):

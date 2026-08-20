@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from tigerflow_ml.text.ocr._base import (
+from tigerflow_ml.image.ocr._base import (
     OutputFormat,
     _determine_output_format,
     _format_output,

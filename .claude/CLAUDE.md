@@ -45,10 +45,12 @@ The `SetupContext` object is populated with `Params` during init, receives model
 
 ### Task Modules
 
-- `text/ocr/` — Image/PDF text extraction (GOT-OCR-2.0 default)
+- `image/ocr/` — Image/PDF text extraction (GOT-OCR-2.0 default)
 - `text/translate/` — Document translation (TranslateGemma, or text-generation models)
 - `audio/transcribe/` — Audio transcription (Whisper)
 - `image/detect/` — Object detection in images/video (RT-DETR, DETR, Grounding DINO, OWLv2)
+- `multimodal/chat/` — Apply a chat prompt to text, images, audio, or video
+- `multimodal/embed/` — Embed text or images
 
 ### Entry Points
 

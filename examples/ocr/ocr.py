@@ -1,4 +1,4 @@
-from tigerflow_ml.text.ocr.local import OCR
+from tigerflow_ml.image.ocr.local import OCR
 
 if __name__ == "__main__":
     OCR.cli()

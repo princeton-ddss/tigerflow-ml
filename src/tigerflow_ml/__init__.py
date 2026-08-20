@@ -9,18 +9,18 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from tigerflow_ml.audio.transcribe.slurm import Transcribe
     from tigerflow_ml.image.detect.slurm import Detect
-    from tigerflow_ml.text.chat.slurm import Chat
-    from tigerflow_ml.text.embed.slurm import Embed
-    from tigerflow_ml.text.ocr.slurm import OCR
+    from tigerflow_ml.image.ocr.slurm import OCR
+    from tigerflow_ml.multimodal.chat.slurm import Chat
+    from tigerflow_ml.multimodal.embed.slurm import Embed
     from tigerflow_ml.text.translate.slurm import Translate
 
 _LAZY_TASKS = {
-    "OCR": "tigerflow_ml.text.ocr.slurm",
+    "OCR": "tigerflow_ml.image.ocr.slurm",
     "Translate": "tigerflow_ml.text.translate.slurm",
     "Transcribe": "tigerflow_ml.audio.transcribe.slurm",
     "Detect": "tigerflow_ml.image.detect.slurm",
-    "Chat": "tigerflow_ml.text.chat.slurm",
-    "Embed": "tigerflow_ml.text.embed.slurm",
+    "Chat": "tigerflow_ml.multimodal.chat.slurm",
+    "Embed": "tigerflow_ml.multimodal.embed.slurm",
 }
 
 __all__ = ["OCR", "Translate", "Transcribe", "Detect", "Chat", "Embed"]

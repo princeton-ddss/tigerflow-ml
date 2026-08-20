@@ -9,7 +9,7 @@ import json
 
 import pytest
 
-from tigerflow_ml.text.chat._base import _ChatBase
+from tigerflow_ml.multimodal.chat._base import _ChatBase
 
 from .conftest import assert_or_update_snapshot
 
