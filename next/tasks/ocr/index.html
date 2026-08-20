@@ -1032,7 +1032,7 @@ The output format is specified when setting <code>--output-ext</code>. This affe
 <div class="highlight"><span class="filename">config.yaml</span><pre><span></span><code><span class="nt">tasks</span><span class="p">:</span>
 <span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ocr</span>
 <span class="w">    </span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">local</span>
-<span class="w">    </span><span class="nt">module</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">tigerflow_ml.text.ocr.local</span>
+<span class="w">    </span><span class="nt">module</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">tigerflow_ml.image.ocr.local</span>
 <span class="w">    </span><span class="nt">input_ext</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">.jpg</span>
 <span class="w">    </span><span class="nt">output_ext</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">.txt</span>
 <span class="w">    </span><span class="nt">params</span><span class="p">:</span>
@@ -1067,7 +1067,7 @@ Schedule of the whole number of Persons in the County of Geauga
 <div class="highlight"><span class="filename">config.yaml</span><pre><span></span><code><span class="nt">tasks</span><span class="p">:</span>
 <span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ocr</span>
 <span class="w">    </span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">local</span>
-<span class="w">    </span><span class="nt">module</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">tigerflow_ml.text.ocr.local</span>
+<span class="w">    </span><span class="nt">module</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">tigerflow_ml.image.ocr.local</span>
 <span class="w">    </span><span class="nt">input_ext</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">.png</span>
 <span class="w">    </span><span class="nt">output_ext</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">.md</span>
 <span class="w">    </span><span class="nt">params</span><span class="p">:</span>
@@ -1111,7 +1111,7 @@ Acquisitions of Outlying Territories and Possessions**
 <div class="highlight"><span class="filename">config.yaml</span><pre><span></span><code><span class="nt">tasks</span><span class="p">:</span>
 <span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ocr</span>
 <span class="w">    </span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">local</span>
-<span class="w">    </span><span class="nt">module</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">tigerflow_ml.text.ocr.local</span>
+<span class="w">    </span><span class="nt">module</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">tigerflow_ml.image.ocr.local</span>
 <span class="w">    </span><span class="nt">input_ext</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">.pdf</span>
 <span class="w">    </span><span class="nt">params</span><span class="p">:</span>
 <span class="w">      </span><span class="nt">model</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">stepfun-ai/GOT-OCR-2.0-hf</span>
@@ -1155,7 +1155,7 @@ work across compute nodes:</p>
 <div class="highlight"><span class="filename">config.yaml</span><pre><span></span><code><span class="nt">tasks</span><span class="p">:</span>
 <span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ocr</span>
 <span class="w">    </span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">slurm</span>
-<span class="w">    </span><span class="nt">module</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">tigerflow_ml.text.ocr.slurm</span>
+<span class="w">    </span><span class="nt">module</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">tigerflow_ml.image.ocr.slurm</span>
 <span class="w">    </span><span class="nt">input_ext</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">.pdf</span>
 <span class="w">    </span><span class="nt">output_ext</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">.txt</span>
 <span class="w">    </span><span class="nt">max_workers</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">4</span>
@@ -1174,7 +1174,7 @@ work across compute nodes:</p>
 <div class="highlight"><span class="filename">config.yaml</span><pre><span></span><code><span class="nt">tasks</span><span class="p">:</span>
 <span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ocr</span>
 <span class="w">    </span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">slurm</span>
-<span class="w">    </span><span class="nt">module</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">tigerflow_ml.text.ocr.slurm</span>
+<span class="w">    </span><span class="nt">module</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">tigerflow_ml.image.ocr.slurm</span>
 <span class="w">    </span><span class="nt">input_ext</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">.pdf</span>
 <span class="w">    </span><span class="nt">output_ext</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">.txt</span>
 <span class="w">    </span><span class="nt">max_workers</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">4</span>
