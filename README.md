@@ -43,12 +43,12 @@ tigerflow tasks list
 Run a task directly:
 
 ```bash
-python -m tigerflow_ml.text.ocr.slurm --help
+python -m tigerflow_ml.image.ocr.slurm --help
 python -m tigerflow_ml.text.translate.slurm --help
-python -m tigerflow_ml.text.chat.slurm --help
+python -m tigerflow_ml.multimodal.chat.slurm --help
 python -m tigerflow_ml.audio.transcribe.slurm --help
 python -m tigerflow_ml.image.detect.slurm --help
-python -m tigerflow_ml.text.embed.slurm --help
+python -m tigerflow_ml.multimodal.embed.slurm --help
 ```
 
 ## Container

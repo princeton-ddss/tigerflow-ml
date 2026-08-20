@@ -59,7 +59,7 @@ Any HuggingFace [`image-text-to-text`](https://huggingface.co/models?pipeline_ta
     tasks:
       - name: ocr
         kind: local
-        module: tigerflow_ml.text.ocr.local
+        module: tigerflow_ml.image.ocr.local
         input_ext: .jpg
         output_ext: .txt
         params:
@@ -96,7 +96,7 @@ Any HuggingFace [`image-text-to-text`](https://huggingface.co/models?pipeline_ta
     tasks:
       - name: ocr
         kind: local
-        module: tigerflow_ml.text.ocr.local
+        module: tigerflow_ml.image.ocr.local
         input_ext: .png
         output_ext: .md
         params:
@@ -143,7 +143,7 @@ Any HuggingFace [`image-text-to-text`](https://huggingface.co/models?pipeline_ta
     tasks:
       - name: ocr
         kind: local
-        module: tigerflow_ml.text.ocr.local
+        module: tigerflow_ml.image.ocr.local
         input_ext: .pdf
         params:
           model: stepfun-ai/GOT-OCR-2.0-hf
@@ -196,7 +196,7 @@ work across compute nodes:
 tasks:
   - name: ocr
     kind: slurm
-    module: tigerflow_ml.text.ocr.slurm
+    module: tigerflow_ml.image.ocr.slurm
     input_ext: .pdf
     output_ext: .txt
     max_workers: 4
@@ -219,7 +219,7 @@ If you're using a model which supports [structured output](https://docs.vllm.ai/
 tasks:
   - name: ocr
     kind: slurm
-    module: tigerflow_ml.text.ocr.slurm
+    module: tigerflow_ml.image.ocr.slurm
     input_ext: .pdf
     output_ext: .txt
     max_workers: 4

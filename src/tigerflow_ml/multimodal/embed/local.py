@@ -1,6 +1,6 @@
 from tigerflow.tasks import LocalTask
 
-from tigerflow_ml.text.embed._base import _EmbedBase
+from tigerflow_ml.multimodal.embed._base import _EmbedBase
 
 
 class Embed(_EmbedBase, LocalTask):

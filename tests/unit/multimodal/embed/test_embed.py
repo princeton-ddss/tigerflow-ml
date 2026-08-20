@@ -6,7 +6,7 @@ from unittest.mock import MagicMock
 import numpy as np
 import pytest
 
-from tigerflow_ml.text.embed._base import _EmbedBase
+from tigerflow_ml.multimodal.embed._base import _EmbedBase
 from tigerflow_ml.utils import EmptyFileError, parse_kwargs
 
 

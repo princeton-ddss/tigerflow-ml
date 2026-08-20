@@ -1,4 +1,4 @@
-from tigerflow_ml.text.embed._base import _EmbedBase
+from tigerflow_ml.multimodal.embed._base import _EmbedBase
 
 
 def test_embed_defaults():

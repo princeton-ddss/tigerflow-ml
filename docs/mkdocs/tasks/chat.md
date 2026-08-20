@@ -47,7 +47,7 @@ Any HuggingFace model that is compatible with vLLM's `LLM.chat()`.
     tasks:
         - name: chat
             kind: slurm
-            module: tigerflow_ml.text.chat.slurm
+            module: tigerflow_ml.multimodal.chat.slurm
             input_ext: .txt
             output_ext: .txt
             max_workers: 1
@@ -117,7 +117,7 @@ Any HuggingFace model that is compatible with vLLM's `LLM.chat()`.
     tasks:
         - name: chat
             kind: slurm
-            module: tigerflow_ml.text.chat.slurm
+            module: tigerflow_ml.multimodal.chat.slurm
             input_ext: .jpeg
             output_ext: .txt
             max_workers: 1
@@ -159,7 +159,7 @@ If you're using a model which supports [structured output](https://docs.vllm.ai/
     tasks:
         - name: chat
             kind: slurm
-            module: tigerflow_ml.text.chat.slurm
+            module: tigerflow_ml.multimodal.chat.slurm
             input_ext: .txt
             output_ext: .txt
             max_workers: 1
@@ -186,7 +186,7 @@ If you're using a model which supports [structured output](https://docs.vllm.ai/
     tasks:
         - name: chat
             kind: slurm
-            module: tigerflow_ml.text.chat.slurm
+            module: tigerflow_ml.multimodal.chat.slurm
             input_ext: .jpeg
             output_ext: .txt
             max_workers: 1

@@ -3,7 +3,7 @@
 import numpy as np
 import pytest
 
-from tigerflow_ml.text.embed._base import _EmbedBase
+from tigerflow_ml.multimodal.embed._base import _EmbedBase
 
 from .conftest import assert_or_update_array_snapshot
 

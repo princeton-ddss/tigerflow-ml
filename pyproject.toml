@@ -71,16 +71,16 @@ test = [
 [project.entry-points."tigerflow.tasks"]
 translate = "tigerflow_ml.text.translate.slurm:Translate"
 translate-local = "tigerflow_ml.text.translate.local:Translate"
-ocr = "tigerflow_ml.text.ocr.slurm:OCR"
-ocr-local = "tigerflow_ml.text.ocr.local:OCR"
+ocr = "tigerflow_ml.image.ocr.slurm:OCR"
+ocr-local = "tigerflow_ml.image.ocr.local:OCR"
 transcribe = "tigerflow_ml.audio.transcribe.slurm:Transcribe"
 transcribe-local = "tigerflow_ml.audio.transcribe.local:Transcribe"
 detect = "tigerflow_ml.image.detect.slurm:Detect"
 detect-local = "tigerflow_ml.image.detect.local:Detect"
-chat = "tigerflow_ml.text.chat.slurm:Chat"
-chat-local = "tigerflow_ml.text.chat.local:Chat"
-embed = "tigerflow_ml.text.embed.slurm:Embed"
-embed-local = "tigerflow_ml.text.embed.local:Embed"
+chat = "tigerflow_ml.multimodal.chat.slurm:Chat"
+chat-local = "tigerflow_ml.multimodal.chat.local:Chat"
+embed = "tigerflow_ml.multimodal.embed.slurm:Embed"
+embed-local = "tigerflow_ml.multimodal.embed.local:Embed"
 
 [build-system]
 requires = ["hatchling"]

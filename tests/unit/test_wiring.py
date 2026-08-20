@@ -7,7 +7,7 @@ from tigerflow.tasks import LocalTask, SlurmTask
 _SLURM_RESOURCES = SlurmResourceConfig(cpus=1, memory="4GB", time="00:10:00")
 
 _TASKS = [
-    ("ocr", ".pdf", "tigerflow_ml.text.ocr.local", "tigerflow_ml.text.ocr.slurm"),
+    ("ocr", ".pdf", "tigerflow_ml.image.ocr.local", "tigerflow_ml.image.ocr.slurm"),
     (
         "translate",
         ".txt",
@@ -29,14 +29,14 @@ _TASKS = [
     (
         "chat",
         ".txt",
-        "tigerflow_ml.text.chat.local",
-        "tigerflow_ml.text.chat.slurm",
+        "tigerflow_ml.multimodal.chat.local",
+        "tigerflow_ml.multimodal.chat.slurm",
     ),
     (
         "embed",
         ".txt",
-        "tigerflow_ml.text.embed.local",
-        "tigerflow_ml.text.embed.slurm",
+        "tigerflow_ml.multimodal.embed.local",
+        "tigerflow_ml.multimodal.embed.slurm",
     ),
 ]
 

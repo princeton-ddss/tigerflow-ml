@@ -10,7 +10,7 @@ import PIL.Image
 import pytest
 import soundfile as sf
 
-from tigerflow_ml.text.chat._base import (
+from tigerflow_ml.multimodal.chat._base import (
     _build_audio_message,
     _build_img_message,
     _build_txt_message,
@@ -61,10 +61,10 @@ class TestImageResize:
             return _build_img_message(prompt, image, system_message)
 
         with patch(
-            "tigerflow_ml.text.chat._base._build_img_message",
+            "tigerflow_ml.multimodal.chat._base._build_img_message",
             side_effect=capture,
         ):
-            with patch("tigerflow_ml.text.chat._base._run_chat", return_value=""):
+            with patch("tigerflow_ml.multimodal.chat._base._run_chat", return_value=""):
                 _ChatBase._process_img_file(context, img_path)
 
         return captured["size"]

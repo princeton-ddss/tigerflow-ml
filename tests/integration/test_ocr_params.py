@@ -9,7 +9,7 @@ import json
 
 import pytest
 
-from tigerflow_ml.text.ocr._base import _OCRBase
+from tigerflow_ml.image.ocr._base import _OCRBase
 
 from .conftest import assert_or_update_snapshot
 
