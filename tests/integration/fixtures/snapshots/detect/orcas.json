@@ -1,7 +1,7 @@
 [
   {
     "label": "bird",
-    "score": 0.7109,
+    "score": 0.7075,
     "box": {
       "xmin": 95,
       "ymin": 140,
@@ -11,7 +11,7 @@
   },
   {
     "label": "surfboard",
-    "score": 0.4429,
+    "score": 0.4421,
     "box": {
       "xmin": 569,
       "ymin": 122,

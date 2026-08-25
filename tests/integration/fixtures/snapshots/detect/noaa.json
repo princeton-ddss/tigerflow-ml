@@ -5,7 +5,7 @@
     "detections": [
       {
         "label": "person",
-        "score": 0.4612,
+        "score": 0.4614,
         "box": {
           "xmin": 54,
           "ymin": 71,
@@ -15,7 +15,7 @@
       },
       {
         "label": "person",
-        "score": 0.4023,
+        "score": 0.4021,
         "box": {
           "xmin": 0,
           "ymin": 71,
@@ -25,7 +25,7 @@
       },
       {
         "label": "sports ball",
-        "score": 0.3608,
+        "score": 0.3623,
         "box": {
           "xmin": 592,
           "ymin": 310,
@@ -35,7 +35,7 @@
       },
       {
         "label": "sports ball",
-        "score": 0.3108,
+        "score": 0.3115,
         "box": {
           "xmin": 600,
           "ymin": 315,
@@ -51,7 +51,7 @@
     "detections": [
       {
         "label": "person",
-        "score": 0.5142,
+        "score": 0.5132,
         "box": {
           "xmin": 77,
           "ymin": 52,
@@ -61,7 +61,7 @@
       },
       {
         "label": "sports ball",
-        "score": 0.4602,
+        "score": 0.4548,
         "box": {
           "xmin": 592,
           "ymin": 309,
@@ -71,7 +71,7 @@
       },
       {
         "label": "person",
-        "score": 0.3667,
+        "score": 0.366,
         "box": {
           "xmin": 10,
           "ymin": 52,
@@ -81,7 +81,7 @@
       },
       {
         "label": "kite",
-        "score": 0.3176,
+        "score": 0.3157,
         "box": {
           "xmin": 592,
           "ymin": 309,
@@ -107,7 +107,7 @@
       },
       {
         "label": "sports ball",
-        "score": 0.3884,
+        "score": 0.3877,
         "box": {
           "xmin": 593,
           "ymin": 310,
@@ -123,7 +123,7 @@
     "detections": [
       {
         "label": "bird",
-        "score": 0.5664,
+        "score": 0.5659,
         "box": {
           "xmin": 1,
           "ymin": 130,
@@ -133,7 +133,7 @@
       },
       {
         "label": "bird",
-        "score": 0.3682,
+        "score": 0.3679,
         "box": {
           "xmin": 0,
           "ymin": 0,
@@ -153,7 +153,7 @@
       },
       {
         "label": "person",
-        "score": 0.3049,
+        "score": 0.3054,
         "box": {
           "xmin": 1,
           "ymin": 130,
@@ -174,12 +174,12 @@
           "xmin": 2,
           "ymin": 0,
           "xmax": 406,
-          "ymax": 359
+          "ymax": 360
         }
       },
       {
         "label": "sports ball",
-        "score": 0.3606,
+        "score": 0.3586,
         "box": {
           "xmin": 591,
           "ymin": 309,
@@ -189,7 +189,7 @@
       },
       {
         "label": "kite",
-        "score": 0.3049,
+        "score": 0.3052,
         "box": {
           "xmin": 591,
           "ymin": 309,
@@ -205,30 +205,30 @@
     "detections": [
       {
         "label": "person",
-        "score": 0.6074,
+        "score": 0.6064,
         "box": {
           "xmin": 1,
-          "ymin": 30,
+          "ymin": 29,
           "xmax": 454,
           "ymax": 360
         }
       },
       {
         "label": "kite",
-        "score": 0.6011,
+        "score": 0.6055,
         "box": {
           "xmin": 591,
           "ymin": 309,
           "xmax": 630,
-          "ymax": 342
+          "ymax": 343
         }
       },
       {
         "label": "kite",
-        "score": 0.3726,
+        "score": 0.3713,
         "box": {
           "xmin": 1,
-          "ymin": 30,
+          "ymin": 29,
           "xmax": 454,
           "ymax": 360
         }

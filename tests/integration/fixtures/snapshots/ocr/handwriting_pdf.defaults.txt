@@ -6,7 +6,7 @@ OMB No. 1545-1610
 2023
 This Form is Open to Public Inspection.
 Part I Annual Return Identification Information
-For the calendar plan year 2023 or fiscal plan year beginning (MM/DD/YYYY) 01/01/2023 ending (MM/DD/YYYY) 01/02/2023
+For the calendar year 2023 or fiscal plan year beginning (MM/DD/YYYY) 01/01/2023 ending (MM/DD/YYYY) 01/02/2023
 A This return is:
 (1) the first return filed for the plan
 (3) the final return filed for the plan
@@ -21,20 +21,19 @@ Part II Basic Plan Information -- enter all requested information.
 Annual Return Plan
 1b Three-digit plan number (PN) 586
 1c Date plan first became effective (MM/DD/YYYY) 02/05/2022
-2a Employer's name Acme Corp Software
-Trade name of business (if different from name of employer)
-2b Employer Identification Number (EIN) 735268329
-In care of name
+2a Employer's name
+Acme Corp Software
+2b Employer Identification Number (EIN)
+Trade name of business (if different from name of employer) 735268329
 2c Employer's telephone number 0113536259
 2d Business code (see instructions)
 3a Plan administrator's name (if same as employer, enter "Same")
 3b Administrator's EIN 532678
-In care of name
 3c Administrator's telephone number
+In care of name
 Mailing address (room, apt., suite no. and street, or P.O. box)
 235, Park Street Avenue, FL
-City or town, state or province, country, and ZIP or foreign postal code (if foreign, see instructions)
-FL 63052
+City or town, state or province, country, and ZIP or foreign postal code (if foreign, see instructions) FL 63052
 4 If the employer's name, the employer's EIN, and/or the plan name has changed since the last return filed for this plan, enter the employer's name and EIN, the plan name, and the plan number for the last return in the appropriate space provided
 4a Employer's name
 4b EIN 5732900
@@ -49,14 +48,10 @@ FL 63052
 5b(3) 5
 5b(4) 2
 5c Number of participants who terminated employment during the plan year with accrued benefits that were less than 100% vested
-5c
 Part III Financial Information
 6a Total plan assets
-6a
 6b Total plan liabilities
-6b
 6c Net plan assets (subtract line 6b from 6a)
-6c
 For Privacy Act and Paperwork Reduction Act Notice, see the Instructions for Form 5500-EZ.
 Catalog Number 63263R
 Form 5500-EZ (2023)
