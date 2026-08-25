@@ -1,11 +1,12 @@
 [project]
 name = "tigerflow-ml"
-version = "0.1.1"
+version = "0.2.0"
 description = "ML task library for TigerFlow"
 readme = "README.md"
 authors = [
     { name = "Colin Swaney", email = "colinswaney@princeton.edu" },
     { name = "Sangyoon Park", email = "sp8538@princeton.edu" },
+    { name = "Nina van Hoorn", email = "nv5842@princeton.edu" },
 ]
 license = "MIT"
 license-files = ["LICENSE"]
