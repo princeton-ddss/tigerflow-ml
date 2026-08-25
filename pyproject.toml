@@ -25,7 +25,7 @@ classifiers = [
 requires-python = ">=3.10,<3.14"
 dependencies = [
     "tigerflow>=0.3.1,<0.4",
-    "transformers>=4.51,<6",
+    "transformers>=4.51,<5.10",  # 5.15.1 broke the chat task; cap tracks the tested ceiling
     "torch>=2.0,<3",
     "Pillow",
     "pymupdf>=1.27.1",
