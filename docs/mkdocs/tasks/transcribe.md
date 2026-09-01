@@ -43,8 +43,8 @@ below).
 
 Audio is decoded with [`soundfile`](https://python-soundfile.readthedocs.io/)
 (libsndfile): WAV, FLAC, OGG/Vorbis, MP3, AIFF, and the other formats
-libsndfile supports. M4A/AAC and video containers (MP4, MOV) are not supported —
-extract the audio to a supported format first.
+libsndfile supports. Formats libsndfile can't open fall back to
+[`av`](https://pyav.org/) (PyAV).
 
 ## Output Format
 

@@ -5,9 +5,9 @@ Transcribe audio files to text, SRT subtitles, or JSON using any
 HuggingFace.
 
 Input is decoded with [`soundfile`](https://python-soundfile.readthedocs.io/)
-(libsndfile), so the supported formats are WAV, FLAC, OGG/Vorbis, MP3, AIFF,
-and the others libsndfile handles. M4A/AAC and video containers (MP4, MOV)
-are **not** supported — extract the audio to a supported format first.
+(libsndfile), covering WAV, FLAC, OGG/Vorbis, MP3, AIFF, and the others
+libsndfile handles. Formats libsndfile can't open fall back to
+[`av`](https://pyav.org/) (PyAV).
 
 ## How it works
 

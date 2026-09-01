@@ -28,7 +28,7 @@ IMG_EXTENSIONS = {
     ".heic",
     ".heif",
 }
-AUDIO_EXTENSIONS = {".wav", ".flac", ".ogg", ".aiff", ".aif", ".mp3"}
+AUDIO_EXTENSIONS = {".wav", ".flac", ".ogg", ".aiff", ".aif", ".mp3", ".m4a"}
 VIDEO_EXTENSIONS = {".mp4", ".avi", ".mov", ".mkv", ".webm", ".flv", ".wmv"}
 
 
@@ -197,8 +197,9 @@ def batched(iterable: Iterator, n: int) -> Iterator[list]:
 def load_audio(input_file: Path, sampling_rate: int = 16000) -> np.ndarray:
     """Load an audio file as a mono float32 array at the given sampling rate.
 
-    Decodes with ``soundfile``, averages channels to mono, and resamples with
-    ``soxr`` if needed.
+    Decodes with ``soundfile``, averages channels to mono, and
+    resamples with ``soxr`` if needed. Formats libsndfile cannot open
+    fall back to ``av`` (PyAV).
 
     Args:
         input_file: Path to the audio file.
@@ -210,12 +211,50 @@ def load_audio(input_file: Path, sampling_rate: int = 16000) -> np.ndarray:
     import soundfile as sf
     import soxr
 
-    array, sr = sf.read(str(input_file), dtype="float32", always_2d=False)
+    try:
+        array, sr = sf.read(str(input_file), dtype="float32", always_2d=False)
+    except sf.LibsndfileError:
+        if not Path(input_file).is_file():
+            raise FileNotFoundError(input_file) from None
+        return _load_audio_ffmpeg(input_file, sampling_rate)
     if array.ndim > 1:
         array = array.mean(axis=1)
     if sr != sampling_rate:
         array = soxr.resample(array, sr, sampling_rate)
     return np.ascontiguousarray(array, dtype=np.float32)
+
+
+def _load_audio_ffmpeg(input_file: Path, sampling_rate: int) -> np.ndarray:
+    """Decode an audio file to a mono float32 array with PyAV (FFmpeg).
+
+    Args:
+        input_file: Path to the audio file.
+        sampling_rate: Target sampling rate in Hz.
+
+    Returns:
+        A 1-D float32 array of samples at ``sampling_rate``.
+
+    Raises:
+        ValueError: If the file has no audio stream or decodes to no samples.
+    """
+    import av
+
+    with av.open(str(input_file)) as container:
+        if not container.streams.audio:
+            raise ValueError(f"No audio stream in {input_file}")
+        stream = container.streams.audio[0]
+        resampler = av.AudioResampler(format="flt", layout="mono", rate=sampling_rate)
+        parts: list[np.ndarray] = []
+        for frame in container.decode(stream):
+            for resampled in resampler.resample(frame):
+                parts.append(resampled.to_ndarray().reshape(-1))
+        # Flush any samples buffered inside the resampler.
+        for resampled in resampler.resample(None):
+            parts.append(resampled.to_ndarray().reshape(-1))
+
+    if not parts:
+        raise ValueError(f"Decoded no audio samples from {input_file}")
+    return np.ascontiguousarray(np.concatenate(parts), dtype=np.float32)
 
 
 def load_video(input_file: Path, sample_fps: float | None = None) -> bytes:
