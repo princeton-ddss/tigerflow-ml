@@ -1,0 +1,34 @@
+{
+  "language": "en",
+  "text": " This recording, Ireland 1, is copyright the International Dialects of English Archive. When the sunlight strikes,",
+  "chunks": [
+    {
+      "text": " This recording, Ireland 1,",
+      "timestamp": [
+        0.0,
+        1.96
+      ]
+    },
+    {
+      "text": " is copyright the International Dialects",
+      "timestamp": [
+        2.46,
+        4.54
+      ]
+    },
+    {
+      "text": " of English Archive.",
+      "timestamp": [
+        4.54,
+        5.68
+      ]
+    },
+    {
+      "text": " When the sunlight strikes,",
+      "timestamp": [
+        6.38,
+        7.48
+      ]
+    }
+  ]
+}
