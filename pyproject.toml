@@ -39,6 +39,7 @@ dependencies = [
     "pydantic>=2.0",
     "soundfile>=0.12",
     "soxr>=0.3",
+    "av>=13",
     "pillow-heif>=1.4.0",
     "sentence-transformers[image]>=5.6.0",
 ]

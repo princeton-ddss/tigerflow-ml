@@ -5107,6 +5107,8 @@ version = "0.2.0"
 source = { editable = "." }
 dependencies = [
     { name = "accelerate" },
+    { name = "av", version = "17.1.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "av", version = "18.1.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "langdetect" },
     { name = "opencv-python-headless" },
     { name = "pillow" },
@@ -5154,6 +5156,7 @@ test = [
 [package.metadata]
 requires-dist = [
     { name = "accelerate", specifier = ">=1.13.0" },
+    { name = "av", specifier = ">=13" },
     { name = "langdetect", specifier = ">=1.0.9" },
     { name = "opencv-python-headless" },
     { name = "pillow" },

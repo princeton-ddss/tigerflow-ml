@@ -1,6 +1,7 @@
 """Unit tests for the Whisper transcription engine (no model downloads)."""
 
 from pathlib import Path
+from unittest.mock import patch
 
 import numpy as np
 import pytest
@@ -16,9 +17,9 @@ from tigerflow_ml.audio.transcribe.transcriber import (
 )
 from tigerflow_ml.utils import load_audio
 
-_FIXTURE = (
-    Path(__file__).parents[3] / "integration" / "fixtures" / "transcribe" / "sample.wav"
-)
+_FIXTURE_DIR = Path(__file__).parents[3] / "integration" / "fixtures" / "transcribe"
+_FIXTURE = _FIXTURE_DIR / "sample_wav.wav"
+_M4A_FIXTURE = _FIXTURE_DIR / "sample_m4a.m4a"
 
 
 class TestLoadWhisperErrors:
@@ -46,11 +47,29 @@ class TestLoadAudioErrors:
 
 class TestLoadAudio:
     def test_returns_mono_float32_at_16khz(self):
-        array = load_audio(_FIXTURE, sampling_rate=SAMPLING_RATE)
+        from tigerflow_ml import utils
+
+        with patch.object(
+            utils, "_load_audio_ffmpeg", wraps=utils._load_audio_ffmpeg
+        ) as spy:
+            array = load_audio(_FIXTURE, sampling_rate=SAMPLING_RATE)
+        spy.assert_not_called()
         assert array.dtype == np.float32
         assert array.ndim == 1
         # ~2.5s fixture at 16kHz.
         assert abs(len(array) / SAMPLING_RATE - 2.5) < 0.2
+
+    def test_m4a_decodes_via_ffmpeg_fallback(self):
+        from tigerflow_ml import utils
+
+        with patch.object(
+            utils, "_load_audio_ffmpeg", wraps=utils._load_audio_ffmpeg
+        ) as spy:
+            array = load_audio(_M4A_FIXTURE, sampling_rate=SAMPLING_RATE)
+        spy.assert_called_once_with(_M4A_FIXTURE, SAMPLING_RATE)
+        assert array.dtype == np.float32
+        assert array.ndim == 1
+        assert abs(len(array) / SAMPLING_RATE - 7.5) < 0.2
 
 
 class TestFlattenSequences:
